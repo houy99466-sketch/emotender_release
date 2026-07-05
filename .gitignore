@@ -1,0 +1,12 @@
+.env
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+recording.wav
+mic_vad.pcm
+mic_denoise.pcm
+*.log
+*.tmp

@@ -1,0 +1,112 @@
+{
+  "schema_version": "1.0",
+  "emotion_dimensions": {
+    "疲惫": {
+      "description": "能量低、反应慢、想恢复但不想被打扰",
+      "base_modules": ["clear_balance", "bitter_focus"],
+      "face_state": "gentle",
+      "action_sequence": "make_cold_start"
+    },
+    "焦虑": {
+      "description": "注意力发散、紧张、需要稳定节奏",
+      "base_modules": ["blue_calm", "clear_balance"],
+      "face_state": "focused",
+      "action_sequence": "make_soft_comfort"
+    },
+    "难过": {
+      "description": "情绪低落、需要被轻轻接住，但不需要夸张安慰",
+      "base_modules": ["soft_comfort", "blue_calm"],
+      "face_state": "gentle",
+      "action_sequence": "make_soft_comfort"
+    },
+    "清醒": {
+      "description": "想提神、恢复判断力、减少情绪噪声",
+      "base_modules": ["clear_balance", "bitter_focus", "spark_restart"],
+      "face_state": "focused",
+      "action_sequence": "make_cold_start"
+    },
+    "兴奋": {
+      "description": "能量高、表达外放、适合明亮和气泡感",
+      "base_modules": ["bright_bubble", "spark_restart"],
+      "face_state": "happy",
+      "action_sequence": "make_spark_restart"
+    },
+    "犹豫": {
+      "description": "需求不明确、需要保守但不无聊的选择",
+      "base_modules": ["clear_balance", "soft_comfort"],
+      "face_state": "thinking",
+      "action_sequence": "gesture_thinking"
+    }
+  },
+  "blend_rules": [
+    {
+      "name": "主情绪优先",
+      "rule": "当一种情绪权重大于等于 0.6 时，以该情绪的 base_modules 为主，再用次要情绪补充一个模块。"
+    },
+    {
+      "name": "焦虑叠加难过",
+      "rule": "焦虑和难过同时出现时，优先降低刺激感，选择 blue_calm、soft_comfort、clear_balance。"
+    },
+    {
+      "name": "疲惫叠加清醒",
+      "rule": "疲惫但明确想清醒时，保留 bitter_focus 和 spark_restart，但避免过甜。"
+    },
+    {
+      "name": "高能量情绪",
+      "rule": "兴奋权重较高时，可以提高 bright_bubble 和 spark_restart 的占比。"
+    }
+  ],
+  "hidden_drinks": {
+    "冷启动": {
+      "emotion_fit": ["疲惫", "清醒"],
+      "recipe_modules": ["clear_balance", "bitter_focus", "spark_restart"],
+      "flavor_profile": "清爽、微苦、低甜、带轻微气泡感",
+      "color_profile": "透明偏冷调，带一点淡青色",
+      "face_state": "focused",
+      "action_sequence": "make_cold_start"
+    },
+    "软着陆": {
+      "emotion_fit": ["难过", "焦虑"],
+      "recipe_modules": ["soft_comfort", "blue_calm", "clear_balance"],
+      "flavor_profile": "柔和、低酸、低刺激、有一点甜感",
+      "color_profile": "浅蓝紫色或淡粉色",
+      "face_state": "gentle",
+      "action_sequence": "make_soft_comfort"
+    },
+    "气泡重启": {
+      "emotion_fit": ["兴奋", "清醒"],
+      "recipe_modules": ["bright_bubble", "spark_restart", "clear_balance"],
+      "flavor_profile": "明亮、轻酸、气泡感明显",
+      "color_profile": "明亮浅黄色或淡青色",
+      "face_state": "happy",
+      "action_sequence": "make_spark_restart"
+    }
+  },
+  "allowed_recipe_modules": [
+    "blue_calm",
+    "clear_balance",
+    "spark_restart",
+    "soft_comfort",
+    "bright_bubble",
+    "bitter_focus"
+  ],
+  "allowed_face_states": [
+    "idle",
+    "listening",
+    "thinking",
+    "focused",
+    "happy",
+    "gentle",
+    "awkward",
+    "mysterious"
+  ],
+  "allowed_action_sequences": [
+    "make_cold_start",
+    "make_soft_comfort",
+    "make_spark_restart",
+    "serve_only",
+    "gesture_thinking",
+    "gesture_thumb_up",
+    "gesture_shrug"
+  ]
+}
