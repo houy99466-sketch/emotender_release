@@ -10,6 +10,7 @@
 - `bar_chat` 和 `safety` 下允许不正式推荐饮品，`recipe_modules` 可以为空。
 - `recommendation` 下仍要求 `recipe_modules` 非空，继续触发正式饮品推荐。
 - `POST /api/reset` 现在会同步清空会话上下文。
+- 新增外层返回字段 `robot_reply_text`：闲聊模式拼接 `bartender_line` 和 `feedback_prompt`，推荐模式只播放 `bartender_line`。
 
 ## 2026-07-05
 

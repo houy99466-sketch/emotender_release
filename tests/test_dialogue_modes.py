@@ -96,6 +96,24 @@ class DialogueModeTests(unittest.TestCase):
         self.assertNotIn("drink_name", state["history"][0])
         self.assertIn("疲惫", state["summary"])
 
+    def test_robot_reply_text_appends_feedback_prompt_for_bar_chat(self):
+        data = base_result("bar_chat")
+        data["bartender_line"] = "挺好。好心情不用急着花掉。"
+        data["feedback_prompt"] = "这份好心情，是因为什么来的？"
+
+        reply = backend.build_robot_reply_text(data)
+
+        self.assertEqual(reply, "挺好。好心情不用急着花掉。\n这份好心情，是因为什么来的？")
+
+    def test_robot_reply_text_uses_only_bartender_line_for_recommendation(self):
+        data = base_result("recommendation")
+        data["bartender_line"] = "那我做主，给你一杯冷启动。"
+        data["feedback_prompt"] = "喝完告诉我感受。"
+
+        reply = backend.build_robot_reply_text(data)
+
+        self.assertEqual(reply, "那我做主，给你一杯冷启动。")
+
 
 if __name__ == "__main__":
     unittest.main()

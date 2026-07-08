@@ -430,6 +430,16 @@ def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
     }
 
 
+def build_robot_reply_text(control_json: dict) -> str:
+    bartender_line = control_json["bartender_line"].strip()
+    feedback_prompt = control_json["feedback_prompt"].strip()
+
+    if control_json["turn_type"] == "bar_chat" and feedback_prompt:
+        return f"{bartender_line}\n{feedback_prompt}"
+
+    return bartender_line
+
+
 def run_pipeline() -> dict:
     user_text = transcribe_audio(AUDIO_PATH)
     turn_type = route_turn_type(user_text)
@@ -455,6 +465,7 @@ def run_pipeline() -> dict:
         "user_text": user_text,
         "turn_type": turn_type,
         "control_json": result,
+        "robot_reply_text": build_robot_reply_text(result),
         "conversation_state": get_conversation_state(),
         "used_fallback": used_fallback,
         "llm_error": llm_error,

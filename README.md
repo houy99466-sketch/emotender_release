@@ -183,6 +183,7 @@ GET  /
     "action_sequence": "make_soft_comfort",
     "feedback_prompt": "喝完告诉我，它是让你稳定了一点，还是还需要更清爽。"
   },
+  "robot_reply_text": "我先给你一杯柔和一点的，让节奏慢下来。",
   "conversation_state": {
     "summary": "第1轮：recommendation；用户情绪=难过和焦虑；需求=需要一杯柔和、低刺激、稳定情绪的饮品。",
     "history": [
@@ -207,6 +208,11 @@ GET  /
 ## 对话模式和上下文
 
 当前后端每轮都会输出 `control_json`，用于驱动机器人表情、动作和台词。
+
+外层返回的 `robot_reply_text` 是推荐给机器人语音或显示端直接播放的文本：
+
+1. `bar_chat`：`robot_reply_text` 会拼接 `bartender_line` 和 `feedback_prompt`，让闲聊更连续。
+2. `recommendation` 和 `safety`：`robot_reply_text` 只使用 `bartender_line`。
 
 `turn_type` 有三种主要状态：
 
