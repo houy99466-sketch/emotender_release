@@ -55,19 +55,12 @@
 
   .neon-path {
     fill:none; stroke:var(--neon-color) !important;
-    stroke-width:14; stroke-linecap:round; stroke-linejoin:round;
-    /* 无模糊外光晕，纯色平涂LED发光线条 */
+    stroke-width:12; stroke-linecap:round; stroke-linejoin:round;
+    filter:drop-shadow(0 0 8px var(--neon-color));
   }
   .neon-fill {
     fill:var(--neon-color) !important;
-    /* 无模糊外光晕，纯色平涂LED发光 */
-  }
-  .neon-path-thin {
-    fill:none; stroke:var(--neon-color) !important;
-    stroke-width:5; stroke-linecap:round; stroke-linejoin:round;
-  }
-  .neon-fill-dot {
-    fill:var(--neon-color) !important;
+    filter:drop-shadow(0 0 8px var(--neon-color));
   }
   #face-state-label { color:var(--neon-color); opacity:0.55; transition:color 0.3s ease; }
 
@@ -87,84 +80,85 @@
     opacity:1 !important; visibility:visible !important; transform:scale(1) !important;
   }
 
-  /* ===== LED PIXEL FACE ANIMATIONS (赛博极简，纯色平涂，无外光晕) ===== */
-
-  /* 清醒：瞳孔呼吸式明暗 */
-  @keyframes qx-breathe {
-    0%,100%{opacity:0.55}
-    50%{opacity:1}
+  /* ===== 3-4s ANTHROPOMORPHIC KEYFRAMES (updated origins) ===== */
+  @keyframes pb-l-anim {
+    0%,50%,100%{transform:scaleY(1)}
+    65%{transform:scaleY(0.05)}
+    72%{transform:scaleY(1.25)}
   }
-  .qx-eye-l, .qx-eye-r { animation:qx-breathe 4s infinite ease-in-out; }
-  .qx-mouth { animation:qx-breathe 4s infinite ease-in-out; }
-
-  /* 兴奋：笑眼闪烁 + 嘴巴弹性张合 */
-  @keyframes xf-blink {
-    0%,100%{opacity:1}
-    48%{opacity:1}
-    52%{opacity:0.15}
-    56%{opacity:1}
+  @keyframes pb-m-anim {
+    0%,100%{transform:scale(1)}
+    60%{transform:scaleX(0.85) scaleY(1.2)}
   }
-  @keyframes xf-mouth-bounce {
+  .pb-eye-l { animation:pb-l-anim 3.5s infinite ease-in-out; transform-origin:110px 160px; }
+  .pb-eye-r { animation:pb-l-anim 3.5s infinite ease-in-out; transform-origin:290px 160px; }
+  .pb-mouth { animation:pb-m-anim 3.5s infinite ease-in-out; transform-origin:200px 275px; }
+
+  @keyframes ng-e-anim {
+    0%,100%{transform:scale(1)}
+    50%{transform:scale(1.05);filter:drop-shadow(0 0 12px var(--neon-color))}
+  }
+  @keyframes ng-t-anim {
+    0%{stroke-dashoffset:0}
+    100%{stroke-dashoffset:-30}
+  }
+  @keyframes ng-m-anim {
+    0%,100%{transform:translateY(0) scaleY(1)}
+    50%{transform:translateY(3px) scaleY(0.85)}
+  }
+  .ng-eye-l { animation:ng-e-anim 3s infinite ease-in-out; transform-origin:110px 160px; }
+  .ng-eye-r { animation:ng-e-anim 3s infinite ease-in-out; transform-origin:290px 160px; }
+  .ng-tear { animation:ng-t-anim 1s infinite linear; }
+  .ng-mouth { animation:ng-m-anim 0.5s infinite ease-in-out; transform-origin:200px 275px; }
+
+  @keyframes jl-e-l-anim {
+    0%,100%{transform:translate(0,0)}
+    25%{transform:translate(-5px,2px)}
+    75%{transform:translate(4px,-3px)}
+  }
+  @keyframes jl-e-r-anim {
+    0%,100%{transform:translate(0,0)}
+    25%{transform:translate(-3px,-2px)}
+    75%{transform:translate(5px,4px)}
+  }
+  @keyframes jl-m-anim {
+    0%,100%{transform:translateX(0)}
+    50%{transform:translateX(-3px) skewX(-4deg)}
+  }
+  .jl-eye-l { animation:jl-e-l-anim 0.25s infinite linear; }
+  .jl-eye-r { animation:jl-e-r-anim 0.25s infinite linear; }
+  .jl-mouth { animation:jl-m-anim 0.08s infinite linear; }
+
+  @keyframes qx-e-anim {
+    0%,100%{transform:scaleX(1);opacity:0.6}
+    50%{transform:scaleX(1.08);opacity:1;filter:drop-shadow(0 0 15px var(--neon-color))}
+  }
+  .qx-eye-l { animation:qx-e-anim 4s infinite ease-in-out; transform-origin:110px 160px; }
+  .qx-eye-r { animation:qx-e-anim 4s infinite ease-in-out; transform-origin:290px 160px; }
+
+  @keyframes xf-e-anim {
     0%,100%{transform:scaleY(1)}
-    50%{transform:scaleY(1.12)}
+    50%{transform:scaleY(0.65) translateY(3px)}
   }
-  .xf-eye-l, .xf-eye-r { animation:xf-blink 2.5s infinite ease-in-out; }
-  .xf-mouth { animation:xf-mouth-bounce 0.6s infinite ease-in-out; transform-origin:200px 265px; }
+  @keyframes xf-m-anim {
+    0%,100%{transform:scale(0.92)}
+    50%{transform:scale(1.08)}
+  }
+  .xf-eye-l { animation:xf-e-anim 0.45s infinite ease-in-out; transform-origin:110px 160px; }
+  .xf-eye-r { animation:xf-e-anim 0.45s infinite ease-in-out; transform-origin:290px 160px; }
+  .xf-mouth { animation:xf-m-anim 0.45s infinite ease-in-out; transform-origin:200px 275px; }
 
-  /* 难过：眼睑微微颤动 + 嘴巴缓慢下沉 */
-  @keyframes ng-quiver {
-    0%,100%{transform:translateY(0)}
-    50%{transform:translateY(2px)}
+  @keyframes yy-e-l-anim {
+    0%,100%{transform:scale(1)}
+    50%{transform:scale(0.8)}
   }
-  @keyframes ng-mouth-sink {
-    0%,100%{transform:translateY(0)}
-    50%{transform:translateY(3px)}
+  @keyframes yy-e-r-anim {
+    0%{transform:rotate(0deg)}
+    100%{transform:rotate(360deg)}
   }
-  .ng-eye-l, .ng-eye-r { animation:ng-quiver 2.5s infinite ease-in-out; }
-  .ng-mouth { animation:ng-mouth-sink 3s infinite ease-in-out; }
-
-  /* 疲惫：眼皮缓慢垂落 + 嘴巴微张 */
-  @keyframes pb-droop {
-    0%,100%{transform:translateY(0)}
-    60%{transform:translateY(4px)}
-  }
-  @keyframes pb-mouth-yawn {
-    0%,100%{transform:scaleX(1)}
-    50%{transform:scaleX(0.85)}
-  }
-  .pb-lid-l, .pb-lid-r { animation:pb-droop 4s infinite ease-in-out; }
-  .pb-eye-l, .pb-eye-r { animation:pb-droop 4s infinite ease-in-out; }
-  .pb-mouth { animation:pb-mouth-yawn 5s infinite ease-in-out; transform-origin:200px 286px; }
-
-  /* 焦虑：眼球微颤 + 嘴巴快速抖动 */
-  @keyframes jl-twitch {
-    0%,100%{transform:translate(0,0)}
-    20%{transform:translate(-3px,1px)}
-    40%{transform:translate(2px,-2px)}
-    60%{transform:translate(-1px,2px)}
-    80%{transform:translate(3px,-1px)}
-  }
-  @keyframes jl-mouth-jitter {
-    0%,100%{transform:translateX(0)}
-    25%{transform:translateX(-2px)}
-    75%{transform:translateX(2px)}
-  }
-  .jl-eye-l, .jl-eye-r { animation:jl-twitch 0.35s infinite linear; }
-  .jl-brow-l, .jl-brow-r { animation:jl-twitch 0.35s infinite linear; }
-  .jl-mouth { animation:jl-mouth-jitter 0.15s infinite linear; }
-
-  /* 犹豫：斜眼缓慢漂移 + 嘴巴轻微左右摆 */
-  @keyframes yy-drift {
-    0%,100%{transform:translate(0,0)}
-    50%{transform:translate(3px,1px)}
-  }
-  @keyframes yy-mouth-waver {
-    0%,100%{transform:translateX(0)}
-    50%{transform:translateX(3px)}
-  }
-  .yy-eye-l { animation:yy-drift 3s infinite ease-in-out; }
-  .yy-eye-r { animation:yy-drift 3s infinite ease-in-out 0.5s; }
-  .yy-mouth { animation:yy-mouth-waver 2.5s infinite ease-in-out; }
+  .yy-eye-l { animation:yy-e-l-anim 2s infinite ease-in-out; transform-origin:110px 160px; }
+  .yy-eye-r { animation:yy-e-r-anim 5s infinite linear; transform-origin:290px 160px; }
+  .yy-mouth { animation:ng-e-anim 2s infinite ease-in-out; transform-origin:200px 275px; }
 
   @media (max-width: 1024px) { .main-layout { flex-direction: column !important; } }
 
@@ -206,53 +200,52 @@
   <div class="flex items-center justify-center" style="flex: 1 1 45%; min-width: 0;">
     <div id="crt-screen" data-emotion="清醒" style="position: relative; width: 400px; height: 400px; background-color: #000000 !important; overflow: hidden;">
       <svg viewBox="0 0 400 400" style="width: 100%; height: 100%;">
-        <!-- 纯色平涂LED风格，无需滤镜 -->
+        <defs>
+          <filter id="oled-glow" x="-10%" y="-10%" width="120%" height="120%">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
         <rect x="0" y="0" width="400" height="400" fill="#000000"/>
 
-        <!-- 1. 清醒：两个规整圆形亮白点眼珠 + 横向平直细短线嘴巴，冷静沉稳 -->
         <g id="group-qx" class="pixel-face-group">
-          <circle class="neon-fill-dot qx-eye-l" cx="155" cy="180" r="14"/>
-          <circle class="neon-fill-dot qx-eye-r" cx="245" cy="180" r="14"/>
-          <line class="neon-path-thin qx-mouth" x1="175" y1="275" x2="225" y2="275"/>
+          <rect class="neon-fill qx-eye-l" x="75" y="151" width="70" height="18" rx="9"/>
+          <rect class="neon-fill qx-eye-r" x="255" y="151" width="70" height="18" rx="9"/>
+          <rect class="neon-fill" x="120" y="270" width="160" height="14" rx="7"/>
         </g>
 
-        <!-- 2. 兴奋：两道大幅度上扬圆弧笑眼 + 舒展宽阔上扬弧线嘴巴 -->
-        <g id="group-xf" class="pixel-face-group">
-          <path class="neon-path xf-eye-l" d="M115,195 Q155,150 195,195"/>
-          <path class="neon-path xf-eye-r" d="M205,195 Q245,150 285,195"/>
-          <path class="neon-path xf-mouth" d="M130,265 Q200,220 270,265"/>
-        </g>
-
-        <!-- 3. 难过：上眼睑向上拱起耷拉，双眼倒弯弧线 + 嘴巴向下凹陷弯曲 -->
-        <g id="group-ng" class="pixel-face-group">
-          <path class="neon-path ng-eye-l" d="M115,185 Q155,220 195,185"/>
-          <path class="neon-path ng-eye-r" d="M205,185 Q245,220 285,185"/>
-          <path class="neon-path ng-mouth" d="M145,295 Q200,315 255,295"/>
-        </g>
-
-        <!-- 4. 疲惫：眼皮向下垂落浅淡弧形 + 双眼微微下压 + 嘴巴平缓下弯短弧线 -->
         <g id="group-pb" class="pixel-face-group">
-          <path class="neon-path pb-lid-l" d="M115,175 Q155,195 195,175"/>
-          <path class="neon-path pb-lid-r" d="M205,175 Q245,195 285,175"/>
-          <line class="neon-path-thin pb-eye-l" x1="130" y1="200" x2="180" y2="200"/>
-          <line class="neon-path-thin pb-eye-r" x1="220" y1="200" x2="270" y2="200"/>
-          <path class="neon-path pb-mouth" d="M175,280 Q200,292 225,280"/>
+          <path class="neon-path pb-eye-l" d="M70,170 Q110,195 150,170"/>
+          <path class="neon-path pb-eye-r" d="M250,170 Q290,195 330,170"/>
+          <rect class="neon-fill pb-mouth" x="175" y="240" width="50" height="65" rx="22"/>
         </g>
 
-        <!-- 5. 焦虑：双眼向内紧绷收拢 + 眉眼褶皱波浪细纹 + 嘴巴小幅扭曲短波浪线 -->
+        <g id="group-ng" class="pixel-face-group">
+          <path class="neon-path ng-eye-l" d="M75,185 Q112,160 150,185"/>
+          <path class="neon-path ng-eye-r" d="M250,185 Q287,160 325,185"/>
+          <path class="neon-path ng-mouth" d="M120,295 Q200,235 280,295"/>
+          <path class="neon-path ng-tear" d="M85,195 L85,260 M315,195 L315,260" stroke-dasharray="10,6"/>
+        </g>
+
         <g id="group-jl" class="pixel-face-group">
-          <line class="neon-path jl-eye-l" x1="125" y1="175" x2="185" y2="198"/>
-          <line class="neon-path jl-eye-r" x1="275" y1="175" x2="215" y2="198"/>
-          <path class="neon-path-thin jl-brow-l" d="M120,152 Q130,145 140,152 Q150,159 160,152 Q170,145 180,152"/>
-          <path class="neon-path-thin jl-brow-r" d="M280,152 Q270,145 260,152 Q250,159 240,152 Q230,145 220,152"/>
-          <path class="neon-path jl-mouth" d="M170,280 Q180,272 190,280 Q200,288 210,280 Q220,272 230,280"/>
+          <path class="neon-path jl-eye-l" d="M80,155 L145,185"/>
+          <path class="neon-path jl-eye-r" d="M320,155 L255,185"/>
+          <path class="neon-path jl-mouth" d="M120,280 L145,295 L170,280 L200,295 L230,280 L255,295 L280,280"/>
         </g>
 
-        <!-- 6. 犹豫：一只眼睛平缓 + 另一只微微斜垂 + 嘴巴轻微左右起伏短波浪线 -->
+        <g id="group-xf" class="pixel-face-group">
+          <path class="neon-path xf-eye-l" d="M70,180 Q110,135 150,180"/>
+          <path class="neon-path xf-eye-r" d="M250,180 Q290,135 330,180"/>
+          <rect class="neon-fill xf-mouth" x="130" y="240" width="140" height="60" rx="30"/>
+        </g>
+
         <g id="group-yy" class="pixel-face-group">
-          <line class="neon-path yy-eye-l" x1="125" y1="185" x2="190" y2="185"/>
-          <line class="neon-path yy-eye-r" x1="210" y1="185" x2="275" y2="202"/>
-          <path class="neon-path yy-mouth" d="M168,275 Q178,266 188,275 Q198,284 208,275 Q218,266 228,275"/>
+          <rect class="neon-fill yy-eye-l" x="80" y="140" width="55" height="55" rx="8"/>
+          <rect class="neon-path yy-eye-r" x="255" y="135" width="55" height="55" rx="8"/>
+          <circle class="neon-fill yy-mouth" cx="170" cy="275" r="14"/>
         </g>
       </svg>
       <div id="face-state-label" style="position: absolute; bottom: -30px; left: 50%; transform: translateX(-50%); z-index: 20; font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 0.2em; color: var(--neon-color); opacity: 0.55; text-transform: uppercase; transition: color 0.3s ease;">
@@ -534,116 +527,6 @@ function init(){
   var ns=document.getElementById("need-summary-text");if(ns)ns.innerHTML='<span class="text-white/30">-- pending --</span>';
   renderFlavors([]);
 }
-
-// ===== MOCK DEBUG: 键盘数字键 1-6 注入伪造载荷 =====
-const MOCK_PAYLOADS = {
-  "1": {
-    schema_version: "1.0", turn_type: "recommendation",
-    user_text: "[MOCK] 清醒测试", emotion_label: "清醒",
-    emotion_blend: [{ emotion: "清醒", weight: 1.0 }],
-    complex_emotion: "精神集中，状态在线。",
-    need_summary: "需要一杯清爽低甜的饮品保持清醒。",
-    drink_name: "冷启动",
-    recipe_modules: ["clear_balance", "bitter_focus", "spark_restart"],
-    flavor_profile: "微苦清爽",
-    color_profile: "透明偏冷调，带一点淡青色",
-    face_state: "focused",
-    bartender_line: "（本地测试）系统高能自检中，请下达指令。",
-    action_sequence: "make_cold_start",
-    feedback_prompt: "感觉怎么样？还需要调整吗？"
-  },
-  "2": {
-    schema_version: "1.0", turn_type: "recommendation",
-    user_text: "[MOCK] 兴奋测试", emotion_label: "兴奋",
-    emotion_blend: [{ emotion: "兴奋", weight: 1.0 }],
-    complex_emotion: "情绪高涨，充满活力。",
-    need_summary: "需要一杯充满气泡感的庆祝饮品。",
-    drink_name: "气泡重启",
-    recipe_modules: ["bright_bubble", "spark_restart"],
-    flavor_profile: "酸甜气泡",
-    color_profile: "明亮霓虹绿",
-    face_state: "happy",
-    bartender_line: "（本地测试）今天真是太棒了！来杯气泡轰炸吧！",
-    action_sequence: "make_spark_restart",
-    feedback_prompt: "好喝吗？还想再来点别的吗？"
-  },
-  "3": {
-    schema_version: "1.0", turn_type: "recommendation",
-    user_text: "[MOCK] 难过测试", emotion_label: "难过",
-    emotion_blend: [{ emotion: "难过", weight: 1.0 }],
-    complex_emotion: "情绪低落，需要安抚。",
-    need_summary: "需要一杯柔和、低刺激、温暖的饮品。",
-    drink_name: "软着陆",
-    recipe_modules: ["soft_comfort", "blue_calm"],
-    flavor_profile: "低酸柔和",
-    color_profile: "浅蓝紫色",
-    face_state: "gentle",
-    bartender_line: "（本地测试）没关系的，慢慢来，先喝杯热的吧。",
-    action_sequence: "make_soft_comfort",
-    feedback_prompt: "有没有感觉好一点点？"
-  },
-  "4": {
-    schema_version: "1.0", turn_type: "bar_chat",
-    user_text: "[MOCK] 疲惫测试", emotion_label: "疲惫",
-    emotion_blend: [{ emotion: "疲惫", weight: 1.0 }],
-    complex_emotion: "身心俱疲，精力见底。",
-    need_summary: "需要被接住，不急着推荐。",
-    drink_name: "无正式推荐",
-    recipe_modules: [],
-    flavor_profile: "无正式推荐",
-    color_profile: "无正式推荐",
-    face_state: "gentle",
-    bartender_line: "（本地测试）哈啊……能量有点低，我想静静。",
-    action_sequence: "gesture_thinking",
-    feedback_prompt: "你愿意的话，可以再说一点。"
-  },
-  "5": {
-    schema_version: "1.0", turn_type: "bar_chat",
-    user_text: "[MOCK] 焦虑测试", emotion_label: "焦虑",
-    emotion_blend: [{ emotion: "焦虑", weight: 1.0 }],
-    complex_emotion: "心神不宁，心跳加快。",
-    need_summary: "需要稳定节奏，不推荐酒精。",
-    drink_name: "无正式推荐",
-    recipe_modules: [],
-    flavor_profile: "无正式推荐",
-    color_profile: "无正式推荐",
-    face_state: "focused",
-    bartender_line: "（本地测试）心跳好快……节奏乱了，快让我稳定下来。",
-    action_sequence: "serve_only",
-    feedback_prompt: "深呼吸，我在这里。"
-  },
-  "6": {
-    schema_version: "1.0", turn_type: "bar_chat",
-    user_text: "[MOCK] 犹豫测试", emotion_label: "犹豫",
-    emotion_blend: [{ emotion: "犹豫", weight: 1.0 }],
-    complex_emotion: "选择困难，左右摇摆。",
-    need_summary: "需要更多时间考虑，不急着决定。",
-    drink_name: "无正式推荐",
-    recipe_modules: [],
-    flavor_profile: "无正式推荐",
-    color_profile: "无正式推荐",
-    face_state: "thinking",
-    bartender_line: "（本地测试）唔……这个听起来不错，那个好像也可以？",
-    action_sequence: "gesture_thinking",
-    feedback_prompt: "不着急，慢慢想。"
-  }
-};
-
-document.addEventListener("keydown", function(e) {
-  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
-  var key = e.key;
-  if (MOCK_PAYLOADS[key]) {
-    e.preventDefault();
-    var payload = MOCK_PAYLOADS[key];
-    console.log("[EmoTender MOCK] 按键 " + key + " -> 注入伪造载荷: " + payload.emotion_label);
-    window.updateTenderState(payload);
-
-    var te = document.getElementById("typed-text");
-    if (te) { te.textContent = ""; typeText(payload.bartender_line); }
-
-    setSystemStatus(payload.turn_type || "serving");
-  }
-});
 
 document.addEventListener("DOMContentLoaded",init);
 </script>
