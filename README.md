@@ -5,9 +5,10 @@
 1. 浏览器页面点击 Start 开始录音。
 2. 点击 Stop 停止录音。
 3. 本地 FunASR 把 `recording.wav` 转成文字。
-4. LLM 根据 prompt 库输出结构化 JSON。
-5. 后端校验 JSON，并返回给页面。
-6. 如果 LLM 输出异常，后端返回内置 fallback 控制 JSON，保证流程不中断。
+4. 后端根据用户文本进入 `bar_chat`、`recommendation` 或 `safety`。
+5. LLM 根据 prompt 库、会话上下文和当前模式输出结构化 JSON。
+6. 后端校验 JSON，并返回给页面。
+7. 如果 LLM 输出异常，后端返回内置 fallback 控制 JSON，保证流程不中断。
 
 ## 文件结构
 
@@ -142,6 +143,8 @@ http://127.0.0.1:8000/
 2. Stop：停止录音并执行 ASR + LLM 分析。
 3. Reset：重置当前状态。
 
+`Reset` 会同时清空当前会话上下文。
+
 ## API
 
 ```text
@@ -159,9 +162,10 @@ GET  /
   "ok": true,
   "audio_path": "/home/sysu/asr_test/recording.wav",
   "user_text": "我有点难过，但是也有点焦虑，我想稳定下来。",
+  "turn_type": "recommendation",
   "control_json": {
     "schema_version": "1.0",
-    "turn_type": "initial_order",
+    "turn_type": "recommendation",
     "user_text": "我有点难过，但是也有点焦虑，我想稳定下来。",
     "emotion_label": "难过和焦虑",
     "emotion_blend": [
@@ -179,10 +183,56 @@ GET  /
     "action_sequence": "make_soft_comfort",
     "feedback_prompt": "喝完告诉我，它是让你稳定了一点，还是还需要更清爽。"
   },
+  "conversation_state": {
+    "summary": "第1轮：recommendation；用户情绪=难过和焦虑；需求=需要一杯柔和、低刺激、稳定情绪的饮品。",
+    "history": [
+      {
+        "turn_type": "recommendation",
+        "user_text": "我有点难过，但是也有点焦虑，我想稳定下来。",
+        "emotion_label": "难过和焦虑",
+        "need_summary": "需要一杯柔和、低刺激、稳定情绪的饮品。",
+        "face_state": "gentle",
+        "action_sequence": "make_soft_comfort",
+        "bartender_line": "我先给你一杯柔和一点的，让节奏慢下来。",
+        "drink_name": "软着陆",
+        "recipe_modules": ["soft_comfort", "blue_calm", "clear_balance"]
+      }
+    ]
+  },
   "used_fallback": false,
   "llm_error": null
 }
 ```
+
+## 对话模式和上下文
+
+当前后端每轮都会输出 `control_json`，用于驱动机器人表情、动作和台词。
+
+`turn_type` 有三种主要状态：
+
+1. `bar_chat`：闲聊模式。记录顾客情绪，输出 `face_state`、`action_sequence` 和 `bartender_line`，但不正式推荐酒。
+2. `recommendation`：推荐模式。输出饮品、配方模块、风味、颜色、表情、动作和台词。
+3. `safety`：安全边界。不给酒精推荐，优先输出温和拒绝、无酒精处理和安全动作。
+
+`bar_chat` 和 `safety` 下允许：
+
+```json
+"drink_name": "无正式推荐",
+"recipe_modules": [],
+"flavor_profile": "无正式推荐",
+"color_profile": "无正式推荐"
+```
+
+`recommendation` 下 `recipe_modules` 仍然必须非空。
+
+后端会在内存里维护当前会话：
+
+```text
+conversation_history
+conversation_summary
+```
+
+LLM 每轮都会拿到会话摘要和最近几轮历史。后端重启或调用 `POST /api/reset` 后，上下文会清空。
 
 ## Prompt 库怎么改
 

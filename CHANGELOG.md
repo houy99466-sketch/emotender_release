@@ -2,6 +2,15 @@
 
 后续每次改动都请在这里记录，方便队友同步。
 
+## 2026-07-08
+
+- 新增 `bar_chat`、`recommendation`、`safety` 三类对话模式路由。
+- 新增内存会话上下文：`conversation_history` 和 `conversation_summary`。
+- LLM 每轮都会输出 `control_json`，用于驱动表情、动作和台词。
+- `bar_chat` 和 `safety` 下允许不正式推荐饮品，`recipe_modules` 可以为空。
+- `recommendation` 下仍要求 `recipe_modules` 非空，继续触发正式饮品推荐。
+- `POST /api/reset` 现在会同步清空会话上下文。
+
 ## 2026-07-05
 
 - 初始发布 EmoTender Speech AI Control Backend。
