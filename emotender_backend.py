@@ -378,6 +378,11 @@ def validate_result(data: dict) -> None:
 
 
 def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
+    """内置熔断兜底：LLM 链路断开或输出非法 JSON 时，返回完整 Schema v1.0 安全字典。
+    
+    闲聊/安全模式 -> 点亮【疲惫】gentle 表情，不推荐饮品。
+    推荐模式     -> 点亮【清醒】focused 表情，推荐标志性"冷启动"。
+    """
     if turn_type in CHAT_ONLY_TURN_TYPES:
         return {
             "schema_version": "1.0",
@@ -385,19 +390,16 @@ def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
             "user_text": user_text,
             "emotion_label": "疲惫",
             "emotion_blend": [
-                {
-                    "emotion": "疲惫",
-                    "weight": 1.0,
-                }
+                {"emotion": "疲惫", "weight": 1.0}
             ],
-            "complex_emotion": "无法稳定解析用户情绪时，先保持低刺激、可继续对话的状态。",
-            "need_summary": "需要被接住，而不是立刻被推荐饮品。",
+            "complex_emotion": "大模型链路超载，触发酒馆全息自检保护协议。",
+            "need_summary": "系统自检中，需要被接住而不是立刻推荐饮品。",
             "drink_name": NO_FORMAL_DRINK_NAME,
             "recipe_modules": [],
             "flavor_profile": NO_FORMAL_DRINK_NAME,
             "color_profile": NO_FORMAL_DRINK_NAME,
             "face_state": "gentle",
-            "bartender_line": "我听到了。先不急着给你推荐酒，你可以继续说。",
+            "bartender_line": "（安全协议启动）我的核心大脑似乎开了一会儿小差，不过别担心，你先缓一缓，我马上回来。",
             "action_sequence": "gesture_thinking" if turn_type == "bar_chat" else "serve_only",
             "feedback_prompt": "你愿意的话，可以再说一点。",
         }
@@ -408,25 +410,21 @@ def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
         "user_text": user_text,
         "emotion_label": "清醒",
         "emotion_blend": [
-            {
-                "emotion": "清醒",
-                "weight": 1.0,
-            }
+            {"emotion": "清醒", "weight": 1.0}
         ],
-        "complex_emotion": "无法稳定解析用户情绪时，先进入清醒、克制、低风险的默认状态。",
-        "need_summary": "需要一杯低甜、清爽、稳定注意力的饮品。",
+        "complex_emotion": "大模型链路超载，触发酒馆全息自检保护协议。",
+        "need_summary": "系统自检，需要一杯清爽低甜的特调冷启动。",
         "drink_name": "冷启动",
         "recipe_modules": [
             "clear_balance",
             "bitter_focus",
-            "spark_restart",
         ],
         "flavor_profile": "清爽、微苦、低甜、带轻微气泡感",
         "color_profile": "透明偏冷调，带一点淡青色",
         "face_state": "focused",
-        "bartender_line": "我先给你一杯清醒、低甜、微苦的冷启动，等你状态稳定一点再细调。",
+        "bartender_line": "（安全协议启动）我的核心大脑似乎开了一会儿小差，不过别担心，我先为你推荐一杯标志性的'冷启动'，让我们重新连接。",
         "action_sequence": "make_cold_start",
-        "feedback_prompt": "喝完告诉我，它是刚好让你清醒，还是需要再柔和一点。",
+        "feedback_prompt": "喝完感觉清醒一点了吗？",
     }
 
 
@@ -578,143 +576,10 @@ def reset():
 
 @app.get("/", response_class=HTMLResponse)
 def index():
-    return """
-<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8" />
-  <title>EmoTender Voice Test</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 40px;
-      background: #f6f7f9;
-      color: #1f2933;
-    }
-    h1 {
-      margin-bottom: 24px;
-    }
-    .panel {
-      background: white;
-      border: 1px solid #d9dee7;
-      border-radius: 8px;
-      padding: 24px;
-      max-width: 900px;
-    }
-    button {
-      font-size: 18px;
-      padding: 12px 22px;
-      margin-right: 12px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    #startBtn {
-      background: #2563eb;
-      color: white;
-    }
-    #stopBtn {
-      background: #dc2626;
-      color: white;
-    }
-    #resetBtn {
-      background: #4b5563;
-      color: white;
-    }
-    .status {
-      margin-top: 24px;
-      padding: 16px;
-      background: #eef2ff;
-      border-left: 5px solid #2563eb;
-      font-size: 20px;
-      font-weight: bold;
-    }
-    pre {
-      margin-top: 24px;
-      padding: 16px;
-      background: #111827;
-      color: #d1fae5;
-      border-radius: 8px;
-      overflow-x: auto;
-      min-height: 220px;
-      white-space: pre-wrap;
-    }
-  </style>
-</head>
-<body>
-  <div class="panel">
-    <h1>EmoTender Voice Test</h1>
-
-    <button id="startBtn" onclick="startRecording()">Start</button>
-    <button id="stopBtn" onclick="stopRecording()">Stop</button>
-    <button id="resetBtn" onclick="resetSystem()">Reset</button>
-
-    <div class="status" id="statusBox">状态：空闲</div>
-
-    <pre id="resultBox">结果会显示在这里。</pre>
-  </div>
-
-  <script>
-    const statusBox = document.getElementById("statusBox");
-    const resultBox = document.getElementById("resultBox");
-
-    function setStatus(text) {
-      statusBox.textContent = "状态：" + text;
-    }
-
-    function setResult(data) {
-      resultBox.textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function callApi(path) {
-      const response = await fetch(path, { method: "POST" });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw data;
-      }
-
-      return data;
-    }
-
-    async function startRecording() {
-      try {
-        setStatus("正在输入，请开始说话");
-        resultBox.textContent = "录音中...";
-        const data = await callApi("/api/voice/start");
-        setResult(data);
-        setStatus("正在输入，请说话，说完后点击 Stop");
-      } catch (err) {
-        setStatus("开始录音失败");
-        setResult(err);
-      }
-    }
-
-    async function stopRecording() {
-      try {
-        setStatus("正在停止录音并分析，请稍等");
-        resultBox.textContent = "正在进行语音转文字和 AI 分析...";
-        const data = await callApi("/api/voice/stop");
-        setResult(data);
-        setStatus("完成");
-      } catch (err) {
-        setStatus("停止或分析失败");
-        setResult(err);
-      }
-    }
-
-    async function resetSystem() {
-      try {
-        setStatus("正在重置");
-        const data = await callApi("/api/reset");
-        setResult(data);
-        setStatus("空闲");
-      } catch (err) {
-        setStatus("重置失败");
-        setResult(err);
-      }
-    }
-  </script>
-</body>
-</html>
-"""
+    index_path = BASE_DIR / "static" / "index.html"
+    if not index_path.exists():
+        return HTMLResponse(
+            content="<h1>Error: static/index.html not found</h1>",
+            status_code=500,
+        )
+    return HTMLResponse(content=index_path.read_text(encoding="utf-8"))

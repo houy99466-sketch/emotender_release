@@ -5,10 +5,12 @@ RELEASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TARGET_DIR="${HOME}/asr_test"
 
 mkdir -p "${TARGET_DIR}/prompts"
+mkdir -p "${TARGET_DIR}/static"
 
 cp "${RELEASE_DIR}/emotender_backend.py" "${TARGET_DIR}/emotender_backend.py"
 cp "${RELEASE_DIR}/prompts/drink_mapping.json" "${TARGET_DIR}/prompts/drink_mapping.json"
 cp "${RELEASE_DIR}/requirements.txt" "${TARGET_DIR}/requirements.txt"
+cp "${RELEASE_DIR}/static/index.html" "${TARGET_DIR}/static/index.html"
 
 if [ ! -f "${TARGET_DIR}/.env" ]; then
   cp "${RELEASE_DIR}/.env.example" "${TARGET_DIR}/.env"
