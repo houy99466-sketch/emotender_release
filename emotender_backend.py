@@ -1,10 +1,19 @@
 import json
+import logging
 import os
 import signal
 import subprocess
 import time
 from pathlib import Path
 from typing import Optional
+
+# Structured logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("emotender")
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -23,6 +32,8 @@ recording_process: Optional[subprocess.Popen] = None
 last_result: Optional[dict] = None
 conversation_history: list[dict] = []
 conversation_summary = ""
+emotion_history: list[str] = []  # Track emotion trend across turns
+MAX_EMOTION_HISTORY = 5
 
 MAX_HISTORY_ITEMS = 8
 MAX_SUMMARY_CHARS = 1200
@@ -124,9 +135,11 @@ def get_conversation_state() -> dict:
 
 
 def reset_conversation_state() -> None:
-    global conversation_summary
+    global conversation_summary, emotion_history
     conversation_history.clear()
     conversation_summary = ""
+    emotion_history.clear()
+    logger.info("会话状态已重置")
 
 
 def update_conversation_state(data: dict) -> None:
@@ -147,6 +160,9 @@ def update_conversation_state(data: dict) -> None:
         item["recipe_modules"] = data["recipe_modules"]
 
     conversation_history.append(item)
+    emotion_history.append(data["emotion_label"])
+    if len(emotion_history) > MAX_EMOTION_HISTORY:
+        emotion_history.pop(0)
 
     if len(conversation_history) > MAX_HISTORY_ITEMS:
         del conversation_history[:-MAX_HISTORY_ITEMS]
@@ -168,10 +184,13 @@ def update_conversation_state(data: dict) -> None:
 
 
 def transcribe_audio(wav_path: Path) -> str:
+    logger.info(f"开始语音识别: {wav_path}")
     result = ASR_MODEL.generate(input=str(wav_path))
     text = result[0].get("text", "").strip()
-    if not text:
-        raise RuntimeError("ASR returned empty text")
+    if not text or len(text) < 2:
+        logger.warning(f"静默或过短语音: '{text}'")
+        raise RuntimeError("silence_detected")
+    logger.info(f"识别结果: {text}")
     return text
 
 
@@ -192,6 +211,13 @@ def analyze_text(user_text: str, turn_type: str) -> dict:
     with open(PROMPT_LIBRARY_PATH, "r", encoding="utf-8") as f:
         prompt_library = json.load(f)
     recent_history = get_recent_history()
+
+    # Build emotion trend
+    emotion_trend = ""
+    if len(emotion_history) >= 2:
+        trend_labels = emotion_history[-3:] if len(emotion_history) >= 3 else emotion_history
+        emotion_trend = f"\n用户情绪变化趋势（最近{len(trend_labels)}轮）：{' → '.join(trend_labels)}。请根据趋势判断用户情绪走向，据此调整你的回应。"
+
     prompt = f"""
 你是 EmoTender 情绪酒保的 AI 中控分析模块。
 你的角色是老柯 / Alex Cole，38岁，12年调酒师。
@@ -212,6 +238,7 @@ def analyze_text(user_text: str, turn_type: str) -> dict:
 
 会话摘要：
 {conversation_summary or "暂无"}
+{emotion_trend}
 
 最近对话历史：
 {json.dumps(recent_history, ensure_ascii=False, indent=2)}
@@ -253,17 +280,32 @@ face_state, bartender_line, action_sequence, feedback_prompt。
 - 不要做医学诊断、法律建议、股票建议。
 """
 
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=[
-            {"role": "system", "content": "你只输出合法 JSON 对象。"},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.2,
-    )
-
-    content = response.choices[0].message.content
-    return extract_json(content)
+    # LLM 调用 + 自动重试（最多2次，指数退避）
+    max_retries = 2
+    last_error = None
+    for attempt in range(max_retries + 1):
+        try:
+            logger.info(f"LLM 调用 (尝试 {attempt+1}/{max_retries+1})")
+            response = client.chat.completions.create(
+                model=MODEL,
+                messages=[
+                    {"role": "system", "content": "你只输出合法 JSON 对象。"},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.2,
+                timeout=30,
+            )
+            llm_content = response.choices[0].message.content
+            return extract_json(llm_content)
+        except Exception as exc:
+            last_error = exc
+            if attempt < max_retries:
+                wait = 2 ** attempt  # 1s, 2s
+                logger.warning(f"LLM 调用失败 (尝试 {attempt+1}), {wait}s 后重试: {exc}")
+                time.sleep(wait)
+            else:
+                logger.error(f"LLM 调用全部失败: {exc}")
+    raise last_error
 
 
 def normalize_result(data: dict) -> dict:
@@ -439,7 +481,42 @@ def build_robot_reply_text(control_json: dict) -> str:
 
 
 def run_pipeline() -> dict:
-    user_text = transcribe_audio(AUDIO_PATH)
+    try:
+        user_text = transcribe_audio(AUDIO_PATH)
+    except RuntimeError as exc:
+        if "silence_detected" in str(exc):
+            logger.info("检测到静默录音，返回提示")
+            silence_result = {
+                "schema_version": "1.0",
+                "turn_type": "bar_chat",
+                "user_text": "",
+                "emotion_label": "清醒",
+                "emotion_blend": [{"emotion": "清醒", "weight": 1.0}],
+                "complex_emotion": "未检测到有效语音。",
+                "need_summary": "等待用户说话。",
+                "drink_name": "无正式推荐",
+                "recipe_modules": [],
+                "flavor_profile": "无正式推荐",
+                "color_profile": "无正式推荐",
+                "face_state": "thinking",
+                "bartender_line": "嗯？我没太听清，能再说一遍吗？",
+                "action_sequence": "gesture_thinking",
+                "feedback_prompt": "",
+            }
+            update_conversation_state(silence_result)
+            return {
+                "ok": True,
+                "audio_path": str(AUDIO_PATH),
+                "user_text": "",
+                "turn_type": "bar_chat",
+                "control_json": silence_result,
+                "robot_reply_text": silence_result["bartender_line"],
+                "conversation_state": get_conversation_state(),
+                "used_fallback": False,
+                "llm_error": None,
+            }
+        raise
+
     turn_type = route_turn_type(user_text)
     used_fallback = False
     llm_error = None
@@ -452,6 +529,7 @@ def run_pipeline() -> dict:
     except Exception as exc:
         used_fallback = True
         llm_error = str(exc)
+        logger.warning(f"LLM/NLP 链路异常，使用熔断兜底: {exc}")
         result = fallback_result(user_text, turn_type)
         validate_result(result)
 
@@ -506,6 +584,7 @@ def start_recording():
             "-acodec", "pcm_s16le",
             "-ar", "16000",
             "-ac", "1",
+            "-t", "30",
             "-y",
             str(AUDIO_PATH),
         ]
@@ -515,6 +594,7 @@ def start_recording():
             "-D", "default",
             "-f", "S16_LE",
             "-r", "16000",
+            "-d", "30",
             "-c", "1",
             str(AUDIO_PATH),
         ]
@@ -536,10 +616,12 @@ def start_recording():
             detail=f"Failed to start recording: {stderr.decode(errors='ignore')}",
         )
 
+    logger.info("录音已启动 (30s 超时)")
     return {
         "ok": True,
         "state": "listening",
-        "message": "Recording started",
+        "max_duration": 30,
+        "message": "Recording started (30s max)",
     }
 
 
@@ -565,7 +647,9 @@ def stop_recording():
         raise HTTPException(status_code=500, detail="Recording file is empty")
 
     try:
+        logger.info("录音已停止，开始分析管线")
         last_result = run_pipeline()
+        logger.info(f"分析完成: emotion={last_result.get('control_json',{}).get('emotion_label','?')}")
         return last_result
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))

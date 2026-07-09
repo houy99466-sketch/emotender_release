@@ -28,6 +28,10 @@
 
   @keyframes statusBlink { 0%,51%,100%{opacity:1} 50%{opacity:0.1} }
   .status-dot { animation: statusBlink 1.2s steps(2) infinite; }
+  @keyframes statusBlinkFast { 0%,75%,100%{opacity:1} 50%{opacity:0.05} }
+  .status-dot.listening { animation: statusBlinkFast 0.6s steps(2) infinite; }
+  @keyframes statusBlinkSlow { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  .status-dot.thinking { animation: statusBlinkSlow 2s ease-in-out infinite; }
 
   @keyframes blinkCaret { 0%,100%{opacity:1} 50%{opacity:0} }
   .typewriter-caret { display:inline-block;width:2px;height:1.1em;background:var(--phosphor);margin-left:2px;vertical-align:text-bottom;animation:blinkCaret 0.5s step-end infinite; }
@@ -45,6 +49,16 @@
     position:relative; width:400px; height:400px;
     background-color:#000000 !important;
     overflow:hidden; border-radius:12px;
+    transition: box-shadow 0.4s ease;
+  }
+  /* Recording pulse glow */
+  @keyframes recording-pulse {
+    0%, 100% { box-shadow: 0 0 0 0px transparent; }
+    50%      { box-shadow: 0 0 30px 3px var(--neon-color, #00f2fe); }
+  }
+  #crt-screen.recording-active {
+    animation: recording-pulse 1.2s ease-in-out infinite;
+    box-shadow: 0 0 20px 2px var(--neon-color, #00f2fe);
   }
   #crt-screen[data-emotion="清醒"] { --neon-color:#00f2fe; }
   #crt-screen[data-emotion="兴奋"] { --neon-color:#00ff66; }
@@ -78,7 +92,7 @@
   .pixel-face-group {
     opacity:0 !important; visibility:hidden !important;
     transform:scale(0.85); transform-origin:200px 200px;
-    transition:opacity 0.3s ease, transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    transition:opacity 0.5s ease, transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
   }
   #crt-screen[data-emotion="清醒"] #group-qx,
   #crt-screen:not([data-emotion]) #group-qx,
@@ -135,6 +149,19 @@
   .yy-mouth { animation:yy-mouth-sway 1.6s ease-in-out infinite; }
 
   @media (max-width: 1024px) { .main-layout { flex-direction: column !important; } }
+  @media (max-width: 768px) {
+    #crt-screen { width: 320px !important; height: 320px !important; }
+    #face-state-label { font-size: 9px; bottom: -24px; }
+    header { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
+    header button { font-size: 10px !important; padding: 4px 8px !important; }
+    .glass-card { padding: 10px !important; }
+  }
+  @media (max-width: 480px) {
+    #crt-screen { width: 260px !important; height: 260px !important; }
+    .main-layout { padding: 8px !important; gap: 8px !important; }
+    #debug-panel { padding: 10px !important; }
+    #debug-panel button { font-size: 9px !important; padding: 4px 6px !important; }
+  }
 </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -338,7 +365,20 @@ function setSystemStatus(sk){
   var b=document.getElementById("sys-status-badge"),d=document.querySelector(".status-dot");
   var i=STATUS_MAP[sk]||STATUS_MAP["idle"];
   if(b){b.textContent=i.label;b.className="ml-auto px-3 py-1 text-xs font-semibold "+i.badgeClass;b.style.fontFamily="'Courier New',monospace";}
-  if(d){d.className="status-dot w-3 h-3 "+i.dotColor;d.style.boxShadow=i.shadow||"0 0 6px rgba(150,150,150,0.3)";}
+  if(d){
+    d.className="status-dot w-3 h-3 "+i.dotColor;
+    d.style.boxShadow=i.shadow||"0 0 6px rgba(150,150,150,0.3)";
+    // Add animation class based on status
+    if(sk==="listening"||sk==="initial_order") d.classList.add("listening");
+    else if(sk==="thinking"||sk==="making") d.classList.add("thinking");
+    else { d.classList.remove("listening"); d.classList.remove("thinking"); }
+  }
+  // Toggle CRT recording glow
+  var crt=document.getElementById("crt-screen");
+  if(crt){
+    if(sk==="listening") crt.classList.add("recording-active");
+    else crt.classList.remove("recording-active");
+  }
 }
 
 function typeText(text,cb){
