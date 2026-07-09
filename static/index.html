@@ -4,61 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EmoTender · 情绪酒保</title>
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <style>
-  :root { --phosphor: #00f2fe; --bg-card: rgba(14,14,18,0.78); }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    margin: 0; padding: 0; font-family: 'Courier New','PingFang SC',monospace;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; gap: 24px;
+    font-family: 'Courier New','PingFang SC',monospace;
     background: #050508;
-    background-image: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,242,254,0.008) 2px,rgba(0,242,254,0.008) 4px);
-    color: #b0b8c0; min-height: 100vh; overflow-x: hidden;
+    overflow-x: hidden;
   }
 
-  @keyframes borderPulse { 0%,100%{box-shadow:inset 0 0 15px rgba(0,242,254,0.3),0 0 10px rgba(0,242,254,0.4)} 50%{box-shadow:inset 0 0 25px rgba(0,242,254,0.5),0 0 18px rgba(0,242,254,0.7)} }
-  .neon-border-blue { animation: borderPulse 3s steps(3) infinite; border: 1px solid rgba(0,242,254,0.2); }
-  .neon-border-pink { animation: borderPulse 3s steps(3) infinite; border: 1px solid rgba(255,51,51,0.2); }
-
-  .glass-card {
-    background: var(--bg-card); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(0,242,254,0.08); position: relative;
-  }
-  .text-glow-blue { text-shadow: 0 0 8px rgba(0,242,254,0.5),0 0 20px rgba(0,242,254,0.15); }
-  .text-glow-pink { text-shadow: 0 0 8px rgba(255,51,51,0.5),0 0 20px rgba(255,51,51,0.15); }
-
-  @keyframes statusBlink { 0%,51%,100%{opacity:1} 50%{opacity:0.1} }
-  .status-dot { animation: statusBlink 1.2s steps(2) infinite; }
-  @keyframes statusBlinkFast { 0%,75%,100%{opacity:1} 50%{opacity:0.05} }
-  .status-dot.listening { animation: statusBlinkFast 0.6s steps(2) infinite; }
-  @keyframes statusBlinkSlow { 0%,100%{opacity:1} 50%{opacity:0.2} }
-  .status-dot.thinking { animation: statusBlinkSlow 2s ease-in-out infinite; }
-
-  @keyframes blinkCaret { 0%,100%{opacity:1} 50%{opacity:0} }
-  .typewriter-caret { display:inline-block;width:2px;height:1.1em;background:var(--phosphor);margin-left:2px;vertical-align:text-bottom;animation:blinkCaret 0.5s step-end infinite; }
-
-  .emotion-tag { background:rgba(0,242,254,0.06);border:1px solid rgba(0,242,254,0.2);font-family:'Courier New',monospace; }
-
-  .flavor-block { width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid rgba(0,242,254,0.15);transition:transform 0.15s steps(2); }
-  .flavor-block:hover { transform:scale(1.08); }
-
-  @keyframes drinkFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-  .drink-card-float { animation: drinkFloat 5s steps(4) infinite; }
-
-  /* ===== OLED PIXEL FACE v2.0 — 固定眼间距 + 柔光弥散 ===== */
+  /* ===== CRT FACE ===== */
   #crt-screen {
     position:relative; width:400px; height:400px;
     background-color:#000000 !important;
     overflow:hidden; border-radius:12px;
     transition: box-shadow 0.4s ease;
-  }
-  /* Recording pulse glow */
-  @keyframes recording-pulse {
-    0%, 100% { box-shadow: 0 0 0 0px transparent; }
-    50%      { box-shadow: 0 0 30px 3px var(--neon-color, #00f2fe); }
-  }
-  #crt-screen.recording-active {
-    animation: recording-pulse 1.2s ease-in-out infinite;
-    box-shadow: 0 0 20px 2px var(--neon-color, #00f2fe);
   }
   #crt-screen[data-emotion="清醒"] { --neon-color:#00f2fe; }
   #crt-screen[data-emotion="兴奋"] { --neon-color:#00ff66; }
@@ -67,16 +28,23 @@
   #crt-screen[data-emotion="焦虑"] { --neon-color:#ff4d4d; }
   #crt-screen[data-emotion="犹豫"] { --neon-color:#39FF14; }
 
+  @keyframes recording-pulse {
+    0%, 100% { box-shadow: 0 0 0 0px transparent; }
+    50%      { box-shadow: 0 0 30px 3px var(--neon-color, #00f2fe); }
+  }
+  #crt-screen.recording-active {
+    animation: recording-pulse 1.2s ease-in-out infinite;
+    box-shadow: 0 0 20px 2px var(--neon-color, #00f2fe);
+  }
+
   .neon-path {
     fill:none; stroke:var(--neon-color) !important;
     stroke-width:12; stroke-linecap:round; stroke-linejoin:round;
   }
-  .neon-fill { fill:var(--neon-color) !important; }
   .neon-path-thin {
     fill:none; stroke:var(--neon-color) !important;
     stroke-width:5; stroke-linecap:round; stroke-linejoin:round;
   }
-  .neon-fill-dot { fill:var(--neon-color) !important; }
   .neon-hollow {
     fill:none; stroke:var(--neon-color) !important;
     stroke-width:5; stroke-linecap:round; stroke-linejoin:round;
@@ -105,13 +73,10 @@
     opacity:1 !important; visibility:visible !important; transform:scale(1) !important;
   }
 
-  /* ===== 分段式时序动态动画 (1.4–1.7s) ===== */
-
-  /* 清醒·平淡无感 — 呼吸光效 1.5s */
+  /* ===== 分段式时序动画 ===== */
   @keyframes qx-breathe { 0%,100%{opacity:0.70} 50%{opacity:1.0} }
   .qx-eye-l, .qx-eye-r, #group-qx .neon-path-thin { animation:qx-breathe 1.5s ease-in-out infinite; }
 
-  /* 兴奋·开怀笑 1.5s */
   @keyframes xf-eyes-lift { 0%,100%{transform:scaleY(1)} 30%,70%{transform:scaleY(1.14)} }
   @keyframes xf-mouth-stretch { 0%,100%{transform:scaleX(1)} 35%,65%{transform:scaleX(1.07)} }
   @keyframes xf-glow { 0%,100%{opacity:0.85} 30%,70%{opacity:1.0} }
@@ -119,18 +84,15 @@
   .xf-eye-r { animation:xf-eyes-lift 1.5s ease-in-out infinite, xf-glow 1.5s ease-in-out infinite; transform-origin:283px 136px; }
   .xf-mouth { animation:xf-mouth-stretch 1.5s ease-in-out infinite; transform-origin:200px 236px; }
 
-  /* 难过·委屈疑惑 — 呼吸光效 1.7s */
   @keyframes ng-breathe { 0%,100%{opacity:0.65} 50%{opacity:1.0} }
   .ng-eye-l, .ng-eye-r, .ng-mouth { animation:ng-breathe 1.7s ease-in-out infinite; }
 
-  /* 疲惫·慵懒犯困 1.5s */
   @keyframes pb-eyes-droop { 0%,100%{transform:scaleY(1)} 45%,80%{transform:scaleY(1.16)} }
   @keyframes pb-mouth-purse { 0%,100%{transform:translateY(0)} 45%,80%{transform:translateY(3px)} }
   .pb-eye-l { animation:pb-eyes-droop 1.5s ease-in-out infinite; transform-origin:117px 138px; }
   .pb-eye-r { animation:pb-eyes-droop 1.5s ease-in-out infinite; transform-origin:283px 138px; }
   .pb-mouth { animation:pb-mouth-purse 1.5s ease-in-out infinite; }
 
-  /* 焦虑·烦躁愠怒 1.4s */
   @keyframes jl-eye-l-in { 0%,100%{transform:translateX(0)} 35%,60%{transform:translateX(4px)} }
   @keyframes jl-eye-r-in { 0%,100%{transform:translateX(0)} 35%,60%{transform:translateX(-4px)} }
   .jl-eye-l-group { animation:jl-eye-l-in 1.4s ease-in-out infinite; }
@@ -141,266 +103,163 @@
   }
   .jl-mouth { animation:jl-mouth-tremble 1.4s ease-in-out infinite; }
 
-  /* 犹豫·眩晕难受 1.6s */
   @keyframes yy-eyes-rotate { 0%,100%{transform:rotate(0deg)} 35%,70%{transform:rotate(5deg)} }
   .yy-eye-l-group { animation:yy-eyes-rotate 1.6s ease-in-out infinite; transform-origin:117px 136px; }
   .yy-eye-r-group { animation:yy-eyes-rotate 1.6s ease-in-out infinite; transform-origin:283px 136px; }
   @keyframes yy-mouth-sway { 0%,100%{transform:translateX(0)} 25%,50%{transform:translateX(3px)} 62%,88%{transform:translateX(-3px)} }
   .yy-mouth { animation:yy-mouth-sway 1.6s ease-in-out infinite; }
 
-  @media (max-width: 1024px) { .main-layout { flex-direction: column !important; } }
-  @media (max-width: 768px) {
-    #crt-screen { width: 320px !important; height: 320px !important; }
-    #face-state-label { font-size: 9px; bottom: -24px; }
-    header { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
-    header button { font-size: 10px !important; padding: 4px 8px !important; }
-    .glass-card { padding: 10px !important; }
+  /* ===== 控制栏 ===== */
+  #control-bar {
+    display: flex; align-items: center; gap: 16px;
   }
-  @media (max-width: 480px) {
-    #crt-screen { width: 260px !important; height: 260px !important; }
-    .main-layout { padding: 8px !important; gap: 8px !important; }
-    #debug-panel { padding: 10px !important; }
-    #debug-panel button { font-size: 9px !important; padding: 4px 6px !important; }
+  #control-bar button {
+    font-family: 'Courier New', monospace; font-size: 13px;
+    padding: 8px 18px; border: 1px solid; cursor: pointer;
+    background: transparent; transition: all 0.2s ease;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  #btnStart {
+    color: #00f2fe; border-color: rgba(0,242,254,0.3);
+  }
+  #btnStart:hover { background: rgba(0,242,254,0.1); border-color: rgba(0,242,254,0.6); }
+  #btnStop {
+    color: #ff4d4d; border-color: rgba(255,77,77,0.2);
+  }
+  #btnStop:hover { background: rgba(255,77,77,0.1); border-color: rgba(255,77,77,0.4); }
+  #btnReset {
+    color: rgba(180,180,190,0.5); border-color: rgba(180,180,190,0.15);
+  }
+  #btnReset:hover { color: rgba(200,200,210,0.8); border-color: rgba(200,200,210,0.3); }
+
+  #status-line {
+    font-family: 'Courier New', monospace; font-size: 11px;
+    color: rgba(0,242,254,0.35); letter-spacing: 0.15em;
+    min-height: 1.2em; text-align: center;
+  }
+
+  /* ===== 回复文字 ===== */
+  #reply-area {
+    max-width: 420px; text-align: center;
+    font-family: 'Courier New', monospace; font-size: 14px;
+    color: rgba(0,242,254,0.7); line-height: 1.7;
+    min-height: 2.5em; transition: opacity 0.4s ease;
+  }
+
+  @media (max-width: 500px) {
+    #crt-screen { width:300px !important; height:300px !important; }
+    #reply-area { font-size: 12px; max-width: 320px; }
+    #control-bar button { font-size: 11px; padding: 6px 14px; }
   }
 </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body>
 
-<header class="relative z-10 flex items-center justify-between px-6 py-3 border-b border-[#00f2fe]/10">
-  <div class="flex items-center gap-3">
-    <span class="text-lg font-bold tracking-[0.3em] text-[#00f2fe]" style="font-family:'Courier New',monospace;">EMOTENDER</span>
-    <span class="text-xs text-[#00f2fe]/40 border border-[#00f2fe]/20 px-2 py-0.5" style="font-family:'Courier New',monospace;">CRT v5.0</span>
-  </div>
-  <div class="flex items-center gap-4">
-    <div class="flex items-center gap-2 text-xs text-[#00f2fe]/60" style="font-family:'Courier New',monospace;">
-      <span class="w-2 h-2 bg-[#00f2fe] shadow-[0_0_6px_rgba(0,242,254,0.6)]"></span>
-      <span>SYS.ONLINE</span>
-    </div>
-    <button id="btnStart" onclick="startRecording()" class="text-xs text-[#00f2fe] hover:text-white border border-[#00f2fe]/30 hover:border-[#00f2fe]/60 px-3 py-1 transition-all bg-[#00f2fe]/10 hover:bg-[#00f2fe]/20" style="font-family:'Courier New',monospace;">[ REC ]</button>
-    <button id="btnStop" onclick="stopRecording()" class="text-xs text-[#ff3333]/50 hover:text-[#ff3333] border border-[#ff3333]/20 hover:border-[#ff3333]/40 px-3 py-1 transition-all" style="font-family:'Courier New',monospace;">[ STOP ]</button>
-    <button id="btnReset" onclick="resetSystem()" class="text-xs text-slate-400/50 hover:text-slate-300 border border-slate-500/20 hover:border-slate-500/40 px-3 py-1 transition-all" style="font-family:'Courier New',monospace;">[ RESET ]</button>
-    <button onclick="toggleDebug()" class="text-xs text-[#00f2fe]/50 hover:text-[#00f2fe] border border-[#00f2fe]/20 hover:border-[#00f2fe]/40 px-3 py-1 transition-all" style="font-family:'Courier New',monospace;">[ DEBUG ]</button>
-  </div>
-</header>
+<!-- ===== CRT FACE ===== -->
+<div id="crt-screen" data-emotion="清醒" style="position: relative; width: 400px; height: 400px; background-color: #000000 !important; overflow: hidden;">
+  <svg viewBox="0 0 400 400" style="width: 100%; height: 100%;">
+    <defs>
+      <filter id="soft-glow" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur1"/>
+        <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur2"/>
+        <feMerge>
+          <feMergeNode in="blur2"/>
+          <feMergeNode in="blur1"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+    <rect x="0" y="0" width="400" height="400" fill="#000000"/>
 
-<main class="main-layout flex flex-1 gap-4 p-4 lg:p-6" style="display:flex;">
+    <!-- 1. 清醒 → 平淡无感 -->
+    <g id="group-qx" class="pixel-face-group" filter="url(#soft-glow)">
+      <line class="neon-path qx-eye-l" x1="76" y1="136" x2="159" y2="136"/>
+      <line class="neon-path qx-eye-r" x1="241" y1="136" x2="324" y2="136"/>
+      <line class="neon-path-thin" x1="190" y1="236" x2="210" y2="236"/>
+    </g>
+    <!-- 2. 兴奋 → 开怀笑 -->
+    <g id="group-xf" class="pixel-face-group" filter="url(#soft-glow)">
+      <path class="neon-path xf-eye-l" d="M76,136 Q117,96 159,136"/>
+      <path class="neon-path xf-eye-r" d="M241,136 Q283,96 324,136"/>
+      <path class="neon-path xf-mouth" d="M138,236 Q200,290 262,236"/>
+    </g>
+    <!-- 3. 难过 → 眩晕难受（X眼+撇嘴） -->
+    <g id="group-ng" class="pixel-face-group" filter="url(#soft-glow)">
+      <g class="yy-eye-l-group">
+        <line class="neon-path-thin" x1="92" y1="116" x2="142" y2="156"/>
+        <line class="neon-path-thin" x1="142" y1="116" x2="92" y2="156"/>
+      </g>
+      <g class="yy-eye-r-group">
+        <line class="neon-path-thin" x1="258" y1="116" x2="308" y2="156"/>
+        <line class="neon-path-thin" x1="308" y1="116" x2="258" y2="156"/>
+      </g>
+      <path class="neon-path yy-mouth" d="M175,240 Q190,234 200,229 Q210,234 225,240"/>
+    </g>
+    <!-- 4. 疲惫 → 委屈疑惑（空心圈眼+波浪嘴） -->
+    <g id="group-pb" class="pixel-face-group" filter="url(#soft-glow)">
+      <circle class="neon-hollow ng-eye-l" cx="117" cy="136" r="34"/>
+      <circle class="neon-hollow ng-eye-r" cx="283" cy="136" r="34"/>
+      <path class="neon-path ng-mouth" d="M168,236 Q184,226 200,236 Q216,246 232,236"/>
+    </g>
+    <!-- 5. 焦虑 → 烦躁愠怒 -->
+    <g id="group-jl" class="pixel-face-group" filter="url(#soft-glow)">
+      <g class="jl-eye-l-group"><path class="neon-path jl-eye-l" d="M88,118 L117,142 L146,118"/></g>
+      <g class="jl-eye-r-group"><path class="neon-path jl-eye-r" d="M254,118 L283,142 L312,118"/></g>
+      <path class="neon-path jl-mouth" d="M175,236 Q184,228 192,236 Q200,244 208,236 Q216,228 225,236"/>
+    </g>
+    <!-- 6. 犹豫 → 慵懒犯困（下弯月牙+下凹嘴） -->
+    <g id="group-yy" class="pixel-face-group" filter="url(#soft-glow)">
+      <path class="neon-path pb-eye-l" d="M76,128 Q117,148 159,128"/>
+      <path class="neon-path pb-eye-r" d="M241,128 Q283,148 324,128"/>
+      <path class="neon-path pb-mouth" d="M182,242 Q200,254 218,242"/>
+    </g>
+  </svg>
+  <div id="face-state-label">清醒</div>
+</div>
 
-  <!-- ===== CRT FACE ===== -->
-  <div class="flex items-center justify-center" style="flex: 1 1 45%; min-width: 0;">
-    <div id="crt-screen" data-emotion="清醒" style="position: relative; width: 400px; height: 400px; background-color: #000000 !important; overflow: hidden;">
-      <svg viewBox="0 0 400 400" style="width: 100%; height: 100%;">
-        <defs>
-          <filter id="soft-glow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur1"/>
-            <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur2"/>
-            <feMerge>
-              <feMergeNode in="blur2"/>
-              <feMergeNode in="blur1"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
-        <rect x="0" y="0" width="400" height="400" fill="#000000"/>
+<!-- ===== 酒保回复 ===== -->
+<div id="reply-area"></div>
 
-        <!-- 固定点位: 眼跨度 62%=248px, 眼 Y=136(34%), 嘴 Y≈236 -->
-        <!-- 1. 清醒 → 平淡无感 -->
-        <g id="group-qx" class="pixel-face-group" filter="url(#soft-glow)">
-          <line class="neon-path qx-eye-l" x1="76" y1="136" x2="159" y2="136"/>
-          <line class="neon-path qx-eye-r" x1="241" y1="136" x2="324" y2="136"/>
-          <line class="neon-path-thin" x1="190" y1="236" x2="210" y2="236"/>
-        </g>
-        <!-- 2. 兴奋 → 开怀笑 -->
-        <g id="group-xf" class="pixel-face-group" filter="url(#soft-glow)">
-          <path class="neon-path xf-eye-l" d="M76,136 Q117,96 159,136"/>
-          <path class="neon-path xf-eye-r" d="M241,136 Q283,96 324,136"/>
-          <path class="neon-path xf-mouth" d="M138,236 Q200,290 262,236"/>
-        </g>
-        <!-- 3. 难过 → 眩晕难受（X眼+撇嘴） -->
-        <g id="group-ng" class="pixel-face-group" filter="url(#soft-glow)">
-          <g class="yy-eye-l-group">
-            <line class="neon-path-thin" x1="92" y1="116" x2="142" y2="156"/>
-            <line class="neon-path-thin" x1="142" y1="116" x2="92" y2="156"/>
-          </g>
-        <!-- 4. 疲惫 → 委屈疑惑（空心圈眼+波浪嘴） -->
-        <g id="group-pb" class="pixel-face-group" filter="url(#soft-glow)">
-          <circle class="neon-hollow ng-eye-l" cx="117" cy="136" r="34"/>
-          <circle class="neon-hollow ng-eye-r" cx="283" cy="136" r="34"/>
-          <path class="neon-path ng-mouth" d="M168,236 Q184,226 200,236 Q216,246 232,236"/>
-        </g>
-        <!-- 5. 焦虑 → 烦躁愠怒 -->
-        <g id="group-jl" class="pixel-face-group" filter="url(#soft-glow)">
-          <g class="jl-eye-l-group"><path class="neon-path jl-eye-l" d="M88,118 L117,142 L146,118"/></g>
-          <g class="jl-eye-r-group"><path class="neon-path jl-eye-r" d="M254,118 L283,142 L312,118"/></g>
-          <path class="neon-path jl-mouth" d="M175,236 Q184,228 192,236 Q200,244 208,236 Q216,228 225,236"/>
-        </g>
-        <!-- 6. 犹豫 → 慵懒犯困（下弯月牙+下凹嘴） -->
-        <g id="group-yy" class="pixel-face-group" filter="url(#soft-glow)">
-          <path class="neon-path pb-eye-l" d="M76,128 Q117,148 159,128"/>
-          <path class="neon-path pb-eye-r" d="M241,128 Q283,148 324,128"/>
-          <path class="neon-path pb-mouth" d="M182,242 Q200,254 218,242"/>
-        </g>
-          <g class="yy-eye-r-group">
-            <line class="neon-path-thin" x1="258" y1="116" x2="308" y2="156"/>
-            <line class="neon-path-thin" x1="308" y1="116" x2="258" y2="156"/>
-          </g>
-          <path class="neon-path yy-mouth" d="M175,240 Q190,234 200,229 Q210,234 225,240"/>
-        </g>
-      </svg>
-      <div id="face-state-label">清醒</div>
-    </div>
-  </div>
-
-  <!-- ===== RIGHT: DASHBOARD ===== -->
-  <section class="flex flex-col gap-4" style="flex: 1 1 55%; min-width: 0;">
-    <div class="glass-card neon-border-blue p-4 flex items-center gap-3">
-      <div class="status-dot w-3 h-3 bg-[#00f2fe]" style="box-shadow:0 0 8px rgba(0,242,254,0.5);"></div>
-      <span class="text-sm text-[#00f2fe]/60 tracking-wider" style="font-family:'Courier New',monospace;">SYS.STATUS</span>
-      <span id="sys-status-badge" class="ml-auto px-3 py-1 text-xs font-semibold bg-[#00f2fe]/10 text-[#00f2fe] border border-[#00f2fe]/25" style="font-family:'Courier New',monospace;">IDLE</span>
-    </div>
-    <div class="glass-card p-4">
-      <div class="text-xs text-[#00f2fe]/40 tracking-wider mb-2" style="font-family:'Courier New',monospace;">> AUDIO_INPUT</div>
-      <div id="user-input-text" class="text-lg text-[#00f2fe]/80 leading-relaxed min-h-[2em]" style="font-family:'Courier New',monospace;">[ AWAITING SIGNAL... ]</div>
-    </div>
-    <div class="glass-card p-4">
-      <div class="text-xs text-[#00f2fe]/40 tracking-wider mb-2" style="font-family:'Courier New',monospace;">> EMOTION_ANALYSIS</div>
-      <div class="flex items-center gap-2 mb-2">
-        <span id="emotion-label-badge" class="px-3 py-1 text-sm font-semibold bg-[#00f2fe]/5 text-[#00f2fe]/30 border border-[#00f2fe]/15" style="font-family:'Courier New',monospace;">--</span>
-      </div>
-      <div id="complex-emotion-text" class="text-sm text-[#00f2fe]/30 leading-relaxed" style="font-family:'Courier New',monospace;">awaiting analysis...</div>
-    </div>
-    <div class="glass-card p-4">
-      <div class="text-xs text-[#00f2fe]/40 tracking-wider mb-2" style="font-family:'Courier New',monospace;">> NEED_INSIGHT</div>
-      <div id="need-summary-text" class="text-sm text-[#00f2fe]/50 leading-relaxed" style="font-family:'Courier New',monospace;"><span class="text-[#00f2fe]/20">-- pending --</span></div>
-    </div>
-    <div class="glass-card neon-border-pink p-4 drink-card-float">
-      <div class="text-xs text-[#00f2fe]/40 tracking-wider mb-2" style="font-family:'Courier New',monospace;">> DRINK_RECIPE</div>
-      <div id="drink-name" class="text-3xl font-bold text-white/20 mb-3" style="font-family:'Courier New',monospace;">--</div>
-      <div class="text-xs text-[#00f2fe]/40 tracking-wider mb-2" style="font-family:'Courier New',monospace;">> FLAVOR_MODULES</div>
-      <div id="flavor-blocks" class="flex gap-3 flex-wrap mb-3">
-        <div class="flavor-block text-white/20">?</div><div class="flavor-block text-white/20">?</div><div class="flavor-block text-white/20">?</div>
-      </div>
-      <div id="flavor-profile-row" class="flex items-start gap-2 mb-1.5 hidden"><span class="text-[10px] text-[#00f2fe]/30 mt-0.5">FLAVOR</span><span id="flavor-profile-text" class="text-xs text-[#00f2fe]/50" style="font-family:'Courier New',monospace;"></span></div>
-      <div id="color-profile-row" class="flex items-start gap-2 hidden"><span class="text-[10px] text-[#00f2fe]/30 mt-0.5">COLOR</span><span id="color-profile-text" class="text-xs text-[#00f2fe]/50" style="font-family:'Courier New',monospace;"></span></div>
-    </div>
-    <div class="glass-card p-4">
-      <div class="text-xs text-[#00f2fe]/40 tracking-wider mb-2" style="font-family:'Courier New',monospace;">> BARTENDER_OUTPUT</div>
-      <div id="bartender-line" class="text-base text-[#00f2fe]/70 leading-relaxed" style="font-family:'Courier New',monospace;"><span id="typed-text"></span><span class="typewriter-caret"></span></div>
-      <div id="feedback-prompt-row" class="mt-3 pt-3 border-t border-[#00f2fe]/10 hidden">
-        <span class="text-[10px] text-[#ff3333]/50 tracking-wider" style="font-family:'Courier New',monospace;">> FEEDBACK_PROMPT</span>
-        <p id="feedback-prompt-text" class="text-sm text-[#ff3333]/50 leading-relaxed mt-1" style="font-family:'Courier New',monospace;"></p>
-      </div>
-    </div>
-  </section>
-</main>
-
-<section id="debug-panel" class="border-t border-[#00f2fe]/10 bg-black/50 backdrop-blur-md px-6 py-4">
-  <div class="flex items-center justify-between mb-3">
-    <span class="text-xs text-[#00f2fe]/40 tracking-wider" style="font-family:'Courier New',monospace;">[ DEBUG_CONSOLE ]</span>
-    <button onclick="toggleDebug()" class="text-xs text-[#00f2fe]/30 hover:text-[#00f2fe]/60" style="font-family:'Courier New',monospace;">[ COLLAPSE ]</button>
-  </div>
-  <div class="grid grid-cols-3 md:grid-cols-5 gap-2 mb-3">
-    <button onclick="runPreset('fatigue')" class="text-xs px-2 py-2 border border-[#d8b4fe]/15 bg-black/30 hover:bg-[#d8b4fe]/10 hover:border-[#d8b4fe]/40 transition-all text-center" style="font-family:'Courier New',monospace;"><div class="text-[#d8b4fe] font-semibold">疲惫</div></button>
-    <button onclick="runPreset('anxiety')" class="text-xs px-2 py-2 border border-[#ffb300]/15 bg-black/30 hover:bg-[#ffb300]/10 hover:border-[#ffb300]/40 transition-all text-center" style="font-family:'Courier New',monospace;"><div class="text-[#ffb300] font-semibold">焦虑</div></button>
-    <button onclick="runPreset('sadness')" class="text-xs px-2 py-2 border border-[#d8b4fe]/15 bg-black/30 hover:bg-[#d8b4fe]/10 hover:border-[#d8b4fe]/40 transition-all text-center" style="font-family:'Courier New',monospace;"><div class="text-[#d8b4fe] font-semibold">难过</div></button>
-    <button onclick="runPreset('awake')" class="text-xs px-2 py-2 border border-[#ffb300]/15 bg-black/30 hover:bg-[#ffb300]/10 hover:border-[#ffb300]/40 transition-all text-center" style="font-family:'Courier New',monospace;"><div class="text-[#ffb300] font-semibold">清醒</div></button>
-    <button onclick="runPreset('excited')" class="text-xs px-2 py-2 border border-[#00ff66]/15 bg-black/30 hover:bg-[#00ff66]/10 hover:border-[#00ff66]/40 transition-all text-center" style="font-family:'Courier New',monospace;"><div class="text-[#00ff66] font-semibold">兴奋</div></button>
-    <button onclick="runPreset('hesitant')" class="text-xs px-2 py-2 border border-[#39FF14]/15 bg-black/30 hover:bg-[#39FF14]/10 hover:border-[#39FF14]/40 transition-all text-center" style="font-family:'Courier New',monospace;"><div class="text-[#39FF14] font-semibold">犹豫</div></button>
-  </div>
-  <div class="flex gap-2 flex-wrap">
-    <button onclick="runPreset('reset')" class="text-[11px] px-3 py-1 border border-[#00f2fe]/15 bg-black/30 text-[#00f2fe]/50 hover:text-[#00f2fe] hover:border-[#00f2fe]/30" style="font-family:'Courier New',monospace;">[ RESET ]</button>
-    <span class="text-[10px] text-[#00f2fe]/20 self-center ml-auto" style="font-family:'Courier New',monospace;">API: window.updateTenderState(json)</span>
-  </div>
-</section>
-
-<footer class="text-center py-2 text-[10px] text-[#00f2fe]/10 tracking-wider border-t border-[#00f2fe]/05" style="font-family:'Courier New',monospace;">EMOTENDER_CRT // HACKATHON_2026 // SYS_NOMINAL</footer>
+<!-- ===== 控制栏 ===== -->
+<div id="control-bar">
+  <button id="btnStart" onclick="startRecording()">Start</button>
+  <button id="btnStop" onclick="stopRecording()">Stop</button>
+  <span id="status-line"></span>
+  <button id="btnReset" onclick="resetSystem()">Reset</button>
+</div>
 
 <script>
-const PRESETS = {
-  reset:   {schema_version:"1.0",turn_type:"idle",user_text:"",emotion_label:"",complex_emotion:"",need_summary:"",drink_name:"",recipe_modules:[],flavor_profile:"",color_profile:"",face_state:"focused",bartender_line:"",action_sequence:"",feedback_prompt:""},
-  fatigue: {schema_version:"1.0",turn_type:"initial_order",user_text:"好累……不想动了。",emotion_label:"疲惫",complex_emotion:"身心俱疲",need_summary:"需要温柔抚慰",drink_name:"月光拥抱",recipe_modules:["blue_calm","moon_soothe","gentle_hug"],flavor_profile:"柔和微甜、丝滑绵长",color_profile:"淡紫微光",face_state:"gentle",bartender_line:"没关系，歇一歇。这杯月光拥抱陪你。",action_sequence:"make_moon_heal",feedback_prompt:"感觉好点了吗？"},
-  sadness: {schema_version:"1.0",turn_type:"initial_order",user_text:"我今天好难过……",emotion_label:"难过",complex_emotion:"深夜心碎",need_summary:"需要被无声陪伴",drink_name:"疗愈之泪",recipe_modules:["blue_calm","gentle_hug"],flavor_profile:"柔和微苦、温情回甘",color_profile:"淡紫微光",face_state:"gentle",bartender_line:"有时候一杯安静的淡紫色就够了。你不必说话，我陪你。",action_sequence:"make_moon_heal",feedback_prompt:"有没有轻了一点点？"},
-  anxiety: {schema_version:"1.0",turn_type:"thinking",user_text:"我觉得好焦虑……",emotion_label:"焦虑",complex_emotion:"心神不宁",need_summary:"需要冷静下来",drink_name:"清醒剂",recipe_modules:["industrial_bitter","clear_balance"],flavor_profile:"极苦开场、瞬间清醒",color_profile:"正红警示",face_state:"focused",bartender_line:"深呼吸，喝一口。让苦味把焦虑冲走。",action_sequence:"serve_focus",feedback_prompt:"冷静点了吗？"},
-  awake:   {schema_version:"1.0",turn_type:"thinking",user_text:"我得打起精神来。",emotion_label:"清醒",complex_emotion:"恢复专注",need_summary:"需要强力提神",drink_name:"清醒风暴",recipe_modules:["spark_restart","bitter_focus"],flavor_profile:"极致清凉、瞬间清醒",color_profile:"冰蓝",face_state:"focused",bartender_line:"这杯下去，困意全无。世界又清晰了。",action_sequence:"serve_focus",feedback_prompt:"精神了吗？"},
-  excited: {schema_version:"1.0",turn_type:"initial_order",user_text:"太棒了！今天超开心！",emotion_label:"兴奋",complex_emotion:"愉悦模式全开",need_summary:"来杯庆祝的",drink_name:"阳光气泡",recipe_modules:["sweet_glow","neon_burst"],flavor_profile:"草莓甜心、气泡跳跃",color_profile:"明亮绿霓虹",face_state:"happy",bartender_line:"开心就对了！这杯阳光气泡，为你助兴！",action_sequence:"serve_happy",feedback_prompt:"好喝吗？"},
-  hesitant:{schema_version:"1.0",turn_type:"thinking",user_text:"让我想想……嗯……",emotion_label:"犹豫",complex_emotion:"陷入沉思",need_summary:"需要时间消化",drink_name:"脑力激荡",recipe_modules:["bitter_focus","spark_restart"],flavor_profile:"微苦回甘、薄荷清凉",color_profile:"薄荷绿",face_state:"thinking",bartender_line:"这杯给你，慢慢想，不着急。",action_sequence:"serve_think",feedback_prompt:"想好了吗？"}
-};
+// ===== STATE =====
+let currentFaceState = "standby";
 
-const STATUS_MAP = {
-  idle:{label:"IDLE",dotColor:"bg-slate-500",badgeClass:"bg-slate-500/10 text-slate-300 border-slate-500/20",shadow:"0 0 6px rgba(150,150,150,0.3)"},
-  listening:{label:"LISTENING",dotColor:"bg-[#00f2fe]",badgeClass:"bg-[#00f2fe]/10 text-[#00f2fe] border-[#00f2fe]/20",shadow:"0 0 8px rgba(0,242,254,0.4)"},
-  thinking:{label:"PROCESSING",dotColor:"bg-[#b44dff]",badgeClass:"bg-[#b44dff]/10 text-[#b44dff] border-[#b44dff]/20",shadow:"0 0 8px rgba(180,77,255,0.4)"},
-  making:{label:"MIXING",dotColor:"bg-[#ffa64d]",badgeClass:"bg-[#ffa64d]/10 text-[#ffa64d] border-[#ffa64d]/20",shadow:"0 0 8px rgba(255,166,77,0.4)"},
-  serving:{label:"SERVED",dotColor:"bg-[#4dff88]",badgeClass:"bg-[#4dff88]/10 text-[#4dff88] border-[#4dff88]/20",shadow:"0 0 8px rgba(77,255,136,0.4)"},
-  waiting_feedback:{label:"AWAIT_FEEDBACK",dotColor:"bg-[#ff0033]",badgeClass:"bg-[#ff0033]/10 text-[#ff0033] border-[#ff0033]/20",shadow:"0 0 8px rgba(255,0,51,0.4)"},
-  cleaning:{label:"CLEANING...",dotColor:"bg-[#39FF14]",badgeClass:"bg-[#39FF14]/10 text-[#39FF14] border-[#39FF14]/20",shadow:"0 0 10px rgba(57,255,20,0.5)"},
-  initial_order:{label:"ORDERING",dotColor:"bg-[#00f2fe]",badgeClass:"bg-[#00f2fe]/10 text-[#00f2fe] border-[#00f2fe]/20",shadow:"0 0 8px rgba(0,242,254,0.4)"},
-  feedback:{label:"FEEDBACK",dotColor:"bg-[#ff0033]",badgeClass:"bg-[#ff0033]/10 text-[#ff0033] border-[#ff0033]/20",shadow:"0 0 8px rgba(255,0,51,0.4)"}
-};
-
-const FLAVOR_STYLES = {
-  blue_calm:{bg:"#1a3a5c",icon:"W",label:"CALM"},
-  clear_balance:{bg:"#2a4a3a",icon:"B",label:"BALANCE"},
-  spark_restart:{bg:"#5a3a1a",icon:"S",label:"SPARK"},
-  neon_burst:{bg:"#6a1a5a",icon:"N",label:"BURST"},
-  sweet_glow:{bg:"#5a2a3a",icon:"G",label:"GLOW"},
-  moon_soothe:{bg:"#2a2a5a",icon:"M",label:"MOON"},
-  gentle_hug:{bg:"#4a3a5a",icon:"H",label:"HUG"},
-  industrial_bitter:{bg:"#2a3a1a",icon:"I",label:"BITTER"},
-  ash_gray_neutral:{bg:"#3a3a3a",icon:"A",label:"ASH"},
-  glitch_sour:{bg:"#1a3a2a",icon:"X",label:"SOUR"},
-  bitter_focus:{bg:"#2a2a1a",icon:"F",label:"FOCUS"}
-};
-
-let currentFaceState="standby",typingTimer=null;
-const EXPR_MAP={standby:"focused",idle:"focused",listening:"focused",thinking:"thinking",focused:"focused",happy:"happy",sad:"gentle",gentle:"gentle",excited:"happy",gloom_cleaner:"focused",heart_eyes:"happy",indifferent:"focused",angry:"focused",rage:"focused",cool:"happy",curious:"thinking",annoyed:"focused",neutral:"focused",awkward:"focused",mysterious:"thinking"};
-const LABEL_MAP={standby:"清醒",idle:"清醒",listening:"清醒",thinking:"犹豫",focused:"清醒",happy:"兴奋",sad:"难过",gentle:"难过",excited:"兴奋",gloom_cleaner:"焦虑",heart_eyes:"兴奋",indifferent:"清醒",angry:"焦虑",rage:"焦虑",cool:"兴奋",curious:"犹豫",annoyed:"焦虑",neutral:"清醒",awkward:"焦虑",mysterious:"犹豫"};
-
-function setFaceState(state){
-  currentFaceState=state;
-  var sl=document.getElementById("face-state-label");
-  if(sl)sl.textContent=(state||'').toUpperCase();
+function setFaceState(state) {
+  currentFaceState = state;
+  var sl = document.getElementById("face-state-label");
+  if (sl) sl.textContent = (state || '').toUpperCase();
 }
 
-function setSystemStatus(sk){
-  var b=document.getElementById("sys-status-badge"),d=document.querySelector(".status-dot");
-  var i=STATUS_MAP[sk]||STATUS_MAP["idle"];
-  if(b){b.textContent=i.label;b.className="ml-auto px-3 py-1 text-xs font-semibold "+i.badgeClass;b.style.fontFamily="'Courier New',monospace";}
-  if(d){
-    d.className="status-dot w-3 h-3 "+i.dotColor;
-    d.style.boxShadow=i.shadow||"0 0 6px rgba(150,150,150,0.3)";
-    // Add animation class based on status
-    if(sk==="listening"||sk==="initial_order") d.classList.add("listening");
-    else if(sk==="thinking"||sk==="making") d.classList.add("thinking");
-    else { d.classList.remove("listening"); d.classList.remove("thinking"); }
-  }
-  // Toggle CRT recording glow
-  var crt=document.getElementById("crt-screen");
-  if(crt){
-    if(sk==="listening") crt.classList.add("recording-active");
-    else crt.classList.remove("recording-active");
+function setStatus(text) {
+  var el = document.getElementById("status-line");
+  if (el) el.textContent = text || '';
+}
+
+function setReply(text) {
+  var el = document.getElementById("reply-area");
+  if (el) {
+    el.style.opacity = '0';
+    setTimeout(function() {
+      el.textContent = text || '';
+      el.style.opacity = '1';
+    }, 200);
   }
 }
 
-function typeText(text,cb){
-  var el=document.getElementById("typed-text");if(!el)return;
-  if(typingTimer)clearTimeout(typingTimer);el.textContent="";
-  if(!text){if(cb)cb();return;}
-  var i=0;function t(){if(i<text.length){el.textContent+=text.charAt(i);i++;typingTimer=setTimeout(t,50+Math.random()*40);}else{if(cb)cb();}}t();
-}
-
-function renderFlavors(mods){
-  var c=document.getElementById("flavor-blocks");if(!c)return;
-  if(!mods||mods.length===0){c.innerHTML='<div class="flavor-block text-white/20">?</div><div class="flavor-block text-white/20">?</div><div class="flavor-block text-white/20">?</div>';return;}
-  c.innerHTML=mods.map(function(m){var s=FLAVOR_STYLES[m]||{bg:"#333",icon:"?",label:m};return'<div class="flavor-block" style="background:'+s.bg+';font-family:Courier New,monospace;color:#00f2fe;font-weight:bold;" title="'+s.label+'">'+s.icon+'</div>';}).join("");
-}
-
+// ===== CORE: updateTenderState =====
 window.updateTenderState = function(jsonData) {
-    console.log("[EmoTender Platform] 收到状态载荷:", jsonData);
+    console.log("[EmoTender] 收到状态载荷:", jsonData);
     const screen = document.getElementById('crt-screen');
-    if (!screen) {
-        console.error("【致命配置断联】未能在页面找到 id='crt-screen' 的面部 DOM 节点！");
-        return;
-    }
+    if (!screen) return;
+
     let finalEmotion = "清醒";
     const label = (jsonData.emotion_label || "").trim();
     const state = (jsonData.face_state || "").trim();
@@ -411,46 +270,10 @@ window.updateTenderState = function(jsonData) {
     else if (label === "兴奋" || state === "happy") { finalEmotion = "兴奋"; }
     else if (label === "犹豫" || state === "thinking") { finalEmotion = "犹豫"; }
     screen.setAttribute('data-emotion', finalEmotion);
-    console.log("[EmoTender UI] 状态成功直连重组，亮起情绪: " + finalEmotion);
     if (jsonData.face_state) setFaceState(jsonData.face_state);
-    var sk = jsonData.turn_type || jsonData.status;
-    if (sk) setSystemStatus(sk);
-    var ue2 = document.getElementById('user-input-text');
-    if (ue2) ue2.textContent = '> ' + (jsonData.user_text || '暂无语音输入');
-    var lb = document.getElementById('emotion-label-badge');
-    if (lb) {
-        lb.textContent = jsonData.emotion_label || '分析中';
-        lb.className = 'px-3 py-1 text-sm font-semibold ' + (jsonData.emotion_label ? 'bg-[#00f2fe]/10 text-[#00f2fe] border-[#00f2fe]/25' : 'bg-white/5 text-white/20 border-white/10');
-        lb.style.fontFamily = "'Courier New',monospace";
-    }
-    var ce = document.getElementById('complex-emotion-text');
-    if (ce) ce.textContent = jsonData.complex_emotion || 'awaiting analysis...';
-    var ne = document.getElementById('need-summary-text');
-    if (ne) ne.innerHTML = '<span class="text-[#00f2fe]/60">' + (jsonData.need_summary || '-- pending --') + '</span>';
-    var de = document.getElementById('drink-name');
-    if (de) {
-        de.textContent = jsonData.drink_name || '等待分析...';
-        de.className = jsonData.drink_name ? 'text-3xl font-bold text-glow-pink mb-3' : 'text-3xl font-bold text-white/20 mb-3';
-        de.style.fontFamily = "'Courier New',monospace";
-    }
-    renderFlavors(jsonData.recipe_modules || []);
-    var fr = document.getElementById('flavor-profile-row'), ft = document.getElementById('flavor-profile-text');
-    if (jsonData.flavor_profile && fr && ft) { fr.classList.remove('hidden'); ft.textContent = jsonData.flavor_profile; }
-    else if (fr) fr.classList.add('hidden');
-    var cr = document.getElementById('color-profile-row'), ct = document.getElementById('color-profile-text');
-    if (jsonData.color_profile && cr && ct) { cr.classList.remove('hidden'); ct.textContent = jsonData.color_profile; }
-    else if (cr) cr.classList.add('hidden');
-    typeText(jsonData.bartender_line || '正在倾听你的声音...', function() {
-        var fb = document.getElementById('feedback-prompt-row'), fbt = document.getElementById('feedback-prompt-text');
-        if (fb && fbt && jsonData.feedback_prompt) { fb.classList.remove('hidden'); fbt.textContent = jsonData.feedback_prompt; }
-        else if (fb) fb.classList.add('hidden');
-    });
 };
 
-function runPreset(k){var d=PRESETS[k];if(d)window.updateTenderState(d);}
-function toggleDebug(){var p=document.getElementById("debug-panel");if(p)p.classList.toggle("collapsed");}
-
-// ===== BACKEND API INTEGRATION =====
+// ===== API =====
 const API_BASE = "";
 
 async function callApi(path) {
@@ -462,28 +285,24 @@ async function callApi(path) {
 
 async function startRecording() {
   try {
-    setSystemStatus("listening");
-    var ue = document.getElementById("user-input-text");
-    if (ue) ue.textContent = "[ 录音中，请说话... ]";
-    var te = document.getElementById("typed-text");
-    if (te) te.textContent = "正在倾听...";
+    setStatus("● RECORDING");
+    var crt = document.getElementById("crt-screen");
+    if (crt) crt.classList.add("recording-active");
     await callApi("/api/voice/start");
     console.log("[EmoTender] 录音已开始");
   } catch (err) {
-    setSystemStatus("idle");
-    console.error("录音启动失败:", err);
-    var ue = document.getElementById("user-input-text");
-    if (ue) ue.textContent = "[ 录音启动失败: " + (err.detail || err.message || "未知错误") + " ]";
+    setStatus("IDLE");
+    var crt = document.getElementById("crt-screen");
+    if (crt) crt.classList.remove("recording-active");
+    setReply("启动录音失败: " + (err.detail || err.message || "未知错误"));
   }
 }
 
 async function stopRecording() {
   try {
-    setSystemStatus("thinking");
-    var ue = document.getElementById("user-input-text");
-    if (ue) ue.textContent = "[ 正在转写和分析，请稍候... ]";
-    var te = document.getElementById("typed-text");
-    if (te) { te.textContent = "分析中..."; }
+    setStatus("● PROCESSING");
+    var crt = document.getElementById("crt-screen");
+    if (crt) crt.classList.remove("recording-active");
     
     const data = await callApi("/api/voice/stop");
     console.log("[EmoTender] 分析结果:", data);
@@ -493,136 +312,43 @@ async function stopRecording() {
     }
     
     if (data.robot_reply_text) {
-      var te2 = document.getElementById("typed-text");
-      if (te2) { te2.textContent = ""; typeText(data.robot_reply_text); }
+      setReply(data.robot_reply_text);
     }
     
-    setSystemStatus(data.turn_type || "serving");
-    
+    setStatus(data.turn_type === "bar_chat" ? "IDLE" : "● SERVED");
   } catch (err) {
-    setSystemStatus("idle");
-    console.error("分析失败:", err);
-    var ue = document.getElementById("user-input-text");
-    if (ue) ue.textContent = "[ 分析失败: " + (err.detail || err.message || "未知错误") + " ]";
-    var te = document.getElementById("typed-text");
-    if (te) te.textContent = "后端连接失败，请检查服务是否运行。";
+    setStatus("IDLE");
+    setReply("分析失败: " + (err.detail || err.message || "未知错误"));
   }
 }
 
 async function resetSystem() {
   try {
     await callApi("/api/reset");
-    console.log("[EmoTender] 已重置");
     init();
+    setReply("");
+    console.log("[EmoTender] 已重置");
   } catch (err) {
-    console.error("重置失败:", err);
+    setReply("重置失败: " + (err.detail || err.message || "未知错误"));
   }
 }
 
-function init(){
-  var screen=document.getElementById("crt-screen");if(screen){screen.setAttribute("data-emotion","清醒");};
-  setFaceState("清醒");setSystemStatus("idle");
-  document.getElementById("drink-name").textContent="--";document.getElementById("drink-name").className="text-3xl font-bold text-white/20 mb-3";
-  document.getElementById("user-input-text").textContent="[ AWAITING SIGNAL... ]";
-  document.getElementById("typed-text").textContent="";
-  var lb=document.getElementById("emotion-label-badge");if(lb){lb.textContent="--";lb.className="px-3 py-1 text-sm font-semibold bg-white/5 text-white/20 border border-white/10";}
-  var ct2=document.getElementById("complex-emotion-text");if(ct2)ct2.textContent="awaiting analysis...";
-  var ns=document.getElementById("need-summary-text");if(ns)ns.innerHTML='<span class="text-white/30">-- pending --</span>';
-  renderFlavors([]);
+// ===== INIT =====
+function init() {
+  var screen = document.getElementById("crt-screen");
+  if (screen) { screen.setAttribute("data-emotion", "清醒"); }
+  setFaceState("清醒");
+  setStatus("IDLE");
 }
 
-// ===== MOCK DEBUG: 键盘数字键 1-6 注入伪造载荷 =====
+// ===== MOCK KEYBOARD 1-6 =====
 const MOCK_PAYLOADS = {
-  "1": {
-    schema_version: "1.0", turn_type: "recommendation",
-    user_text: "[MOCK] 清醒测试", emotion_label: "清醒",
-    emotion_blend: [{ emotion: "清醒", weight: 1.0 }],
-    complex_emotion: "精神集中，状态在线。",
-    need_summary: "需要一杯清爽低甜的饮品保持清醒。",
-    drink_name: "冷启动",
-    recipe_modules: ["clear_balance", "bitter_focus", "spark_restart"],
-    flavor_profile: "微苦清爽",
-    color_profile: "透明偏冷调，带一点淡青色",
-    face_state: "focused",
-    bartender_line: "（本地测试）系统高能自检中，请下达指令。",
-    action_sequence: "make_cold_start",
-    feedback_prompt: "感觉怎么样？还需要调整吗？"
-  },
-  "2": {
-    schema_version: "1.0", turn_type: "recommendation",
-    user_text: "[MOCK] 兴奋测试", emotion_label: "兴奋",
-    emotion_blend: [{ emotion: "兴奋", weight: 1.0 }],
-    complex_emotion: "情绪高涨，充满活力。",
-    need_summary: "需要一杯充满气泡感的庆祝饮品。",
-    drink_name: "气泡重启",
-    recipe_modules: ["bright_bubble", "spark_restart"],
-    flavor_profile: "酸甜气泡",
-    color_profile: "明亮霓虹绿",
-    face_state: "happy",
-    bartender_line: "（本地测试）今天真是太棒了！来杯气泡轰炸吧！",
-    action_sequence: "make_spark_restart",
-    feedback_prompt: "好喝吗？还想再来点别的吗？"
-  },
-  "3": {
-    schema_version: "1.0", turn_type: "recommendation",
-    user_text: "[MOCK] 难过测试", emotion_label: "难过",
-    emotion_blend: [{ emotion: "难过", weight: 1.0 }],
-    complex_emotion: "情绪低落，需要安抚。",
-    need_summary: "需要一杯柔和、低刺激、温暖的饮品。",
-    drink_name: "软着陆",
-    recipe_modules: ["soft_comfort", "blue_calm"],
-    flavor_profile: "低酸柔和",
-    color_profile: "浅蓝紫色",
-    face_state: "gentle",
-    bartender_line: "（本地测试）没关系的，慢慢来，先喝杯热的吧。",
-    action_sequence: "make_soft_comfort",
-    feedback_prompt: "有没有感觉好一点点？"
-  },
-  "4": {
-    schema_version: "1.0", turn_type: "bar_chat",
-    user_text: "[MOCK] 疲惫测试", emotion_label: "疲惫",
-    emotion_blend: [{ emotion: "疲惫", weight: 1.0 }],
-    complex_emotion: "身心俱疲，精力见底。",
-    need_summary: "需要被接住，不急着推荐。",
-    drink_name: "无正式推荐",
-    recipe_modules: [],
-    flavor_profile: "无正式推荐",
-    color_profile: "无正式推荐",
-    face_state: "gentle",
-    bartender_line: "（本地测试）哈啊……能量有点低，我想静静。",
-    action_sequence: "gesture_thinking",
-    feedback_prompt: "你愿意的话，可以再说一点。"
-  },
-  "5": {
-    schema_version: "1.0", turn_type: "bar_chat",
-    user_text: "[MOCK] 焦虑测试", emotion_label: "焦虑",
-    emotion_blend: [{ emotion: "焦虑", weight: 1.0 }],
-    complex_emotion: "心神不宁，心跳加快。",
-    need_summary: "需要稳定节奏，不推荐酒精。",
-    drink_name: "无正式推荐",
-    recipe_modules: [],
-    flavor_profile: "无正式推荐",
-    color_profile: "无正式推荐",
-    face_state: "focused",
-    bartender_line: "（本地测试）心跳好快……节奏乱了，快让我稳定下来。",
-    action_sequence: "serve_only",
-    feedback_prompt: "深呼吸，我在这里。"
-  },
-  "6": {
-    schema_version: "1.0", turn_type: "bar_chat",
-    user_text: "[MOCK] 犹豫测试", emotion_label: "犹豫",
-    emotion_blend: [{ emotion: "犹豫", weight: 1.0 }],
-    complex_emotion: "选择困难，左右摇摆。",
-    need_summary: "需要更多时间考虑，不急着决定。",
-    drink_name: "无正式推荐",
-    recipe_modules: [],
-    flavor_profile: "无正式推荐",
-    color_profile: "无正式推荐",
-    face_state: "thinking",
-    bartender_line: "（本地测试）唔……这个听起来不错，那个好像也可以？",
-    action_sequence: "gesture_thinking",
-    feedback_prompt: "不着急，慢慢想。"
-  }
+  "1": { schema_version:"1.0",turn_type:"recommendation",user_text:"[MOCK] 清醒",emotion_label:"清醒",face_state:"focused",bartender_line:"系统自检中。",emotion_blend:[{emotion:"清醒",weight:1}],complex_emotion:"",need_summary:"",drink_name:"",recipe_modules:[],flavor_profile:"",color_profile:"",action_sequence:"",feedback_prompt:"" },
+  "2": { schema_version:"1.0",turn_type:"recommendation",user_text:"[MOCK] 兴奋",emotion_label:"兴奋",face_state:"happy",bartender_line:"太棒了！",emotion_blend:[{emotion:"兴奋",weight:1}],complex_emotion:"",need_summary:"",drink_name:"",recipe_modules:[],flavor_profile:"",color_profile:"",action_sequence:"",feedback_prompt:"" },
+  "3": { schema_version:"1.0",turn_type:"recommendation",user_text:"[MOCK] 难过",emotion_label:"难过",face_state:"gentle",bartender_line:"没关系的。",emotion_blend:[{emotion:"难过",weight:1}],complex_emotion:"",need_summary:"",drink_name:"",recipe_modules:[],flavor_profile:"",color_profile:"",action_sequence:"",feedback_prompt:"" },
+  "4": { schema_version:"1.0",turn_type:"bar_chat",user_text:"[MOCK] 疲惫",emotion_label:"疲惫",face_state:"gentle",bartender_line:"哈啊……我想静静。",emotion_blend:[{emotion:"疲惫",weight:1}],complex_emotion:"",need_summary:"",drink_name:"",recipe_modules:[],flavor_profile:"",color_profile:"",action_sequence:"",feedback_prompt:"" },
+  "5": { schema_version:"1.0",turn_type:"bar_chat",user_text:"[MOCK] 焦虑",emotion_label:"焦虑",face_state:"focused",bartender_line:"深呼吸，我在这里。",emotion_blend:[{emotion:"焦虑",weight:1}],complex_emotion:"",need_summary:"",drink_name:"",recipe_modules:[],flavor_profile:"",color_profile:"",action_sequence:"",feedback_prompt:"" },
+  "6": { schema_version:"1.0",turn_type:"bar_chat",user_text:"[MOCK] 犹豫",emotion_label:"犹豫",face_state:"thinking",bartender_line:"不着急，慢慢想。",emotion_blend:[{emotion:"犹豫",weight:1}],complex_emotion:"",need_summary:"",drink_name:"",recipe_modules:[],flavor_profile:"",color_profile:"",action_sequence:"",feedback_prompt:"" }
 };
 
 document.addEventListener("keydown", function(e) {
@@ -631,17 +357,13 @@ document.addEventListener("keydown", function(e) {
   if (MOCK_PAYLOADS[key]) {
     e.preventDefault();
     var payload = MOCK_PAYLOADS[key];
-    console.log("[EmoTender MOCK] 按键 " + key + " -> 注入伪造载荷: " + payload.emotion_label);
     window.updateTenderState(payload);
-
-    var te = document.getElementById("typed-text");
-    if (te) { te.textContent = ""; typeText(payload.bartender_line); }
-
-    setSystemStatus(payload.turn_type || "serving");
+    setReply(payload.bartender_line);
+    setStatus("● MOCK");
   }
 });
 
-document.addEventListener("DOMContentLoaded",init);
+document.addEventListener("DOMContentLoaded", init);
 </script>
 </body>
 </html>
