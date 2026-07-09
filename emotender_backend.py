@@ -485,23 +485,39 @@ def start_recording():
     global recording_process
 
     if recording_process is not None:
-        raise HTTPException(status_code=400, detail="Recording is already running")
+        # Auto-stop existing recording before starting a new one
+        try:
+            os.killpg(os.getpgid(recording_process.pid), signal.SIGINT)
+            recording_process.communicate(timeout=2)
+        except Exception:
+            pass
+        finally:
+            recording_process = None
 
     if AUDIO_PATH.exists():
         AUDIO_PATH.unlink()
 
-    command = [
-        "arecord",
-        "-D",
-        "default",
-        "-f",
-        "S16_LE",
-        "-r",
-        "16000",
-        "-c",
-        "1",
-        str(AUDIO_PATH),
-    ]
+    import platform
+    if platform.system() == "Darwin":
+        command = [
+            "ffmpeg",
+            "-f", "avfoundation",
+            "-i", ":0",
+            "-acodec", "pcm_s16le",
+            "-ar", "16000",
+            "-ac", "1",
+            "-y",
+            str(AUDIO_PATH),
+        ]
+    else:
+        command = [
+            "arecord",
+            "-D", "default",
+            "-f", "S16_LE",
+            "-r", "16000",
+            "-c", "1",
+            str(AUDIO_PATH),
+        ]
 
     recording_process = subprocess.Popen(
         command,
@@ -510,7 +526,7 @@ def start_recording():
         preexec_fn=os.setsid,
     )
 
-    time.sleep(0.2)
+    time.sleep(0.5)
 
     if recording_process.poll() is not None:
         _, stderr = recording_process.communicate()
