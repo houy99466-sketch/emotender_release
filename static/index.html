@@ -4,20 +4,88 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EmoTender · 情绪酒保</title>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ===== 全局背景 ===== */
   body {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-height: 100vh; gap: 24px;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh; gap: 22px;
     font-family: 'Courier New','PingFang SC',monospace;
-    background: #000000; overflow-x: hidden;
+    background: #0a0a0a; overflow-x: hidden;
+    padding: 20px 0 60px;
   }
 
-  /* ===== OLED 屏幕容器 ===== */
+  /* CRT 四周粗光晕 — 情绪切换时闪现2秒后淡出 */
+  #crt-screen::before {
+    content: ''; position: absolute; inset: -20px;
+    border-radius: 24px; z-index: 0;
+    pointer-events: none;
+    background: transparent;
+    opacity: 0;
+    box-shadow:
+      0 0 30px 8px var(--neon-color, #8cc8e0),
+      0 0 60px 18px var(--neon-color, #8cc8e0),
+      0 0 100px 30px var(--neon-color, #8cc8e0),
+      0 0 160px 50px var(--neon-color, #8cc8e0);
+    transition: opacity 0.3s ease;
+  }
+  #crt-screen.glow-flash::before {
+    opacity: 1;
+    animation: glowOut 2.2s ease-out forwards;
+  }
+  @keyframes glowOut {
+    0%   { opacity: 1; }
+    15%  { opacity: 1; }
+    70%  { opacity: 0.45; }
+    100% { opacity: 0; }
+  }
+
+  /* CRT 正方形边框粗渐变光晕 — 贴边亮色渐变框 */
+  #crt-screen {
+    border: 5px solid transparent;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  #crt-screen.glow-flash {
+    border-color: var(--neon-color, #8cc8e0);
+    box-shadow:
+      inset 0 0 18px 4px var(--neon-color, #8cc8e0),
+      0 0 16px 4px var(--neon-color, #8cc8e0),
+      0 0 35px 10px var(--neon-color, #8cc8e0);
+    animation: borderGlowOut 2.2s ease-out forwards;
+  }
+  @keyframes borderGlowOut {
+    0%   { border-color: var(--neon-color, #8cc8e0);
+           box-shadow: inset 0 0 18px 4px var(--neon-color, #8cc8e0),
+                       0 0 16px 4px var(--neon-color, #8cc8e0),
+                       0 0 35px 10px var(--neon-color, #8cc8e0); }
+    12%  { border-color: var(--neon-color, #8cc8e0);
+           box-shadow: inset 0 0 18px 4px var(--neon-color, #8cc8e0),
+                       0 0 16px 4px var(--neon-color, #8cc8e0),
+                       0 0 35px 10px var(--neon-color, #8cc8e0); }
+    100% { border-color: transparent;
+           box-shadow: inset 0 0 0px 0px transparent,
+                       0 0 0px 0px transparent,
+                       0 0 0px 0px transparent; }
+  }
+
+  /* OLED 像素网格纹理叠加 */
+  #crt-screen::after {
+    content: ''; position: absolute; inset: 0;
+    border-radius: 16px; z-index: 5;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px),
+      repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+    opacity: 0.6;
+  }
+
+  /* ===== CRT 屏幕 ===== */
   #crt-screen {
     position:relative; width:400px; height:400px;
     background-color:#000000 !important;
-    overflow:hidden; border-radius:16px;
+    overflow:hidden; border-radius:16px; flex-shrink:0;
     transition: box-shadow 0.4s ease;
   }
   #crt-screen[data-emotion="清醒"] { --neon-color:#8cc8e0; }
@@ -27,159 +95,6 @@
   #crt-screen[data-emotion="焦虑"] { --neon-color:#e8a8a0; }
   #crt-screen[data-emotion="犹豫"] { --neon-color:#a8d8a0; }
 
-  /* ===== OLED 像素网格叠加层 ===== */
-  #crt-screen::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 15;
-    background-image: radial-gradient(circle, rgba(0,0,0,0.38) 0.35px, transparent 0.35px);
-    background-size: 2.5px 2.5px;
-    border-radius: 16px;
-  }
-
-  /* ===== 光晕闪现动画 ===== */
-  /* 清醒 · cyan 光晕 */
-  @keyframes halo-清醒 {
-    0%   { box-shadow: inset 0 0 240px 120px rgba(140,200,224,0.8),
-                       inset 0 0 560px 280px rgba(140,200,224,0.5),
-                       inset 0 0 880px 480px rgba(140,200,224,0.2);
-           outline: 32px solid rgba(140,200,224,0.7); outline-offset: -16px; }
-    40%  { box-shadow: inset 0 0 160px 80px rgba(140,200,224,0.55),
-                       inset 0 0 400px 200px rgba(140,200,224,0.35),
-                       inset 0 0 640px 320px rgba(140,200,224,0.12);
-           outline: 20px solid rgba(140,200,224,0.4); outline-offset: -16px; }
-    70%  { box-shadow: inset 0 0 80px 32px rgba(140,200,224,0.25),
-                       inset 0 0 200px 100px rgba(140,200,224,0.12),
-                       inset 0 0 320px 160px rgba(140,200,224,0.04);
-           outline: 8px solid rgba(140,200,224,0.12); outline-offset: -16px; }
-    100% { box-shadow: inset 0 0 0px 0px transparent,
-                       inset 0 0 0px 0px transparent,
-                       inset 0 0 0px 0px transparent;
-           outline: 0px solid transparent; outline-offset: -16px; }
-  }
-  #crt-screen.halo-清醒 {
-    animation: halo-清醒 3s ease-out forwards;
-    transition: box-shadow 0s, outline 0s !important;
-  }
-  /* 兴奋 · green 光晕 */
-  @keyframes halo-兴奋 {
-    0%   { box-shadow: inset 0 0 240px 120px rgba(144,216,176,0.8),
-                       inset 0 0 560px 280px rgba(144,216,176,0.5),
-                       inset 0 0 880px 480px rgba(144,216,176,0.2);
-           outline: 32px solid rgba(144,216,176,0.7); outline-offset: -16px; }
-    40%  { box-shadow: inset 0 0 160px 80px rgba(144,216,176,0.55),
-                       inset 0 0 400px 200px rgba(144,216,176,0.35),
-                       inset 0 0 640px 320px rgba(144,216,176,0.12);
-           outline: 20px solid rgba(144,216,176,0.4); outline-offset: -16px; }
-    70%  { box-shadow: inset 0 0 80px 32px rgba(144,216,176,0.25),
-                       inset 0 0 200px 100px rgba(144,216,176,0.12),
-                       inset 0 0 320px 160px rgba(144,216,176,0.04);
-           outline: 8px solid rgba(144,216,176,0.12); outline-offset: -16px; }
-    100% { box-shadow: inset 0 0 0px 0px transparent,
-                       inset 0 0 0px 0px transparent,
-                       inset 0 0 0px 0px transparent;
-           outline: 0px solid transparent; outline-offset: -16px; }
-  }
-  #crt-screen.halo-兴奋 {
-    animation: halo-兴奋 3s ease-out forwards;
-    transition: box-shadow 0s, outline 0s !important;
-  }
-  /* 难过 · purple 光晕 */
-  @keyframes halo-难过 {
-    0%   { box-shadow: inset 0 0 240px 120px rgba(200,187,224,0.8),
-                       inset 0 0 560px 280px rgba(200,187,224,0.5),
-                       inset 0 0 880px 480px rgba(200,187,224,0.2);
-           outline: 32px solid rgba(200,187,224,0.7); outline-offset: -16px; }
-    40%  { box-shadow: inset 0 0 160px 80px rgba(200,187,224,0.55),
-                       inset 0 0 400px 200px rgba(200,187,224,0.35),
-                       inset 0 0 640px 320px rgba(200,187,224,0.12);
-           outline: 20px solid rgba(200,187,224,0.4); outline-offset: -16px; }
-    70%  { box-shadow: inset 0 0 80px 32px rgba(200,187,224,0.25),
-                       inset 0 0 200px 100px rgba(200,187,224,0.12),
-                       inset 0 0 320px 160px rgba(200,187,224,0.04);
-           outline: 8px solid rgba(200,187,224,0.12); outline-offset: -16px; }
-    100% { box-shadow: inset 0 0 0px 0px transparent,
-                       inset 0 0 0px 0px transparent,
-                       inset 0 0 0px 0px transparent;
-           outline: 0px solid transparent; outline-offset: -16px; }
-  }
-  #crt-screen.halo-难过 {
-    animation: halo-难过 3s ease-out forwards;
-    transition: box-shadow 0s, outline 0s !important;
-  }
-  /* 疲惫 · gold 光晕 */
-  @keyframes halo-疲惫 {
-    0%   { box-shadow: inset 0 0 240px 120px rgba(242,218,144,0.8),
-                       inset 0 0 560px 280px rgba(242,218,144,0.5),
-                       inset 0 0 880px 480px rgba(242,218,144,0.2);
-           outline: 32px solid rgba(242,218,144,0.7); outline-offset: -16px; }
-    40%  { box-shadow: inset 0 0 160px 80px rgba(242,218,144,0.55),
-                       inset 0 0 400px 200px rgba(242,218,144,0.35),
-                       inset 0 0 640px 320px rgba(242,218,144,0.12);
-           outline: 20px solid rgba(242,218,144,0.4); outline-offset: -16px; }
-    70%  { box-shadow: inset 0 0 80px 32px rgba(242,218,144,0.25),
-                       inset 0 0 200px 100px rgba(242,218,144,0.12),
-                       inset 0 0 320px 160px rgba(242,218,144,0.04);
-           outline: 8px solid rgba(242,218,144,0.12); outline-offset: -16px; }
-    100% { box-shadow: inset 0 0 0px 0px transparent,
-                       inset 0 0 0px 0px transparent,
-                       inset 0 0 0px 0px transparent;
-           outline: 0px solid transparent; outline-offset: -16px; }
-  }
-  #crt-screen.halo-疲惫 {
-    animation: halo-疲惫 3s ease-out forwards;
-    transition: box-shadow 0s, outline 0s !important;
-  }
-  /* 焦虑 · coral 光晕 */
-  @keyframes halo-焦虑 {
-    0%   { box-shadow: inset 0 0 240px 120px rgba(232,168,160,0.8),
-                       inset 0 0 560px 280px rgba(232,168,160,0.5),
-                       inset 0 0 880px 480px rgba(232,168,160,0.2);
-           outline: 32px solid rgba(232,168,160,0.7); outline-offset: -16px; }
-    40%  { box-shadow: inset 0 0 160px 80px rgba(232,168,160,0.55),
-                       inset 0 0 400px 200px rgba(232,168,160,0.35),
-                       inset 0 0 640px 320px rgba(232,168,160,0.12);
-           outline: 20px solid rgba(232,168,160,0.4); outline-offset: -16px; }
-    70%  { box-shadow: inset 0 0 80px 32px rgba(232,168,160,0.25),
-                       inset 0 0 200px 100px rgba(232,168,160,0.12),
-                       inset 0 0 320px 160px rgba(232,168,160,0.04);
-           outline: 8px solid rgba(232,168,160,0.12); outline-offset: -16px; }
-    100% { box-shadow: inset 0 0 0px 0px transparent,
-                       inset 0 0 0px 0px transparent,
-                       inset 0 0 0px 0px transparent;
-           outline: 0px solid transparent; outline-offset: -16px; }
-  }
-  #crt-screen.halo-焦虑 {
-    animation: halo-焦虑 3s ease-out forwards;
-    transition: box-shadow 0s, outline 0s !important;
-  }
-  /* 犹豫 · lime 光晕 */
-  @keyframes halo-犹豫 {
-    0%   { box-shadow: inset 0 0 240px 120px rgba(168,216,160,0.8),
-                       inset 0 0 560px 280px rgba(168,216,160,0.5),
-                       inset 0 0 880px 480px rgba(168,216,160,0.2);
-           outline: 32px solid rgba(168,216,160,0.7); outline-offset: -16px; }
-    40%  { box-shadow: inset 0 0 160px 80px rgba(168,216,160,0.55),
-                       inset 0 0 400px 200px rgba(168,216,160,0.35),
-                       inset 0 0 640px 320px rgba(168,216,160,0.12);
-           outline: 20px solid rgba(168,216,160,0.4); outline-offset: -16px; }
-    70%  { box-shadow: inset 0 0 80px 32px rgba(168,216,160,0.25),
-                       inset 0 0 200px 100px rgba(168,216,160,0.12),
-                       inset 0 0 320px 160px rgba(168,216,160,0.04);
-           outline: 8px solid rgba(168,216,160,0.12); outline-offset: -16px; }
-    100% { box-shadow: inset 0 0 0px 0px transparent,
-                       inset 0 0 0px 0px transparent,
-                       inset 0 0 0px 0px transparent;
-           outline: 0px solid transparent; outline-offset: -16px; }
-  }
-  #crt-screen.halo-犹豫 {
-    animation: halo-犹豫 3s ease-out forwards;
-    transition: box-shadow 0s, outline 0s !important;
-  }
-
-  /* ===== 录音脉冲 (与光晕互不冲突) ===== */
   @keyframes recording-pulse {
     0%,100%{box-shadow:0 0 0 0px transparent}
     50%{box-shadow:0 0 32px 4px var(--neon-color,#8cc8e0)}
@@ -189,7 +104,6 @@
     box-shadow:0 0 20px 2px var(--neon-color,#8cc8e0);
   }
 
-  /* ===== 霓虹线条样式 ===== */
   .neon-eye {
     fill:none; stroke:var(--neon-color) !important;
     stroke-width:16; stroke-linecap:round; stroke-linejoin:round;
@@ -203,7 +117,6 @@
     stroke-width:8; stroke-linecap:round; stroke-linejoin:round;
   }
 
-  /* ===== 表情标签 ===== */
   #face-state-label {
     position:absolute; bottom:-28px; left:50%; transform:translateX(-50%);
     z-index:20; font-family:'Courier New',monospace; font-size:10px;
@@ -211,7 +124,6 @@
     text-transform:uppercase; transition:color 0.3s ease; pointer-events:none;
   }
 
-  /* ===== 表情组显隐 ===== */
   .pixel-face-group {
     opacity:0 !important; visibility:hidden !important;
     transform:scale(0.88); transform-origin:200px 200px;
@@ -228,107 +140,43 @@
     opacity:1 !important; visibility:visible !important; transform:scale(1) !important;
   }
 
-  /* ================================================================
-     表情动画 — 按提示词重新设计
-     ================================================================ */
+  /* ===== 动画 ===== */
+  @keyframes qx-pulse { 0%,100%{transform:scale(1); opacity:0.72} 50%{transform:scale(1.06,1.12); opacity:1} }
+  #group-qx .neon-eye { animation:qx-pulse 1.8s ease-in-out infinite; transform-origin:114px 148px; }
+  #group-qx .neon-mouth { animation:qx-pulse 1.8s ease-in-out infinite; transform-origin:200px 240px; }
 
-  /* ---- 1. 清醒：嘴巴横向缓慢拉伸循环，眼睛保持静止 ---- */
-  @keyframes qx-mouth-stretch {
-    0%,100% { transform: scaleX(1); }
-    50%     { transform: scaleX(1.45); }
-  }
-  #group-qx .neon-mouth {
-    animation: qx-mouth-stretch 2.2s ease-in-out infinite;
-    transform-origin: 200px 240px;
-  }
-  /* 眼睛完全静止，无动画 */
+  @keyframes xf-blink-l { 0%,100%{opacity:1} 22%,26%{opacity:0.06} 50%,54%{opacity:1} 72%,76%{opacity:0.06} }
+  @keyframes xf-blink-r { 0%,22%{opacity:1} 26%,30%{opacity:0.06} 54%,58%{opacity:1} 76%,80%{opacity:0.06} 100%{opacity:1} }
+  @keyframes xf-lift { 0%,100%{transform:scaleY(1)} 40%,60%{transform:scaleY(1.14)} }
+  @keyframes xf-glow2 { 0%,100%{opacity:0.85} 40%,60%{opacity:1} }
+  .xf-eye-l { animation:xf-blink-l 1.6s ease-in-out infinite, xf-lift 1.6s ease-in-out infinite, xf-glow2 1.6s ease-in-out infinite; transform-origin:114px 148px; }
+  .xf-eye-r { animation:xf-blink-r 1.6s ease-in-out infinite, xf-lift 1.6s ease-in-out infinite, xf-glow2 1.6s ease-in-out infinite; transform-origin:286px 148px; }
+  @keyframes xf-mouth2 { 0%,100%{transform:scaleX(1)} 40%,60%{transform:scaleX(1.08)} }
+  .xf-mouth { animation:xf-mouth2 1.6s ease-in-out infinite; transform-origin:200px 240px; }
 
-  /* ---- 2. 兴奋：大笑夸张弧度 + 交替眨眼 + 嘴随眨眼微颤 ---- */
-  @keyframes xf-blink-L {
-    0%,100% { transform: scaleY(1); }
-    18%,24% { transform: scaleY(0.06); }
-    50%,56% { transform: scaleY(1); }
-    68%,74% { transform: scaleY(0.06); }
-  }
-  @keyframes xf-blink-R {
-    0%,20%  { transform: scaleY(1); }
-    26%,32% { transform: scaleY(0.06); }
-    58%,64% { transform: scaleY(1); }
-    76%,82% { transform: scaleY(0.06); }
-    100%    { transform: scaleY(1); }
-  }
-  .xf-eye-L {
-    animation: xf-blink-L 1.5s ease-in-out infinite;
-    transform-origin: 112px 140px;
-  }
-  .xf-eye-R {
-    animation: xf-blink-R 1.5s ease-in-out infinite;
-    transform-origin: 288px 140px;
-  }
-  /* 笑嘴随眨眼节奏微颤 */
-  @keyframes xf-mouth-quiver {
-    0%,16%  { transform: scale(1); }
-    20%,28% { transform: scale(1.04, 0.97); }
-    40%,48% { transform: scale(1); }
-    52%,60% { transform: scale(1.03, 0.97); }
-    64%,72% { transform: scale(1); }
-    76%,84% { transform: scale(1.04, 0.97); }
-    88%,100%{ transform: scale(1); }
-  }
-  .xf-mouth {
-    animation: xf-mouth-quiver 1.5s ease-in-out infinite;
-    transform-origin: 200px 260px;
-  }
+  @keyframes ng-shake { 0%,100%{transform:rotate(0deg) scale(1)} 20%{transform:rotate(4deg) scale(1.05)} 40%{transform:rotate(-3deg) scale(0.96)} 60%{transform:rotate(3deg) scale(1.04)} 80%{transform:rotate(-2deg) scale(0.97)} }
+  .ng-eye-l-g { animation:ng-shake 1.2s ease-in-out infinite; transform-origin:114px 148px; }
+  .ng-eye-r-g { animation:ng-shake 1.2s ease-in-out infinite 0.15s; transform-origin:286px 148px; }
+  @keyframes ng-mouth2 { 0%,100%{transform:translateX(0)} 30%{transform:translateX(3px)} 70%{transform:translateX(-3px)} }
+  .ng-mouth { animation:ng-mouth2 1.4s ease-in-out infinite; }
 
-  /* ---- 3. 难过：眼睛不变，嘴巴大幅扩张收缩循环 ---- */
-  @keyframes ng-mouth-expand {
-    0%,100% { transform: scale(1); }
-    40%,60% { transform: scale(1.4, 1.35); }
-  }
-  .ng-mouth {
-    animation: ng-mouth-expand 1.6s ease-in-out infinite;
-    transform-origin: 200px 248px;
-  }
-  /* X 眼保持静止，去掉抖动 */
+  @keyframes pb-blink { 0%,78%{transform:scaleY(1)} 84%,90%{transform:scaleY(0.10)} 96%,100%{transform:scaleY(1)} }
+  .pb-eye-l { animation:pb-blink 3.5s ease-in-out infinite; transform-origin:113px 148px; }
+  .pb-eye-r { animation:pb-blink 3.5s ease-in-out infinite; transform-origin:287px 148px; }
+  #group-pb .neon-mouth { opacity:0.7; }
 
-  /* ---- 4. 疲惫：空心圆眼 + 缓速间歇眨眼，嘴巴静止 ---- */
-  @keyframes pb-slow-blink {
-    0%,76%  { transform: scaleY(1); }
-    84%,92% { transform: scaleY(0.08); }
-    100%    { transform: scaleY(1); }
-  }
-  .pb-eye-L {
-    animation: pb-slow-blink 3.8s ease-in-out infinite;
-    transform-origin: 113px 148px;
-  }
-  .pb-eye-R {
-    animation: pb-slow-blink 3.8s ease-in-out infinite;
-    transform-origin: 287px 148px;
-  }
-  /* 嘴巴完全静止 */
+  @keyframes jl-twitch { 0%,100%{transform:translate(0,0) scale(1)} 15%{transform:translate(4px,-2px) scale(1.06)} 30%{transform:translate(-3px,3px) scale(0.95)} 45%{transform:translate(3px,0) scale(1.05)} 60%{transform:translate(-4px,-1px) scale(0.96)} 75%{transform:translate(2px,2px) scale(1.04)} }
+  .jl-eye-l-g { animation:jl-twitch 0.45s ease-in-out infinite; transform-origin:114px 148px; }
+  .jl-eye-r-g { animation:jl-twitch 0.45s ease-in-out infinite 0.07s; transform-origin:286px 148px; }
+  @keyframes jl-mouth2 { 0%{transform:translateY(0)} 15%{transform:translateY(-3px)} 30%{transform:translateY(3px)} 45%{transform:translateY(-2px)} 60%{transform:translateY(2px)} 75%{transform:translateY(-1px)} 100%{transform:translateY(0)} }
+  .jl-mouth { animation:jl-mouth2 0.55s ease-in-out infinite; }
 
-  /* ---- 5. 焦虑：夸张眼型 + 同步放大嘴部，静态画面 ---- */
-  /* 无循环动画 — 静态夸张表情 */
+  @keyframes yy-drift { 0%,100%{transform:translate(0,0) scale(1)} 25%{transform:translate(4px,-2px) scale(1.05)} 50%{transform:translate(-3px,2px) scale(0.96)} 75%{transform:translate(2px,0) scale(1.03)} }
+  .yy-eye-l { animation:yy-drift 2.5s ease-in-out infinite; transform-origin:114px 148px; }
+  .yy-eye-r { animation:yy-drift 2.5s ease-in-out infinite 0.35s; transform-origin:286px 148px; }
+  @keyframes yy-mouth2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(3px)} }
+  .yy-mouth { animation:yy-mouth2 2s ease-in-out infinite; }
 
-  /* ---- 6. 犹豫：保持原有眼型 + 缓速眨眼，大幅夸张嘴型 ---- */
-  @keyframes yy-gentle-blink {
-    0%,82%  { transform: scaleY(1); }
-    88%,94% { transform: scaleY(0.1); }
-    100%    { transform: scaleY(1); }
-  }
-  .yy-eye-L {
-    animation: yy-gentle-blink 4.5s ease-in-out infinite;
-    transform-origin: 114px 150px;
-  }
-  .yy-eye-R {
-    animation: yy-gentle-blink 4.5s ease-in-out infinite;
-    transform-origin: 286px 150px;
-  }
-
-
-  /* ===== 装饰动画 ===== */
-
-  /* 爱心飘落 (兴奋) */
   @keyframes hf {
     0%{transform:translate(0,0) rotate(0deg); opacity:0}
     2%{opacity:0.9}
@@ -342,13 +190,12 @@
   .h5 { animation:hf 20s ease-in infinite 12s backwards; }
   .h6 { animation:hf 20s ease-in infinite 15s backwards; }
 
-  /* 泪滴滑落 (难过) */
   @keyframes tear-fall { 0%{transform:translate(0,0) scale(1); opacity:0.8} 60%{transform:translate(0,70px) scale(0.8); opacity:0.4} 100%{transform:translate(0,130px) scale(0.4); opacity:0} }
   .t1 { animation:tear-fall 2.5s ease-in infinite; }
   .t2 { animation:tear-fall 2.5s ease-in infinite 0.6s; }
 
   /* ===== 控制栏 ===== */
-  #control-bar { display:flex; align-items:center; gap:14px; }
+  #control-bar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; justify-content:center; }
   #control-bar button {
     font-family:'Courier New',monospace; font-size:12px;
     padding:7px 16px; border:1px solid; cursor:pointer;
@@ -373,19 +220,149 @@
     min-height:2.4em; transition:opacity 0.4s ease;
   }
 
+  /* ===== 风味六维图（无标题、无滑块） ===== */
+  #flavor-section {
+    display: flex; flex-direction: column; align-items: center; gap: 24px;
+    margin-top: 10px;
+    opacity: 0; transform: translateY(16px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  #flavor-section.visible { opacity: 1; transform: translateY(0); }
+
+  #flavor-chart-wrap {
+    position: relative; width: 280px; height: 280px;
+    margin: 8px 0;
+  }
+  #flavor-chart-wrap svg { width: 100%; height: 100%; }
+
+  /* 确认按钮 */
+  #btnConfirm {
+    margin-top: 6px;
+    font-family: 'Ma Shan Zheng','PingFang SC',cursive;
+    font-size: 16px; padding: 8px 32px;
+    border: 1px solid rgba(200,170,120,0.4);
+    background: rgba(200,170,120,0.08);
+    color: rgba(210,190,160,0.85);
+    border-radius: 8px; cursor: pointer;
+    transition: all 0.3s ease; letter-spacing: 0.2em;
+  }
+  #btnConfirm:hover {
+    background: rgba(200,170,120,0.18);
+    border-color: rgba(200,170,120,0.7);
+  }
+
+  /* ===== 牛皮纸小票 ===== */
+  #receipt-wrapper {
+    width: 100%; max-width: 440px;
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.8s cubic-bezier(0.22,0.61,0.36,1);
+  }
+  #receipt-wrapper.visible { max-height: 800px; }
+  @keyframes printReveal {
+    0%   { clip-path: inset(0 0 100% 0); }
+    20%  { clip-path: inset(0 0 80% 0); }
+    40%  { clip-path: inset(0 0 55% 0); }
+    60%  { clip-path: inset(0 0 30% 0); }
+    80%  { clip-path: inset(0 0 10% 0); }
+    100% { clip-path: inset(0 0 0 0); }
+  }
+  #receipt-wrapper.visible #receipt {
+    animation: printReveal 1.2s ease-out forwards;
+  }
+
+  #receipt {
+    width: 100%;
+    background-color: #c8b692;
+    background-image:
+      radial-gradient(ellipse at 25% 8%, rgba(220,200,160,0.3) 0%, transparent 55%),
+      radial-gradient(ellipse at 75% 85%, rgba(160,130,90,0.2) 0%, transparent 50%),
+      radial-gradient(circle at 15% 40%, rgba(180,140,100,0.12) 0%, transparent 30%),
+      radial-gradient(circle at 85% 55%, rgba(200,160,110,0.1) 0%, transparent 25%),
+      linear-gradient(178deg, #d4c3a4 0%, #cbb893 8%, #d6c7a5 22%, #c2ad85 40%, #cfbc95 58%, #c7b28c 75%, #d2bf9a 92%, #c9b590 100%);
+    border-radius: 3px;
+    box-shadow:
+      0 4px 16px rgba(0,0,0,0.35),
+      0 1px 3px rgba(0,0,0,0.2),
+      inset 0 0 50px rgba(139,119,80,0.12),
+      inset 0 0 3px rgba(100,70,30,0.08);
+    padding: 28px 26px 24px;
+    position: relative;
+    font-family: 'Ma Shan Zheng','STKaiti','KaiTi','PingFang SC',cursive;
+    color: #3e2e1a;
+    line-height: 2;
+    overflow: hidden;
+  }
+  #receipt::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(139,119,80,0.025) 2px, rgba(139,119,80,0.025) 4px),
+      repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(139,119,80,0.015) 3px, rgba(139,119,80,0.015) 6px);
+    pointer-events: none; border-radius: 3px;
+  }
+  #receipt::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 3px;
+    background: repeating-linear-gradient(90deg, transparent, transparent 12px, rgba(80,50,20,0.3) 12px, rgba(80,50,20,0.3) 14px);
+    border-radius: 3px 3px 0 0;
+  }
+  #receipt .drink-name {
+    text-align: center; font-size: 24px; margin-bottom: 4px;
+    letter-spacing: 0.12em; color: #2a1a08;
+    border-bottom: 1px dashed rgba(80,50,20,0.3);
+    padding-bottom: 8px;
+  }
+  #receipt .drink-en {
+    text-align: center; font-size: 12px; color: #7b6040;
+    margin-bottom: 12px; letter-spacing: 0.06em;
+    font-family: 'Courier New','Ma Shan Zheng',monospace;
+  }
+  #receipt .story-label {
+    font-size: 15px; color: #5a3e1a; margin-bottom: 4px;
+    letter-spacing: 0.1em;
+  }
+  #receipt .story-text {
+    font-size: 15px; color: #4a3520; line-height: 2.1;
+    text-indent: 2em;
+    padding: 4px 0;
+    position: relative; z-index: 1;
+  }
+  #receipt .story-flavor {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    margin: 10px 0 4px; font-size: 13px;
+    position: relative; z-index: 1;
+  }
+  #receipt .flavor-tag {
+    background: rgba(139,100,60,0.1);
+    padding: 0px 7px; border-radius: 2px;
+    color: #5a3e1a; font-size: 12px;
+  }
+  #receipt .receipt-footer {
+    text-align: center; margin-top: 14px;
+    font-size: 13px; color: #8b7355;
+    border-top: 1px dashed rgba(80,50,20,0.2);
+    padding-top: 8px;
+    position: relative; z-index: 1;
+  }
+  #receipt .hand-tilt-1 { display:inline-block; transform:rotate(-1.5deg); }
+  #receipt .hand-tilt-2 { display:inline-block; transform:rotate(1deg); }
+
+  /* ===== 响应式 ===== */
   @media (max-width:500px) {
     #crt-screen { width:300px !important; height:300px !important; }
     #reply-area { font-size:11px; max-width:300px; }
     #control-bar button { font-size:10px; padding:5px 12px; }
+    #flavor-chart-wrap { width:220px; height:220px; }
+    #receipt-wrapper { max-width:340px; }
+    #receipt { padding: 20px 16px 18px; }
   }
 </style>
 </head>
 <body>
 
+<!-- ===== CRT 表情屏幕 ===== -->
 <div id="crt-screen" data-emotion="清醒" style="position:relative;width:400px;height:400px;background-color:#000000!important;overflow:hidden;">
   <svg viewBox="0 0 400 400" style="width:100%;height:100%;">
     <defs>
-      <!-- 柔和霓虹辉光 -->
       <filter id="soft-glow" x="-50%" y="-50%" width="200%" height="200%">
         <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="core"/>
         <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="ambient"/>
@@ -395,39 +372,21 @@
           <feMergeNode in="SourceGraphic"/>
         </feMerge>
       </filter>
-
-      <!-- 轻微数字噪点 (OLED 纹理) -->
-      <filter id="digital-noise" x="0%" y="0%" width="100%" height="100%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="3" result="noise"/>
-        <feComponentTransfer in="noise" result="alphaNoise">
-          <feFuncA type="linear" slope="0.025"/>
-        </feComponentTransfer>
-        <feBlend mode="screen" in="alphaNoise" in2="SourceGraphic"/>
-      </filter>
     </defs>
-
     <rect x="0" y="0" width="400" height="400" fill="#000000"/>
 
-    <!-- ================================================================
-         表情组 — 按提示词重新设计
-         比例: 眼跨~260px(65%), 眼Y=148(37%), 嘴Y≈240(60%)
-         ================================================================ -->
-
-    <!-- 1. 清醒·浅青蓝 — 嘴横向拉伸循环，眼静止 -->
+    <!-- 1. 清醒·浅青蓝 -->
     <g id="group-qx" class="pixel-face-group" filter="url(#soft-glow)">
       <line class="neon-eye" x1="58" y1="148" x2="170" y2="148"/>
       <line class="neon-eye" x1="230" y1="148" x2="342" y2="148"/>
-      <line class="neon-mouth" x1="183" y1="240" x2="217" y2="240"/>
+      <line class="neon-mouth" x1="185" y1="240" x2="215" y2="240"/>
     </g>
 
-    <!-- 2. 兴奋·薄荷绿 — 大笑眼弧 + 大张嘴 + 交替眨眼 + 嘴随眨眼微颤 + 飘落爱心 -->
+    <!-- 2. 兴奋·薄荷绿 -->
     <g id="group-xf" class="pixel-face-group" filter="url(#soft-glow)">
-      <!-- 夸张大笑眼弧 -->
-      <path class="neon-eye xf-eye-L" d="M58,152 Q112,108 168,148"/>
-      <path class="neon-eye xf-eye-R" d="M232,148 Q288,108 342,152"/>
-      <!-- 大笑嘴 -->
-      <path class="neon-mouth xf-mouth" d="M135,245 Q200,300 265,245"/>
-      <!-- 飘落爱心 -->
+      <path class="neon-eye xf-eye-l" d="M65,148 Q113,118 160,148"/>
+      <path class="neon-eye xf-eye-r" d="M240,148 Q287,118 335,148"/>
+      <path class="neon-mouth xf-mouth" d="M148,240 Q200,278 252,240"/>
       <g opacity="0.35">
         <path class="h1" style="opacity:0" d="M120,10 C120,2 114,-2 110,2 C107,5 107,8 109,12 L120,24 L131,12 C133,8 133,5 130,2 C126,-2 120,2 120,10 Z" fill="#f5a0b8"/>
         <path class="h2" style="opacity:0" d="M300,30 C300,22 294,18 290,22 C287,25 287,28 289,32 L300,44 L311,32 C313,28 313,25 310,22 C306,18 300,22 300,30 Z" fill="#f5a0b8"/>
@@ -438,60 +397,43 @@
       </g>
     </g>
 
-    <!-- 3. 难过·淡薰衣草紫 — X眼静止 + 嘴扩张收缩循环 + 泪滴 -->
+    <!-- 3. 难过·淡薰衣草紫 -->
     <g id="group-ng" class="pixel-face-group" filter="url(#soft-glow)">
-      <!-- X眼静态 -->
-      <g>
+      <g class="ng-eye-l-g">
         <line class="neon-eye" x1="76" y1="120" x2="154" y2="178"/>
         <line class="neon-eye" x1="154" y1="120" x2="76" y2="178"/>
       </g>
-      <g>
+      <g class="ng-eye-r-g">
         <line class="neon-eye" x1="246" y1="120" x2="324" y2="178"/>
         <line class="neon-eye" x1="324" y1="120" x2="246" y2="178"/>
       </g>
-      <!-- 嘴扩张收缩 -->
-      <g class="ng-mouth">
-        <path class="neon-mouth" d="M185,240 Q200,260 215,240"/>
-      </g>
-      <!-- 泪滴滑落 -->
+      <path class="neon-mouth ng-mouth" d="M188,240 Q200,256 212,240"/>
       <g opacity="0.5">
         <ellipse class="t1" cx="115" cy="180" rx="5" ry="9" fill="#88b8e8" filter="url(#soft-glow)"/>
         <ellipse class="t2" cx="285" cy="180" rx="5" ry="9" fill="#88b8e8" filter="url(#soft-glow)"/>
       </g>
     </g>
 
-    <!-- 4. 疲惫·奶黄 — 空心圆眼 + 缓速眨眼，嘴静止 -->
+    <!-- 4. 疲惫·奶黄 -->
     <g id="group-pb" class="pixel-face-group" filter="url(#soft-glow)">
-      <g class="pb-eye-L">
-        <circle class="neon-ring" cx="113" cy="148" r="38"/>
-      </g>
-      <g class="pb-eye-R">
-        <circle class="neon-ring" cx="287" cy="148" r="38"/>
-      </g>
+      <circle class="neon-ring pb-eye-l" cx="113" cy="148" r="38"/>
+      <circle class="neon-ring pb-eye-r" cx="287" cy="148" r="38"/>
       <path class="neon-mouth" d="M190,240 Q200,234 210,240"/>
     </g>
 
-    <!-- 5. 焦虑·浅砖红 — 夸张V型眼 + 同步放大锯齿嘴，静态画面 -->
+    <!-- 5. 焦虑·浅砖红 -->
     <g id="group-jl" class="pixel-face-group" filter="url(#soft-glow)">
-      <!-- 夸张 V 型眼 -->
-      <path class="neon-eye" d="M64,112 Q114,170 158,112"/>
-      <path class="neon-eye" d="M242,112 Q286,170 336,112"/>
-      <!-- 放大锯齿嘴 -->
-      <path class="neon-mouth" d="M168,238 Q182,222 196,238 Q210,254 224,238 Q238,222 232,238"/>
+      <g class="jl-eye-l-g"><path class="neon-eye jl-eye-l" d="M74,118 Q114,160 148,118"/></g>
+      <g class="jl-eye-r-g"><path class="neon-eye jl-eye-r" d="M252,118 Q286,160 326,118"/></g>
+      <path class="neon-mouth jl-mouth" d="M175,240 Q185,228 195,240 Q205,252 215,240 Q225,228 225,240"/>
     </g>
 
-    <!-- 6. 犹豫·嫩浅绿 — 温和弧线眼(保持原风格) + 大幅夸张嘴，静态画面 -->
+    <!-- 6. 犹豫·嫩浅绿 -->
     <g id="group-yy" class="pixel-face-group" filter="url(#soft-glow)">
-      <!-- 温和弧线眼 + 缓眨 -->
-      <path class="neon-eye yy-eye-L" d="M68,150 Q114,128 160,150"/>
-      <path class="neon-eye yy-eye-R" d="M240,150 Q286,128 332,150"/>
-      <!-- 大幅夸张宽嘴 -->
-      <path class="neon-mouth" d="M178,238 Q200,228 222,238"/>
+      <path class="neon-eye yy-eye-l" d="M70,150 Q113,130 157,150"/>
+      <path class="neon-eye yy-eye-r" d="M243,150 Q287,130 330,150"/>
+      <path class="neon-mouth yy-mouth" d="M192,240 Q200,234 208,240"/>
     </g>
-
-    <!-- 数字噪点叠加层 (OLED 纹理) -->
-    <rect x="0" y="0" width="400" height="400" fill="none"
-          filter="url(#digital-noise)" style="pointer-events:none; opacity:0.6;"/>
   </svg>
   <div id="face-state-label">清醒</div>
 </div>
@@ -505,28 +447,265 @@
   <button id="btnReset" onclick="resetSystem()">Reset</button>
 </div>
 
+<!-- ===== 风味六维图 ===== -->
+<div id="flavor-section">
+  <div id="flavor-chart-wrap">
+    <svg viewBox="-20 -20 340 340" id="flavor-svg"></svg>
+  </div>
+  <button id="btnConfirm" onclick="confirmFlavor()">✓ 确认方案</button>
+</div>
+
+<!-- ===== 牛皮纸小票 ===== -->
+<div id="receipt-wrapper">
+  <div id="receipt">
+    <div class="drink-name" id="receipt-drink-name">—</div>
+    <div class="drink-en" id="receipt-drink-en"></div>
+    <div class="story-flavor" id="receipt-flavors"></div>
+    <div class="story-label">▸ 背景故事</div>
+    <div class="story-text" id="receipt-story"></div>
+    <div class="receipt-footer">
+      <span class="hand-tilt-1">EmoTender</span> · <span class="hand-tilt-2">深夜情绪酒馆</span>
+    </div>
+  </div>
+</div>
+
 <script>
+// ============ 饮品数据库 ============
+const DRINK_DB = {
+  "清醒": {
+    name: "冷启动", en: "Cold Start",
+    flavor: {甜:20, 鲜:40, 酸:65, 咸:5, 涩:25, 苦:45},
+    story: "以前有个总坐角落的客人，每次来都点这杯。他说：\"老柯，喝别的像在逃避，喝这杯像在跟自己谈判。\"后来他走了，每年跨年还给我发消息：\"今晚没你，但窗外的海还是蓝的。\""
+  },
+  "兴奋": {
+    name: "气泡重启", en: "Spark Restart",
+    flavor: {甜:50, 鲜:25, 酸:55, 咸:5, 涩:15, 苦:15},
+    story: "这杯是我为一个刚离职的老客人调的。他那天进来，笑得像卸了盔甲。他说：\"老柯，我三个月没笑这么大声了。\"我给他倒了这杯，气泡滋滋响，像在替他鼓掌。"
+  },
+  "难过": {
+    name: "软着陆", en: "Soft Landing",
+    flavor: {甜:70, 鲜:30, 酸:10, 咸:10, 涩:10, 苦:5},
+    story: "有一年冬天，店里暖气坏了，一个姑娘坐了一整晚。我给她这杯，她捧在手里暖了半小时才喝。临走她说：\"这杯不是酒，是围巾。\"后来，\"围巾\"就留下来了。"
+  },
+  "疲惫": {
+    name: "灰度模式", en: "Grayscale Mode",
+    flavor: {甜:30, 鲜:20, 酸:15, 咸:10, 涩:40, 苦:50},
+    story: "有个写代码的客人，天天来修bug，眼神永远焦灼。他说：\"白天世界是彩色的，每个颜色都在催我干活。\"我给他这杯，他盯着看了很久，忽然舒了口气：\"原来不选颜色，才是最大的自由。\""
+  },
+  "焦虑": {
+    name: "断点续传", en: "Breakpoint Resume",
+    flavor: {甜:25, 鲜:35, 酸:40, 咸:15, 涩:20, 苦:35},
+    story: "有个写小说的客人，卡文卡了整整两个月，每晚来就盯着这杯发呆。有一天他忽然一口闷了，眼睛亮了：\"我知道主角下一章怎么走了。\"后来他书里写：\"生活给我们的从来不是答案，是一个断点后的回车键。\""
+  },
+  "犹豫": {
+    name: "延时摄影", en: "Time-lapse",
+    flavor: {甜:40, 鲜:30, 酸:35, 咸:15, 涩:30, 苦:25},
+    story: "有个做纪录片的姑娘，拍一朵昙花开放，蹲了七个通宵。第七晚她撑不住睡着了，醒来发现花已经开败了——但监视器里录下了全过程。她冲进店里说：\"老柯，我守了七天，它偏偏在我闭眼的时候开。\"我给她这杯。她说：\"懂了，有些事不是等来的，是你忘了等，它自己就来了。\""
+  }
+};
+
+let currentDrink = null;
+let currentEmotion = "清醒";
+
+// ============ 六维风味图 ============
+const FLAVOR_KEYS = ["甜","鲜","酸","咸","涩","苦"];
+const FLAVOR_COLORS = {
+  "甜":"#f0a0a0", "鲜":"#c0d8a0", "酸":"#e8d870",
+  "咸":"#b8d0e8", "涩":"#c8a888", "苦":"#a8c888"
+};
+
+let flavorValues = {甜:50, 鲜:50, 酸:50, 咸:50, 涩:50, 苦:50};
+let draggingIdx = -1;
+
+function getHexPoint(cx, cy, r, idx, value) {
+  const angle = -Math.PI/2 + idx * (Math.PI/3);
+  const dist = r * (value/100);
+  return { x: cx + dist*Math.cos(angle), y: cy + dist*Math.sin(angle) };
+}
+
+function getHexCorner(cx, cy, r, idx) {
+  const angle = -Math.PI/2 + idx * (Math.PI/3);
+  return { x: cx + r*Math.cos(angle), y: cy + r*Math.sin(angle) };
+}
+
+function renderFlavorChart() {
+  const svg = document.getElementById('flavor-svg');
+  const cx = 150, cy = 150, R = 130;
+
+  let html = '';
+  // 同心六边形背景 (5层)
+  for (let level=1; level<=5; level++) {
+    const r = R * level/5;
+    let pts = '';
+    for (let i=0; i<6; i++) {
+      const p = getHexCorner(cx, cy, r, i);
+      pts += `${p.x},${p.y} `;
+    }
+    html += `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>`;
+  }
+  // 轴线
+  for (let i=0; i<6; i++) {
+    const p = getHexCorner(cx, cy, R, i);
+    html += `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="rgba(255,255,255,0.09)" stroke-width="1"/>`;
+  }
+  // 轴标签
+  for (let i=0; i<6; i++) {
+    const p = getHexCorner(cx, cy, R+25, i);
+    const col = FLAVOR_COLORS[FLAVOR_KEYS[i]];
+    html += `<text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="middle"
+      font-family="'Ma Shan Zheng','PingFang SC',cursive" font-size="20" fill="${col}" opacity="0.9" font-weight="bold">${FLAVOR_KEYS[i]}</text>`;
+  }
+  // 数据多边形填充
+  let dataPts = '';
+  for (let i=0; i<6; i++) {
+    const p = getHexPoint(cx, cy, R, i, flavorValues[FLAVOR_KEYS[i]]);
+    dataPts += `${p.x},${p.y} `;
+  }
+  html += `<polygon points="${dataPts}" fill="rgba(200,170,120,0.18)" stroke="rgba(200,170,120,0.5)" stroke-width="1.5"/>`;
+  // 数据点（可拖拽）
+  for (let i=0; i<6; i++) {
+    const p = getHexPoint(cx, cy, R, i, flavorValues[FLAVOR_KEYS[i]]);
+    const col = FLAVOR_COLORS[FLAVOR_KEYS[i]];
+    html += `<circle cx="${p.x}" cy="${p.y}" r="8" fill="${col}" opacity="0.9"
+      class="flavor-dot" data-idx="${i}"
+      style="cursor:grab; filter:drop-shadow(0 0 5px ${col}55);"/>`;
+  }
+  // 中心点
+  html += `<circle cx="${cx}" cy="${cy}" r="3" fill="rgba(255,255,255,0.15)"/>`;
+
+  svg.innerHTML = html;
+
+  // 绑定拖拽事件
+  const dots = svg.querySelectorAll('.flavor-dot');
+  dots.forEach(dot => {
+    dot.addEventListener('mousedown', onDotMouseDown);
+    dot.addEventListener('touchstart', onDotTouchStart, {passive:false});
+  });
+  // 也允许在 SVG 空白区域点击来设置最近轴的值
+  svg.addEventListener('mousedown', onSvgClick);
+}
+
+function onDotMouseDown(e) {
+  e.preventDefault(); e.stopPropagation();
+  draggingIdx = parseInt(e.target.dataset.idx);
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function onMouseMove(e) {
+  if (draggingIdx < 0) return;
+  updateFlavorFromMouse(e.clientX, e.clientY);
+}
+
+function onMouseUp() {
+  draggingIdx = -1;
+  document.removeEventListener('mousemove', onMouseMove);
+  document.removeEventListener('mouseup', onMouseUp);
+}
+
+function onDotTouchStart(e) {
+  e.preventDefault(); e.stopPropagation();
+  draggingIdx = parseInt(e.target.dataset.idx);
+  document.addEventListener('touchmove', onTouchMove, {passive:false});
+  document.addEventListener('touchend', onTouchEnd);
+}
+
+function onTouchMove(e) {
+  e.preventDefault();
+  if (draggingIdx < 0) return;
+  const t = e.touches[0];
+  updateFlavorFromMouse(t.clientX, t.clientY);
+}
+
+function onTouchEnd() {
+  draggingIdx = -1;
+  document.removeEventListener('touchmove', onTouchMove);
+  document.removeEventListener('touchend', onTouchEnd);
+}
+
+function onSvgClick(e) {
+  if (e.target.classList.contains('flavor-dot')) return; // 让 dot handler 处理
+  const svg = document.getElementById('flavor-svg');
+  const rect = svg.getBoundingClientRect();
+  const scaleX = 300 / rect.width;
+  const scaleY = 300 / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+  const cx = 150, cy = 150, R = 130;
+
+  // 找到最近的轴
+  let bestIdx = 0, bestDist = Infinity;
+  for (let i=0; i<6; i++) {
+    const angle = -Math.PI/2 + i*(Math.PI/3);
+    const ux = Math.cos(angle), uy = Math.sin(angle);
+    // 点到轴线的距离
+    const dx = mx - cx, dy = my - cy;
+    const proj = dx*ux + dy*uy;
+    const px = cx + proj*ux, py = cy + proj*uy;
+    const dist = Math.sqrt((mx-px)**2 + (my-py)**2);
+    if (dist < bestDist) { bestDist = dist; bestIdx = i; }
+  }
+  // 设置该轴的值
+  const angle = -Math.PI/2 + bestIdx*(Math.PI/3);
+  const dx = mx - cx, dy = my - cy;
+  let proj = dx*Math.cos(angle) + dy*Math.sin(angle);
+  let val = Math.round((proj / R) * 100);
+  val = Math.max(0, Math.min(100, val));
+
+  flavorValues[FLAVOR_KEYS[bestIdx]] = val;
+  renderFlavorChart();
+}
+
+function updateFlavorFromMouse(clientX, clientY) {
+  const svg = document.getElementById('flavor-svg');
+  const rect = svg.getBoundingClientRect();
+  const scaleX = 300 / rect.width;
+  const scaleY = 300 / rect.height;
+  const cx = 150, cy = 150, R = 130;
+  const mx = (clientX - rect.left) * scaleX - cx;
+  const my = (clientY - rect.top) * scaleY - cy;
+
+  const angle = -Math.PI/2 + draggingIdx * (Math.PI/3);
+  const dot = mx*Math.cos(angle) + my*Math.sin(angle);
+  let val = Math.round((dot / R) * 100);
+  val = Math.max(0, Math.min(100, val));
+
+  const key = FLAVOR_KEYS[draggingIdx];
+  flavorValues[key] = val;
+  renderFlavorChart();
+}
+
+function setFlavorValues(vals) {
+  FLAVOR_KEYS.forEach(k => { flavorValues[k] = vals[k] || 50; });
+  renderFlavorChart();
+}
+
+// ============ 小票渲染 ============
+function confirmFlavor() {
+  const d = currentDrink || DRINK_DB["清醒"];
+  const wrapper = document.getElementById('receipt-wrapper');
+
+  document.getElementById('receipt-drink-name').textContent = d.name;
+  document.getElementById('receipt-drink-en').textContent = d.en || '';
+
+  let flavorsHtml = '';
+  FLAVOR_KEYS.forEach(k => {
+    const v = flavorValues[k];
+    if (v > 10) {
+      flavorsHtml += `<span class="flavor-tag">${k} ${v}</span>`;
+    }
+  });
+  document.getElementById('receipt-flavors').innerHTML = flavorsHtml || '<span class="flavor-tag">定制风味</span>';
+  document.getElementById('receipt-story').textContent = d.story || '';
+
+  wrapper.classList.add('visible');
+}
+
+// ============ 原有系统逻辑 ============
 let s="standby";
 function F(t){s=t;var e=document.getElementById("face-state-label");if(e)e.textContent=(t||'').toUpperCase()}
 function U(t){var e=document.getElementById("status-line");if(e)e.textContent=t||''}
 function R(t){var e=document.getElementById("reply-area");if(e){e.style.opacity='0';setTimeout(function(){e.textContent=t||'';e.style.opacity='1'},180)}}
-
-/* ---- 光晕闪现逻辑 ---- */
-function triggerHalo(c, emotion) {
-  // 清除所有光晕 class
-  var haloClasses = ['halo-清醒','halo-兴奋','halo-难过','halo-疲惫','halo-焦虑','halo-犹豫'];
-  haloClasses.forEach(function(cls){ c.classList.remove(cls); });
-  // 触发回流以重置动画
-  void c.offsetWidth;
-  // 每种情绪对应独特色光晕
-  if (emotion) {
-    c.classList.add('halo-' + emotion);
-  }
-  // 动画结束后自动移除 (动画时长 3s)
-  setTimeout(function() {
-    haloClasses.forEach(function(cls){ c.classList.remove(cls); });
-  }, 3100);
-}
 
 window.updateTenderState=function(d){
   var c=document.getElementById('crt-screen');if(!c)return;
@@ -537,16 +716,39 @@ window.updateTenderState=function(d){
   else if(l==="清醒")e="清醒";
   else if(l==="兴奋"||t==="happy")e="兴奋";
   else if(l==="犹豫"||t==="thinking")e="犹豫";
-
-  var prev = c.getAttribute('data-emotion');
-  c.setAttribute('data-emotion',e);
-  if(d.face_state)F(d.face_state);
-
-  // 情绪切换时触发一次光晕
-  if (prev !== e) {
-    triggerHalo(c, e);
-  }
+  c.setAttribute('data-emotion',e);if(d.face_state)F(d.face_state);
+  onEmotionChange(e);
 };
+
+function onEmotionChange(emotion) {
+  currentEmotion = emotion;
+  const d = DRINK_DB[emotion];
+  if (d) {
+    currentDrink = d;
+    setFlavorValues(d.flavor);
+    document.getElementById('flavor-section').classList.add('visible');
+    document.getElementById('receipt-wrapper').classList.remove('visible');
+  }
+  if (d && !window._suppressDrinkMsg) {
+    R('🍸 推荐: ' + d.name + ' — 拖拽六维图调整风味后确认');
+  }
+  window._suppressDrinkMsg = false;
+  // 触发 CRT 光晕闪烁
+  triggerGlowFlash();
+}
+
+function triggerGlowFlash() {
+  var crt = document.getElementById('crt-screen');
+  if (!crt) return;
+  crt.classList.remove('glow-flash');
+  void crt.offsetWidth; // 强制回流，确保动画重新触发
+  crt.classList.add('glow-flash');
+  // 动画结束后自动清除 class，避免影响 recording-active 等状态
+  clearTimeout(window._glowTimer);
+  window._glowTimer = setTimeout(function() {
+    crt.classList.remove('glow-flash');
+  }, 2200);
+}
 
 const B="";
 async function C(p){var r=await fetch(B+p,{method:"POST"});var d=await r.json();if(!r.ok)throw d;return d}
@@ -557,27 +759,24 @@ async function stopRecording(){
   try{U("● PROC");var c=document.getElementById("crt-screen");if(c)c.classList.remove("recording-active");
     var d=await C("/api/voice/stop");if(d.control_json)window.updateTenderState(d.control_json);if(d.robot_reply_text)R(d.robot_reply_text);U(d.turn_type==="bar_chat"?"IDLE":"● OK")}
   catch(e){U("IDLE");R("分析失败: "+(e.detail||e.message||"?"))}}
-async function resetSystem(){try{await C("/api/reset");I();R("")}catch(e){R("重置失败: "+(e.detail||e.message||"?"))}}
-function I(){
-  var c=document.getElementById("crt-screen");if(c){
-    var prev = c.getAttribute('data-emotion');
-    c.setAttribute("data-emotion","清醒");
-    F("清醒");U("IDLE");
-    // 重置时也触发光晕 (如果前一个情绪不同)
-    if (prev !== '清醒') {
-      triggerHalo(c, '清醒');
-    }
-  }
+async function resetSystem(){try{await C("/api/reset");I();R("");resetFlavorPanels()}catch(e){R("重置失败: "+(e.detail||e.message||"?"))}}
+function I(){var c=document.getElementById("crt-screen");if(c)c.setAttribute("data-emotion","清醒");F("清醒");U("IDLE")}
+function resetFlavorPanels(){
+  document.getElementById('flavor-section').classList.remove('visible');
+  document.getElementById('receipt-wrapper').classList.remove('visible');
 }
 
 var M={1:{emotion_label:"清醒",face_state:"focused",bartender_line:"…嗯？我在。",emotion_blend:[{emotion:"清醒",weight:1}]},2:{emotion_label:"兴奋",face_state:"happy",bartender_line:"嘿嘿，今天状态超好！",emotion_blend:[{emotion:"兴奋",weight:1}]},3:{emotion_label:"难过",face_state:"gentle",bartender_line:"没关系的……慢慢来。",emotion_blend:[{emotion:"难过",weight:1}]},4:{emotion_label:"疲惫",face_state:"gentle",bartender_line:"呼……能量有点低。",emotion_blend:[{emotion:"疲惫",weight:1}]},5:{emotion_label:"焦虑",face_state:"focused",bartender_line:"深呼吸……我在这里陪你。",emotion_blend:[{emotion:"焦虑",weight:1}]},6:{emotion_label:"犹豫",face_state:"thinking",bartender_line:"唔…不着急，慢慢想~",emotion_blend:[{emotion:"犹豫",weight:1}]}};
-document.addEventListener("keydown",function(e){if(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA")return;var k=e.key;if(M[k]){e.preventDefault();var p=M[k];window.updateTenderState(p);R(p.bartender_line||"");U("● MOCK")}});
-document.addEventListener("DOMContentLoaded",function(){
+document.addEventListener("keydown",function(e){if(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA")return;var k=e.key;if(M[k]){e.preventDefault();var p=M[k];window._suppressDrinkMsg=true;window.updateTenderState(p);R(p.bartender_line||"");U("● MOCK")}});
+
+// ============ 初始化 ============
+document.addEventListener("DOMContentLoaded", function(){
   I();
-  // 首次加载也触发光晕
-  var c=document.getElementById('crt-screen');
-  if(c) { triggerHalo(c, '清醒'); }
+  // 初始化风味数据但不显示六维图，等用户选择情绪后才出现
+  setFlavorValues(DRINK_DB["清醒"].flavor);
+  currentDrink = DRINK_DB["清醒"];
 });
 </script>
+
 </body>
 </html>
