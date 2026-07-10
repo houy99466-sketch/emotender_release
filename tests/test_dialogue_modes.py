@@ -129,6 +129,44 @@ class DialogueModeTests(unittest.TestCase):
         self.assertEqual(response["robot_reply_text"], "我先给你一杯清醒一点的。")
         self.assertEqual(len(response["conversation_state"]["history"]), 1)
 
+    def test_affirmative_reply_after_recommendation_offer_switches_to_recommendation(self):
+        chat_turn = base_result("bar_chat")
+        chat_turn.update(
+            {
+                "user_text": "我今天有点累。",
+                "drink_name": "无正式推荐",
+                "recipe_modules": [],
+                "flavor_profile": "无正式推荐",
+                "color_profile": "无正式推荐",
+                "bartender_line": "听起来你需要先缓一下。",
+                "feedback_prompt": "要不要让我正式给你推荐一杯？",
+            }
+        )
+        backend.update_conversation_state(chat_turn)
+
+        llm_result = base_result("recommendation")
+        llm_result["user_text"] = "好"
+
+        with patch.object(backend, "analyze_text", return_value=llm_result) as mocked:
+            response = backend.process_user_text("好")
+
+        self.assertEqual(response["turn_type"], "recommendation")
+        self.assertEqual(response["control_json"]["drink_name"], "冷启动")
+        self.assertEqual(mocked.call_args.args[1], "recommendation")
+
+    def test_llm_turn_type_can_override_keyword_router_hint(self):
+        llm_result = base_result("recommendation")
+        llm_result["user_text"] = "可以，你看着安排。"
+
+        with patch.object(backend, "route_turn_type", return_value="bar_chat"):
+            with patch.object(backend, "analyze_text", return_value=llm_result) as mocked:
+                response = backend.process_user_text("可以，你看着安排。")
+
+        self.assertEqual(mocked.call_args.args[1], "bar_chat")
+        self.assertEqual(response["turn_type"], "recommendation")
+        self.assertEqual(response["control_json"]["turn_type"], "recommendation")
+        self.assertEqual(response["control_json"]["drink_name"], "冷启动")
+
 
 if __name__ == "__main__":
     unittest.main()

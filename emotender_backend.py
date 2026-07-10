@@ -307,6 +307,30 @@ RECOMMENDATION_TRIGGERS = (
     "你做主",
 )
 
+RECOMMENDATION_CONFIRMATIONS = (
+    "好",
+    "好的",
+    "可以",
+    "行",
+    "来吧",
+    "嗯",
+    "嗯嗯",
+    "要",
+    "需要",
+    "开始吧",
+    "按你说的",
+    "你做主",
+)
+
+RECOMMENDATION_OFFER_MARKERS = (
+    "正式推荐",
+    "推荐一杯",
+    "给你推荐",
+    "为你推荐",
+    "要不要",
+    "需不需要",
+)
+
 SAFETY_TRIGGERS = (
     "未成年",
     "喝醉",
@@ -324,6 +348,29 @@ CHAT_ONLY_TURN_TYPES = {
     "safety",
 }
 
+ALLOWED_TURN_TYPES = {
+    "bar_chat",
+    "recommendation",
+    "safety",
+}
+
+
+def previous_turn_offered_recommendation() -> bool:
+    if not conversation_history:
+        return False
+
+    previous = conversation_history[-1]
+    prompt_text = " ".join(
+        str(previous.get(key, ""))
+        for key in ("bartender_line", "feedback_prompt")
+    )
+    return any(marker in prompt_text for marker in RECOMMENDATION_OFFER_MARKERS)
+
+
+def is_recommendation_confirmation(user_text: str) -> bool:
+    text = user_text.strip()
+    return any(trigger in text for trigger in RECOMMENDATION_CONFIRMATIONS)
+
 
 def route_turn_type(user_text: str) -> str:
     text = user_text.strip()
@@ -332,6 +379,9 @@ def route_turn_type(user_text: str) -> str:
         return "safety"
 
     if any(trigger in text for trigger in RECOMMENDATION_TRIGGERS):
+        return "recommendation"
+
+    if previous_turn_offered_recommendation() and is_recommendation_confirmation(text):
         return "recommendation"
 
     return "bar_chat"
@@ -482,6 +532,7 @@ def update_conversation_state(data: dict) -> None:
         "face_state": data["face_state"],
         "action_sequence": data["action_sequence"],
         "bartender_line": data["bartender_line"],
+        "feedback_prompt": data["feedback_prompt"],
     }
 
     if data["turn_type"] == "recommendation":
@@ -565,8 +616,11 @@ def analyze_text(user_text: str, turn_type: str, profile_context: Optional[dict]
 不要输出代码块。
 不要在 JSON 前后添加任何文字。
 
-本轮模式：
+规则路由给出的初步模式建议：
 {turn_type}
+
+你必须根据用户原话、最近对话历史和用户长期 profile 自行决定最终 turn_type。
+规则路由只是提示，不是最终答案。
 
 用户原话：
 {user_text}
@@ -615,12 +669,16 @@ face_state, bartender_line, action_sequence, feedback_prompt。
 - emotion_blend 的 weight 总和必须接近 1.0
 
 模式规则：
+- turn_type 只能是 "bar_chat"、"recommendation" 或 "safety"。
 - 如果 turn_type 是 "bar_chat"，这一轮是闲聊。你仍然必须输出完整 JSON，用于驱动机器人表情、动作和台词，但不要正式推荐饮品。
 - 如果 turn_type 是 "bar_chat"，drink_name 使用 "无正式推荐"，recipe_modules 使用 []，flavor_profile 使用 "无正式推荐"，color_profile 使用 "无正式推荐"。
 - 如果 turn_type 是 "bar_chat"，face_state 必须体现用户情绪，action_sequence 优先使用 "gesture_thinking"、"gesture_shrug"、"serve_only"。
 - 如果 turn_type 是 "recommendation"，必须正式推荐当前后端饮品菜单中的饮品，drink_name 必须精确使用菜单里的中文饮品名，recipe_modules 不能为空。
 - 如果推荐时判断为单一情绪，优先使用菜单“单品”；如果判断为两种或三种主要情绪，可以使用菜单“混合情绪特调”。
 - 推荐饮品时，bartender_line 优先使用或贴近菜单中对应饮品的 serve_line。
+- 如果用户明确要求推荐、调酒、来一杯、让你做主，turn_type 必须是 "recommendation"。
+- 如果最近一轮你询问是否正式推荐饮品，而用户本轮表达同意、接受、让你安排，turn_type 必须是 "recommendation"。
+- 如果用户只是继续倾诉、闲聊、打招呼，且没有表达要饮品推荐，turn_type 使用 "bar_chat"。
 - 如果 turn_type 是 "safety"，不要推荐酒精饮品，drink_name 使用 "无正式推荐"，recipe_modules 使用 []，action_sequence 优先使用 "serve_only"。
 - 如果用户长期 profile 中有口味偏好、历史饮品或情绪模式，请把它作为个性化依据，但不要在台词里暴露“我保存了你的资料”这类后台措辞。
 - 每轮最多问一个问题。
@@ -748,6 +806,9 @@ def validate_result(data: dict) -> None:
         if not data[field].strip():
             raise ValueError(f"{field} must not be empty")
 
+    if data["turn_type"] not in ALLOWED_TURN_TYPES:
+        raise ValueError(f"Unknown turn_type: {data['turn_type']}")
+
     if not isinstance(data["recipe_modules"], list):
         raise TypeError(f"recipe_modules must be a list, got {type(data['recipe_modules']).__name__}: {data['recipe_modules']}")
 
@@ -838,14 +899,17 @@ def process_user_text(user_text: str, username: Optional[str] = None) -> dict:
     username = normalize_username(username) or current_username
     current_username = username
     profile_context = compact_profile_context(username)
-    turn_type = route_turn_type(user_text)
+    turn_type_hint = route_turn_type(user_text)
     used_fallback = False
     llm_error = None
 
     try:
-        result = analyze_text(user_text, turn_type, profile_context)
+        result = analyze_text(user_text, turn_type_hint, profile_context)
         result = normalize_result(result)
-        result["turn_type"] = turn_type
+        if turn_type_hint == "safety":
+            result["turn_type"] = "safety"
+        elif result.get("turn_type") not in ALLOWED_TURN_TYPES:
+            result["turn_type"] = turn_type_hint
         result["user_text"] = user_text
         validate_result(result)
         result = enrich_result_with_drink_metadata(result)
@@ -853,7 +917,7 @@ def process_user_text(user_text: str, username: Optional[str] = None) -> dict:
         used_fallback = True
         llm_error = str(exc)
         logger.warning(f"LLM/NLP 链路异常，使用熔断兜底: {exc}")
-        result = fallback_result(user_text, turn_type)
+        result = fallback_result(user_text, turn_type_hint)
         validate_result(result)
         result = enrich_result_with_drink_metadata(result)
 
@@ -863,7 +927,7 @@ def process_user_text(user_text: str, username: Optional[str] = None) -> dict:
         "ok": True,
         "username": username,
         "user_text": user_text,
-        "turn_type": turn_type,
+        "turn_type": result["turn_type"],
         "control_json": result,
         "robot_reply_text": build_robot_reply_text(result),
         "profile_context": profile_context,

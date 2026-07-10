@@ -1,36 +1,68 @@
 # Changelog
 
-后续每次改动都请在这里记录，方便队友同步。
+每次修改代码、prompt、前端、APK 或使用方式后，请在这里记录，方便队友同步。
 
 ## 2026-07-10
 
-- 重写 `README.md`，按当前版本补全项目定位、Demo 架构、浏览器/平板/机器人交互链路、API、profile、饮品小票、部署、测试和协作规范。
-- `emotender_backend.py` 新增用户 profile 体系：`/api/user/login`、`/api/user/logout`、`/api/user/profile`，并支持 `/api/text/analyze` 传入可选 `username`。
-- 新增 `prompts/profile_summary_prompt.md`，用于 Logout 时把本次会话压缩进用户长期 profile。
-- 合并队友的饮品故事体系：后端加入 `DRINK_MENU`，推荐模式会自动输出 `drink_metadata`，供牛皮纸小票展示英文名、故事、配方和色泽。
-- 前端 `static/index.html` 合并六维风味图、牛皮纸小票、CRT 动画和登录/退出 UI，小票优先读取后端 `drink_metadata`。
-- `scripts/deploy_to_asr_test.sh` 现在会同步复制 `prompts/profile_summary_prompt.md`。
+### 本次提交
+
+- 修复闲聊转正式推荐的后端路由逻辑。
+  - `route_turn_type()` 现在只提供初步模式提示。
+  - LLM 输出的 `turn_type` 会被保留，不再被关键词路由强行覆盖。
+  - 如果上一轮机器人问过是否正式推荐，用户本轮说“好 / 可以 / 你看着安排”等确认语，会进入 `recommendation`。
+  - 安全场景仍会强制保持 `safety`。
+
+- 更新 LLM prompt 约束。
+  - 明确 `turn_type` 只能是 `bar_chat`、`recommendation`、`safety`。
+  - 明确用户要求推荐、调酒、来一杯、让机器人做主时必须进入正式推荐。
+  - 明确继续倾诉或闲聊时保持 `bar_chat`。
+
+- 更新前端 `static/index.html`。
+  - 左上角放用户名、`Login`、`Logout`。
+  - 右上角放圆形 `?` 说明入口。
+  - 主操作区保留 `Start`、`Send`、`Reset`。
+  - 支持 Android WebView 桥接：`EmoTenderAndroid.startSpeech()` 和 `submitRecognizedText(text)`。
+  - 闲聊模式只显示表情和回复。
+  - 正式推荐后才显示六维风味图和牛皮纸小票。
+
+- 新增和更新测试。
+  - 覆盖“上一轮问是否正式推荐，下一轮用户确认后切到 recommendation”。
+  - 覆盖“LLM 可以把关键词路由的初步提示改成最终 recommendation”。
+
+- 上传平板 APK 成品。
+  - 文件位置：`release/EmoTender-latest.apk`
+  - APK 使用 Android 系统语音识别。
+  - APK 启动时要求填写 Windows 后端地址，不再默认使用固定 IP。
+  - 长按页面可重新配置后端地址。
+
+- 重写项目说明。
+  - `README.md` 改为当前 Windows 后端 + 平板 APK 链路。
+  - 新增 `docs/Windows平板使用指南.md`，方便现场测试复用。
+  - 说明 PowerShell 中文请求需要使用 UTF-8 字节写法，避免中文变成问号。
+
+### 之前同日改动
+
+- 新增用户 profile 体系：`/api/user/login`、`/api/user/logout`、`/api/user/profile`。
+- `/api/text/analyze` 支持可选 `username`。
+- 新增 `prompts/profile_summary_prompt.md`，Logout 时把本次会话压缩写入长期 profile。
+- 后端加入 `DRINK_MENU`，正式推荐时自动输出 `drink_metadata`，用于牛皮纸小票展示英文名、故事、配方和颜色。
+- 前端合并六维风味图、牛皮纸小票、CRT 表情动画和登录/退出 UI。
+- `scripts/deploy_to_asr_test.sh` 同步复制 `prompts/profile_summary_prompt.md`。
 - 新增 `tests/test_user_profiles.py`，覆盖登录、profile 注入、Logout 保存 summary、推荐模式小票元数据和闲聊模式无饮品元数据。
-- 需要重启后端生效；如果部署到 `~/asr_test`，请重新运行部署脚本。
-
-## 2026-07-08 (2)
-
-- 新增 CRT 像素风表情系统前端页面 `static/index.html`，包含 6 种 SVG 面部动画（清醒/难过/焦虑/兴奋/疲惫/犹豫）。
-- 前端仪表盘支持实时显示：情绪标签、复杂情绪描述、需求洞察、饮品配方模块、风味描述、颜色描述、酒保台词（打字机效果）。
-- `emotender_backend.py` 的 `/` 路由改为从 `static/index.html` 读取文件，不再内联 HTML，方便独立维护前端。
-- 前端通过 `data.control_json` 直连后端 `POST /api/voice/stop` 返回结果，自动驱动面部表情和仪表盘更新。
-- 影响模块：`emotender_backend.py`（`index()` 改为读文件）、新增 `static/index.html`。
-- 需要重启后端生效。
 
 ## 2026-07-08
 
-- 新增 `bar_chat`、`recommendation`、`safety` 三类对话模式路由。
+- 新增 `bar_chat`、`recommendation`、`safety` 三类对话模式。
 - 新增内存会话上下文：`conversation_history` 和 `conversation_summary`。
-- LLM 每轮都会输出 `control_json`，用于驱动表情、动作和台词。
-- `bar_chat` 和 `safety` 下允许不正式推荐饮品，`recipe_modules` 可以为空。
-- `recommendation` 下仍要求 `recipe_modules` 非空，继续触发正式饮品推荐。
-- `POST /api/reset` 现在会同步清空会话上下文。
-- 新增外层返回字段 `robot_reply_text`：闲聊模式拼接 `bartender_line` 和 `feedback_prompt`，推荐模式只播放 `bartender_line`。
+- LLM 每轮都输出 `control_json`，用于驱动表情、动作和台词。
+- `bar_chat` 和 `safety` 允许不正式推荐饮品。
+- `recommendation` 要求 `recipe_modules` 非空。
+- `POST /api/reset` 会同步清空当前内存会话。
+- 新增外层返回字段 `robot_reply_text`：
+  - 闲聊模式拼接 `bartender_line` 和 `feedback_prompt`。
+  - 推荐模式只播 `bartender_line`。
+- 新增 CRT 像素风表情系统前端页面 `static/index.html`。
+- 后端 `/` 路由改为读取 `static/index.html`。
 
 ## 2026-07-05
 

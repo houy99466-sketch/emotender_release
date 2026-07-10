@@ -204,8 +204,8 @@
   }
   #btnStart { color:#8cc8e0; border-color:rgba(140,200,224,0.3); }
   #btnStart:hover { background:rgba(140,200,224,0.1); border-color:rgba(140,200,224,0.55); }
-  #btnStop  { color:#e8a8a0; border-color:rgba(232,168,160,0.2); }
-  #btnStop:hover  { background:rgba(232,168,160,0.1); border-color:rgba(232,168,160,0.4); }
+  #btnSend  { color:#90d8b0; border-color:rgba(144,216,176,0.22); }
+  #btnSend:hover  { background:rgba(144,216,176,0.1); border-color:rgba(144,216,176,0.42); }
   #btnReset { color:rgba(180,180,190,0.45); border-color:rgba(180,180,190,0.12); }
   #btnReset:hover { color:rgba(200,200,210,0.75); border-color:rgba(200,200,210,0.28); }
   #status-line {
@@ -347,9 +347,18 @@
   #receipt .hand-tilt-1 { display:inline-block; transform:rotate(-1.5deg); }
   #receipt .hand-tilt-2 { display:inline-block; transform:rotate(1deg); }
 
+  #manual-input {
+    width:min(420px, calc(100vw - 40px));
+    height:34px; padding:6px 10px;
+    background:rgba(8,12,14,0.92); color:rgba(220,230,235,0.78);
+    border:1px solid rgba(140,200,224,0.18);
+    outline:none; font-family:'Courier New','PingFang SC',monospace;
+    font-size:12px; text-align:center;
+  }
+
   /* ===== 账号与说明 ===== */
-  #top-panel {
-    position:fixed; top:14px; right:14px; z-index:50;
+  #account-panel {
+    position:fixed; top:14px; left:14px; z-index:50;
     display:flex; align-items:center; gap:8px;
     font-family:'Courier New','PingFang SC',monospace;
   }
@@ -359,7 +368,7 @@
     border:1px solid rgba(140,200,224,0.22);
     outline:none; font-size:11px; letter-spacing:0;
   }
-  #top-panel button {
+  #account-panel button {
     height:30px; min-width:30px; padding:0 8px;
     background:rgba(8,12,14,0.92); color:rgba(140,200,224,0.82);
     border:1px solid rgba(140,200,224,0.28);
@@ -367,7 +376,12 @@
     cursor:pointer;
   }
   #help-button {
-    width:30px; border-radius:50%; padding:0 !important; font-size:15px !important;
+    position:fixed; top:14px; right:14px; z-index:50;
+    width:34px; height:34px; border-radius:50%; padding:0 !important;
+    background:rgba(8,12,14,0.92); color:rgba(140,200,224,0.88);
+    border:1px solid rgba(140,200,224,0.36);
+    font-family:'Courier New','PingFang SC',monospace; font-size:18px !important;
+    cursor:pointer;
   }
   #help-popover {
     position:fixed; top:52px; right:14px; z-index:60;
@@ -387,19 +401,20 @@
     #flavor-chart-wrap { width:220px; height:220px; }
     #receipt-wrapper { max-width:340px; }
     #receipt { padding: 20px 16px 18px; }
-    #top-panel { top:8px; right:8px; gap:5px; }
+    #account-panel { top:8px; left:8px; gap:5px; }
+    #help-button { top:8px; right:8px; }
     #username-input { width:92px; }
   }
 </style>
 </head>
 <body>
 
-<div id="top-panel">
+<div id="account-panel">
   <input id="username-input" placeholder="username" autocomplete="off">
   <button id="login-button" onclick="loginUser()">Login</button>
   <button id="logout-button" onclick="logoutUser()">Logout</button>
-  <button id="help-button" onclick="toggleHelp()">?</button>
 </div>
+<button id="help-button" onclick="toggleHelp()">?</button>
 <div id="help-popover">
   你可以直接和 EmoTender 对话。系统会根据你的表达分析情绪，并生成适合此刻状态的饮品建议。登录用户名后，系统会建立你的个人偏好数据库，用于记住口味、情绪变化和过往饮品体验，让之后的推荐更贴近你。不登录也可以使用，但不会保存长期记忆。
 </div>
@@ -484,10 +499,11 @@
 </div>
 
 <div id="reply-area"></div>
+<input id="manual-input" placeholder="可手动输入文字后点 Send" autocomplete="off">
 
 <div id="control-bar">
   <button id="btnStart" onclick="startRecording()">Start</button>
-  <button id="btnStop" onclick="stopRecording()">Stop</button>
+  <button id="btnSend" onclick="sendText()">Send</button>
   <span id="status-line"></span>
   <button id="btnReset" onclick="resetSystem()">Reset</button>
 </div>
@@ -725,10 +741,20 @@ function setFlavorValues(vals) {
   renderFlavorChart();
 }
 
+function hasFormalRecommendation(controlJson) {
+  return !!(
+    controlJson &&
+    controlJson.turn_type === "recommendation" &&
+    controlJson.drink_name &&
+    controlJson.drink_name !== "无正式推荐" &&
+    controlJson.drink_metadata
+  );
+}
+
 function drinkFromControl(controlJson, emotion) {
   const base = DRINK_DB[emotion] || DRINK_DB["清醒"];
   const meta = controlJson && controlJson.drink_metadata;
-  if (!meta) return base;
+  if (!meta) return null;
 
   let story = meta.backstory || meta.serve_line || base.story || '';
   if (meta.recipe) story += '\n\n配方：' + meta.recipe;
@@ -784,15 +810,15 @@ window.updateTenderState=function(d){
 
 function onEmotionChange(emotion, controlJson) {
   currentEmotion = emotion;
-  const d = drinkFromControl(controlJson, emotion);
-  if (d) {
+  if (hasFormalRecommendation(controlJson)) {
+    const d = drinkFromControl(controlJson, emotion);
     currentDrink = d;
     setFlavorValues(d.flavor);
     document.getElementById('flavor-section').classList.add('visible');
-    document.getElementById('receipt-wrapper').classList.remove('visible');
-  }
-  if (d && !window._suppressDrinkMsg) {
-    R('🍸 推荐: ' + d.name + ' — 拖拽六维图调整风味后确认');
+    confirmFlavor();
+  } else {
+    currentDrink = null;
+    resetFlavorPanels();
   }
   window._suppressDrinkMsg = false;
   // 触发 CRT 光晕闪烁
@@ -819,12 +845,38 @@ function toggleHelp(){var e=document.getElementById("help-popover");if(e)e.class
 async function loginUser(){var u=usernameValue();if(!u){R("先输入一个用户名。");return}try{await C("/api/user/login",{username:u});localStorage.setItem("emotender_username",u);U("USER "+u);R("已登录。之后的对话会用于形成你的个人偏好数据库。")}catch(e){R("登录失败: "+(e.detail||e.message||"?"))}}
 async function logoutUser(){var u=usernameValue()||localStorage.getItem("emotender_username")||"";if(!u){R("当前没有登录用户。");return}try{var d=await C("/api/user/logout",{username:u});localStorage.removeItem("emotender_username");var i=document.getElementById("username-input");if(i)i.value="";U("IDLE");R(d.saved_summary?"已退出，并保存本次对话摘要。":"已退出，本次没有需要保存的对话。")}catch(e){R("退出失败: "+(e.detail||e.message||"?"))}}
 async function startRecording(){
-  try{U("● REC");var c=document.getElementById("crt-screen");if(c)c.classList.add("recording-active");await C("/api/voice/start")}
+  try{
+    U("● REC");var c=document.getElementById("crt-screen");if(c)c.classList.add("recording-active");
+    if(window.EmoTenderAndroid&&window.EmoTenderAndroid.startSpeech){window.EmoTenderAndroid.startSpeech();return}
+    await C("/api/voice/start")
+  }
   catch(e){U("IDLE");var c=document.getElementById("crt-screen");if(c)c.classList.remove("recording-active");R("录音启动失败: "+(e.detail||e.message||"?"))}}
 async function stopRecording(){
   try{U("● PROC");var c=document.getElementById("crt-screen");if(c)c.classList.remove("recording-active");
-    var d=await C("/api/voice/stop");if(d.control_json)window.updateTenderState(d.control_json);if(d.robot_reply_text)R(d.robot_reply_text);U(d.turn_type==="bar_chat"?"IDLE":"● OK")}
+    var d=await C("/api/voice/stop");handleAnalyzeResponse(d)}
   catch(e){U("IDLE");R("分析失败: "+(e.detail||e.message||"?"))}}
+async function analyzeUserText(text){
+  var clean=(text||"").trim();if(!clean){R("先说一句话，或者手动输入一句话。");return}
+  try{
+    U("● PROC");var c=document.getElementById("crt-screen");if(c)c.classList.remove("recording-active");
+    var body={user_text:clean};var u=usernameValue();if(u)body.username=u;
+    var d=await C("/api/text/analyze",body);handleAnalyzeResponse(d)
+  }catch(e){U("IDLE");R("分析失败: "+(e.detail||e.message||"?"))}
+}
+function handleAnalyzeResponse(d){
+  if(d.control_json)window.updateTenderState(d.control_json);
+  if(d.robot_reply_text)R(d.robot_reply_text);
+  U(d.turn_type==="bar_chat"?"IDLE":"● OK");
+}
+function submitRecognizedText(text){
+  var i=document.getElementById("manual-input");if(i)i.value=text||"";
+  analyzeUserText(text||"");
+}
+function onAndroidSpeechStatus(status){
+  if(status==="IDLE"){var c=document.getElementById("crt-screen");if(c)c.classList.remove("recording-active")}
+  U(status||"IDLE");
+}
+function sendText(){var i=document.getElementById("manual-input");analyzeUserText(i?(i.value||""):"")}
 async function resetSystem(){try{await C("/api/reset");I();R("");resetFlavorPanels()}catch(e){R("重置失败: "+(e.detail||e.message||"?"))}}
 function I(){var c=document.getElementById("crt-screen");if(c)c.setAttribute("data-emotion","清醒");F("清醒");U("IDLE");var u=localStorage.getItem("emotender_username")||"";var i=document.getElementById("username-input");if(i)i.value=u}
 function resetFlavorPanels(){
