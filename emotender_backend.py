@@ -18,12 +18,21 @@ logger = logging.getLogger("emotender")
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
-from funasr import AutoModel
 from openai import OpenAI
+from pydantic import BaseModel
+
+try:
+    from funasr import AutoModel
+except ModuleNotFoundError:
+    AutoModel = None
 
 load_dotenv()
 
 app = FastAPI(title="EmoTender Backend")
+
+
+class TextAnalyzeRequest(BaseModel):
+    user_text: str
 
 BASE_DIR = Path(__file__).resolve().parent
 AUDIO_PATH = BASE_DIR / "recording.wav"
@@ -39,10 +48,14 @@ MAX_HISTORY_ITEMS = 8
 MAX_SUMMARY_CHARS = 1200
 NO_FORMAL_DRINK_NAME = "无正式推荐"
 
-ASR_MODEL = AutoModel(
-    model="paraformer-zh",
-    vad_model="fsmn-vad",
-    punc_model="ct-punc-c",
+ASR_MODEL = (
+    AutoModel(
+        model="paraformer-zh",
+        vad_model="fsmn-vad",
+        punc_model="ct-punc-c",
+    )
+    if AutoModel is not None
+    else None
 )
 
 client = OpenAI(
@@ -184,6 +197,9 @@ def update_conversation_state(data: dict) -> None:
 
 
 def transcribe_audio(wav_path: Path) -> str:
+    if ASR_MODEL is None:
+        raise RuntimeError("asr_unavailable")
+
     logger.info(f"开始语音识别: {wav_path}")
     result = ASR_MODEL.generate(input=str(wav_path))
     text = result[0].get("text", "").strip()
@@ -480,6 +496,42 @@ def build_robot_reply_text(control_json: dict) -> str:
     return bartender_line
 
 
+def process_user_text(user_text: str) -> dict:
+    user_text = user_text.strip()
+    if not user_text:
+        raise ValueError("user_text must not be empty")
+
+    turn_type = route_turn_type(user_text)
+    used_fallback = False
+    llm_error = None
+
+    try:
+        result = analyze_text(user_text, turn_type)
+        result = normalize_result(result)
+        result["turn_type"] = turn_type
+        result["user_text"] = user_text
+        validate_result(result)
+    except Exception as exc:
+        used_fallback = True
+        llm_error = str(exc)
+        logger.warning(f"LLM/NLP 链路异常，使用熔断兜底: {exc}")
+        result = fallback_result(user_text, turn_type)
+        validate_result(result)
+
+    update_conversation_state(result)
+
+    return {
+        "ok": True,
+        "user_text": user_text,
+        "turn_type": turn_type,
+        "control_json": result,
+        "robot_reply_text": build_robot_reply_text(result),
+        "conversation_state": get_conversation_state(),
+        "used_fallback": used_fallback,
+        "llm_error": llm_error,
+    }
+
+
 def run_pipeline() -> dict:
     try:
         user_text = transcribe_audio(AUDIO_PATH)
@@ -517,35 +569,9 @@ def run_pipeline() -> dict:
             }
         raise
 
-    turn_type = route_turn_type(user_text)
-    used_fallback = False
-    llm_error = None
-
-    try:
-        result = analyze_text(user_text, turn_type)
-        result = normalize_result(result)
-        result["turn_type"] = turn_type
-        validate_result(result)
-    except Exception as exc:
-        used_fallback = True
-        llm_error = str(exc)
-        logger.warning(f"LLM/NLP 链路异常，使用熔断兜底: {exc}")
-        result = fallback_result(user_text, turn_type)
-        validate_result(result)
-
-    update_conversation_state(result)
-
-    return {
-        "ok": True,
-        "audio_path": str(AUDIO_PATH),
-        "user_text": user_text,
-        "turn_type": turn_type,
-        "control_json": result,
-        "robot_reply_text": build_robot_reply_text(result),
-        "conversation_state": get_conversation_state(),
-        "used_fallback": used_fallback,
-        "llm_error": llm_error,
-    }
+    result = process_user_text(user_text)
+    result["audio_path"] = str(AUDIO_PATH)
+    return result
 
 
 @app.get("/api/status")
@@ -556,6 +582,16 @@ def status():
         "last_result": last_result,
         "conversation_state": get_conversation_state(),
     }
+
+
+@app.post("/api/text/analyze")
+def analyze_text_api(payload: TextAnalyzeRequest):
+    try:
+        return process_user_text(payload.user_text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.post("/api/voice/start")

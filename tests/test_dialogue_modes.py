@@ -3,6 +3,7 @@ import os
 import sys
 import types
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 
@@ -113,6 +114,20 @@ class DialogueModeTests(unittest.TestCase):
         reply = backend.build_robot_reply_text(data)
 
         self.assertEqual(reply, "那我做主，给你一杯冷启动。")
+
+    def test_process_user_text_returns_control_json_and_updates_memory(self):
+        llm_result = base_result("recommendation")
+        llm_result["user_text"] = "我今天有点累，给我推荐一杯。"
+
+        with patch.object(backend, "analyze_text", return_value=llm_result):
+            response = backend.process_user_text("我今天有点累，给我推荐一杯。")
+
+        self.assertTrue(response["ok"])
+        self.assertEqual(response["user_text"], "我今天有点累，给我推荐一杯。")
+        self.assertEqual(response["turn_type"], "recommendation")
+        self.assertEqual(response["control_json"]["drink_name"], "冷启动")
+        self.assertEqual(response["robot_reply_text"], "我先给你一杯清醒一点的。")
+        self.assertEqual(len(response["conversation_state"]["history"]), 1)
 
 
 if __name__ == "__main__":
