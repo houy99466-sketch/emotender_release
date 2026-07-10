@@ -13,6 +13,7 @@
     background: #000000; overflow-x: hidden;
   }
 
+  /* ===== OLED 屏幕容器 ===== */
   #crt-screen {
     position:relative; width:400px; height:400px;
     background-color:#000000 !important;
@@ -26,6 +27,159 @@
   #crt-screen[data-emotion="焦虑"] { --neon-color:#e8a8a0; }
   #crt-screen[data-emotion="犹豫"] { --neon-color:#a8d8a0; }
 
+  /* ===== OLED 像素网格叠加层 ===== */
+  #crt-screen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 15;
+    background-image: radial-gradient(circle, rgba(0,0,0,0.38) 0.35px, transparent 0.35px);
+    background-size: 2.5px 2.5px;
+    border-radius: 16px;
+  }
+
+  /* ===== 光晕闪现动画 ===== */
+  /* 清醒 · cyan 光晕 */
+  @keyframes halo-清醒 {
+    0%   { box-shadow: inset 0 0 240px 120px rgba(140,200,224,0.8),
+                       inset 0 0 560px 280px rgba(140,200,224,0.5),
+                       inset 0 0 880px 480px rgba(140,200,224,0.2);
+           outline: 32px solid rgba(140,200,224,0.7); outline-offset: -16px; }
+    40%  { box-shadow: inset 0 0 160px 80px rgba(140,200,224,0.55),
+                       inset 0 0 400px 200px rgba(140,200,224,0.35),
+                       inset 0 0 640px 320px rgba(140,200,224,0.12);
+           outline: 20px solid rgba(140,200,224,0.4); outline-offset: -16px; }
+    70%  { box-shadow: inset 0 0 80px 32px rgba(140,200,224,0.25),
+                       inset 0 0 200px 100px rgba(140,200,224,0.12),
+                       inset 0 0 320px 160px rgba(140,200,224,0.04);
+           outline: 8px solid rgba(140,200,224,0.12); outline-offset: -16px; }
+    100% { box-shadow: inset 0 0 0px 0px transparent,
+                       inset 0 0 0px 0px transparent,
+                       inset 0 0 0px 0px transparent;
+           outline: 0px solid transparent; outline-offset: -16px; }
+  }
+  #crt-screen.halo-清醒 {
+    animation: halo-清醒 3s ease-out forwards;
+    transition: box-shadow 0s, outline 0s !important;
+  }
+  /* 兴奋 · green 光晕 */
+  @keyframes halo-兴奋 {
+    0%   { box-shadow: inset 0 0 240px 120px rgba(144,216,176,0.8),
+                       inset 0 0 560px 280px rgba(144,216,176,0.5),
+                       inset 0 0 880px 480px rgba(144,216,176,0.2);
+           outline: 32px solid rgba(144,216,176,0.7); outline-offset: -16px; }
+    40%  { box-shadow: inset 0 0 160px 80px rgba(144,216,176,0.55),
+                       inset 0 0 400px 200px rgba(144,216,176,0.35),
+                       inset 0 0 640px 320px rgba(144,216,176,0.12);
+           outline: 20px solid rgba(144,216,176,0.4); outline-offset: -16px; }
+    70%  { box-shadow: inset 0 0 80px 32px rgba(144,216,176,0.25),
+                       inset 0 0 200px 100px rgba(144,216,176,0.12),
+                       inset 0 0 320px 160px rgba(144,216,176,0.04);
+           outline: 8px solid rgba(144,216,176,0.12); outline-offset: -16px; }
+    100% { box-shadow: inset 0 0 0px 0px transparent,
+                       inset 0 0 0px 0px transparent,
+                       inset 0 0 0px 0px transparent;
+           outline: 0px solid transparent; outline-offset: -16px; }
+  }
+  #crt-screen.halo-兴奋 {
+    animation: halo-兴奋 3s ease-out forwards;
+    transition: box-shadow 0s, outline 0s !important;
+  }
+  /* 难过 · purple 光晕 */
+  @keyframes halo-难过 {
+    0%   { box-shadow: inset 0 0 240px 120px rgba(200,187,224,0.8),
+                       inset 0 0 560px 280px rgba(200,187,224,0.5),
+                       inset 0 0 880px 480px rgba(200,187,224,0.2);
+           outline: 32px solid rgba(200,187,224,0.7); outline-offset: -16px; }
+    40%  { box-shadow: inset 0 0 160px 80px rgba(200,187,224,0.55),
+                       inset 0 0 400px 200px rgba(200,187,224,0.35),
+                       inset 0 0 640px 320px rgba(200,187,224,0.12);
+           outline: 20px solid rgba(200,187,224,0.4); outline-offset: -16px; }
+    70%  { box-shadow: inset 0 0 80px 32px rgba(200,187,224,0.25),
+                       inset 0 0 200px 100px rgba(200,187,224,0.12),
+                       inset 0 0 320px 160px rgba(200,187,224,0.04);
+           outline: 8px solid rgba(200,187,224,0.12); outline-offset: -16px; }
+    100% { box-shadow: inset 0 0 0px 0px transparent,
+                       inset 0 0 0px 0px transparent,
+                       inset 0 0 0px 0px transparent;
+           outline: 0px solid transparent; outline-offset: -16px; }
+  }
+  #crt-screen.halo-难过 {
+    animation: halo-难过 3s ease-out forwards;
+    transition: box-shadow 0s, outline 0s !important;
+  }
+  /* 疲惫 · gold 光晕 */
+  @keyframes halo-疲惫 {
+    0%   { box-shadow: inset 0 0 240px 120px rgba(242,218,144,0.8),
+                       inset 0 0 560px 280px rgba(242,218,144,0.5),
+                       inset 0 0 880px 480px rgba(242,218,144,0.2);
+           outline: 32px solid rgba(242,218,144,0.7); outline-offset: -16px; }
+    40%  { box-shadow: inset 0 0 160px 80px rgba(242,218,144,0.55),
+                       inset 0 0 400px 200px rgba(242,218,144,0.35),
+                       inset 0 0 640px 320px rgba(242,218,144,0.12);
+           outline: 20px solid rgba(242,218,144,0.4); outline-offset: -16px; }
+    70%  { box-shadow: inset 0 0 80px 32px rgba(242,218,144,0.25),
+                       inset 0 0 200px 100px rgba(242,218,144,0.12),
+                       inset 0 0 320px 160px rgba(242,218,144,0.04);
+           outline: 8px solid rgba(242,218,144,0.12); outline-offset: -16px; }
+    100% { box-shadow: inset 0 0 0px 0px transparent,
+                       inset 0 0 0px 0px transparent,
+                       inset 0 0 0px 0px transparent;
+           outline: 0px solid transparent; outline-offset: -16px; }
+  }
+  #crt-screen.halo-疲惫 {
+    animation: halo-疲惫 3s ease-out forwards;
+    transition: box-shadow 0s, outline 0s !important;
+  }
+  /* 焦虑 · coral 光晕 */
+  @keyframes halo-焦虑 {
+    0%   { box-shadow: inset 0 0 240px 120px rgba(232,168,160,0.8),
+                       inset 0 0 560px 280px rgba(232,168,160,0.5),
+                       inset 0 0 880px 480px rgba(232,168,160,0.2);
+           outline: 32px solid rgba(232,168,160,0.7); outline-offset: -16px; }
+    40%  { box-shadow: inset 0 0 160px 80px rgba(232,168,160,0.55),
+                       inset 0 0 400px 200px rgba(232,168,160,0.35),
+                       inset 0 0 640px 320px rgba(232,168,160,0.12);
+           outline: 20px solid rgba(232,168,160,0.4); outline-offset: -16px; }
+    70%  { box-shadow: inset 0 0 80px 32px rgba(232,168,160,0.25),
+                       inset 0 0 200px 100px rgba(232,168,160,0.12),
+                       inset 0 0 320px 160px rgba(232,168,160,0.04);
+           outline: 8px solid rgba(232,168,160,0.12); outline-offset: -16px; }
+    100% { box-shadow: inset 0 0 0px 0px transparent,
+                       inset 0 0 0px 0px transparent,
+                       inset 0 0 0px 0px transparent;
+           outline: 0px solid transparent; outline-offset: -16px; }
+  }
+  #crt-screen.halo-焦虑 {
+    animation: halo-焦虑 3s ease-out forwards;
+    transition: box-shadow 0s, outline 0s !important;
+  }
+  /* 犹豫 · lime 光晕 */
+  @keyframes halo-犹豫 {
+    0%   { box-shadow: inset 0 0 240px 120px rgba(168,216,160,0.8),
+                       inset 0 0 560px 280px rgba(168,216,160,0.5),
+                       inset 0 0 880px 480px rgba(168,216,160,0.2);
+           outline: 32px solid rgba(168,216,160,0.7); outline-offset: -16px; }
+    40%  { box-shadow: inset 0 0 160px 80px rgba(168,216,160,0.55),
+                       inset 0 0 400px 200px rgba(168,216,160,0.35),
+                       inset 0 0 640px 320px rgba(168,216,160,0.12);
+           outline: 20px solid rgba(168,216,160,0.4); outline-offset: -16px; }
+    70%  { box-shadow: inset 0 0 80px 32px rgba(168,216,160,0.25),
+                       inset 0 0 200px 100px rgba(168,216,160,0.12),
+                       inset 0 0 320px 160px rgba(168,216,160,0.04);
+           outline: 8px solid rgba(168,216,160,0.12); outline-offset: -16px; }
+    100% { box-shadow: inset 0 0 0px 0px transparent,
+                       inset 0 0 0px 0px transparent,
+                       inset 0 0 0px 0px transparent;
+           outline: 0px solid transparent; outline-offset: -16px; }
+  }
+  #crt-screen.halo-犹豫 {
+    animation: halo-犹豫 3s ease-out forwards;
+    transition: box-shadow 0s, outline 0s !important;
+  }
+
+  /* ===== 录音脉冲 (与光晕互不冲突) ===== */
   @keyframes recording-pulse {
     0%,100%{box-shadow:0 0 0 0px transparent}
     50%{box-shadow:0 0 32px 4px var(--neon-color,#8cc8e0)}
@@ -35,6 +189,7 @@
     box-shadow:0 0 20px 2px var(--neon-color,#8cc8e0);
   }
 
+  /* ===== 霓虹线条样式 ===== */
   .neon-eye {
     fill:none; stroke:var(--neon-color) !important;
     stroke-width:16; stroke-linecap:round; stroke-linejoin:round;
@@ -48,6 +203,7 @@
     stroke-width:8; stroke-linecap:round; stroke-linejoin:round;
   }
 
+  /* ===== 表情标签 ===== */
   #face-state-label {
     position:absolute; bottom:-28px; left:50%; transform:translateX(-50%);
     z-index:20; font-family:'Courier New',monospace; font-size:10px;
@@ -55,6 +211,7 @@
     text-transform:uppercase; transition:color 0.3s ease; pointer-events:none;
   }
 
+  /* ===== 表情组显隐 ===== */
   .pixel-face-group {
     opacity:0 !important; visibility:hidden !important;
     transform:scale(0.88); transform-origin:200px 200px;
@@ -71,58 +228,107 @@
     opacity:1 !important; visibility:visible !important; transform:scale(1) !important;
   }
 
-  /* ===== 动画 ===== */
-  /* ===== 夸张动态动画 ===== */
+  /* ================================================================
+     表情动画 — 按提示词重新设计
+     ================================================================ */
 
-  /* 1. 清醒: 眼缩放脉冲 + 亮度呼吸 */
-  @keyframes qx-pulse { 0%,100%{transform:scale(1); opacity:0.72} 50%{transform:scale(1.06,1.12); opacity:1} }
-  #group-qx .neon-eye { animation:qx-pulse 1.8s ease-in-out infinite; transform-origin:114px 148px; }
-  #group-qx .neon-mouth { animation:qx-pulse 1.8s ease-in-out infinite; transform-origin:200px 240px; }
-
-  /* 2. 兴奋: 交替眨眼 + 眼弧抬升 + 亮度闪烁 */
-  @keyframes xf-blink-l { 0%,100%{opacity:1} 22%,26%{opacity:0.06} 50%,54%{opacity:1} 72%,76%{opacity:0.06} }
-  @keyframes xf-blink-r { 0%,22%{opacity:1} 26%,30%{opacity:0.06} 54%,58%{opacity:1} 76%,80%{opacity:0.06} 100%{opacity:1} }
-  @keyframes xf-lift { 0%,100%{transform:scaleY(1)} 40%,60%{transform:scaleY(1.14)} }
-  @keyframes xf-glow2 { 0%,100%{opacity:0.85} 40%,60%{opacity:1} }
-  .xf-eye-l { animation:xf-blink-l 1.6s ease-in-out infinite, xf-lift 1.6s ease-in-out infinite, xf-glow2 1.6s ease-in-out infinite; transform-origin:114px 148px; }
-  .xf-eye-r { animation:xf-blink-r 1.6s ease-in-out infinite, xf-lift 1.6s ease-in-out infinite, xf-glow2 1.6s ease-in-out infinite; transform-origin:286px 148px; }
-  @keyframes xf-mouth2 { 0%,100%{transform:scaleX(1)} 40%,60%{transform:scaleX(1.08)} }
-  .xf-mouth { animation:xf-mouth2 1.6s ease-in-out infinite; transform-origin:200px 240px; }
-
-  /* 3. 难过: X眼抖动旋转 + 缩放震颤 */
-  @keyframes ng-shake { 0%,100%{transform:rotate(0deg) scale(1)} 20%{transform:rotate(4deg) scale(1.05)} 40%{transform:rotate(-3deg) scale(0.96)} 60%{transform:rotate(3deg) scale(1.04)} 80%{transform:rotate(-2deg) scale(0.97)} }
-  .ng-eye-l-g { animation:ng-shake 1.2s ease-in-out infinite; transform-origin:114px 148px; }
-  .ng-eye-r-g { animation:ng-shake 1.2s ease-in-out infinite 0.15s; transform-origin:286px 148px; }
-  @keyframes ng-mouth2 { 0%,100%{transform:translateX(0)} 30%{transform:translateX(3px)} 70%{transform:translateX(-3px)} }
-  .ng-mouth { animation:ng-mouth2 1.4s ease-in-out infinite; }
-
-  /* 4. 疲惫: 缓眨眼 */
-  @keyframes pb-blink {
-    0%,78%{transform:scaleY(1)}
-    84%,90%{transform:scaleY(0.10)}
-    96%,100%{transform:scaleY(1)}
+  /* ---- 1. 清醒：嘴巴横向缓慢拉伸循环，眼睛保持静止 ---- */
+  @keyframes qx-mouth-stretch {
+    0%,100% { transform: scaleX(1); }
+    50%     { transform: scaleX(1.45); }
   }
-  .pb-eye-l { animation:pb-blink 3.5s ease-in-out infinite; transform-origin:113px 148px; }
-  .pb-eye-r { animation:pb-blink 3.5s ease-in-out infinite; transform-origin:287px 148px; }
-  #group-pb .neon-mouth { opacity:0.7; }
+  #group-qx .neon-mouth {
+    animation: qx-mouth-stretch 2.2s ease-in-out infinite;
+    transform-origin: 200px 240px;
+  }
+  /* 眼睛完全静止，无动画 */
 
-  /* 5. 焦虑: 眼剧烈颤动 + 缩放脉冲 */
-  @keyframes jl-twitch { 0%,100%{transform:translate(0,0) scale(1)} 15%{transform:translate(4px,-2px) scale(1.06)} 30%{transform:translate(-3px,3px) scale(0.95)} 45%{transform:translate(3px,0) scale(1.05)} 60%{transform:translate(-4px,-1px) scale(0.96)} 75%{transform:translate(2px,2px) scale(1.04)} }
-  .jl-eye-l-g { animation:jl-twitch 0.45s ease-in-out infinite; transform-origin:114px 148px; }
-  .jl-eye-r-g { animation:jl-twitch 0.45s ease-in-out infinite 0.07s; transform-origin:286px 148px; }
-  @keyframes jl-mouth2 { 0%{transform:translateY(0)} 15%{transform:translateY(-3px)} 30%{transform:translateY(3px)} 45%{transform:translateY(-2px)} 60%{transform:translateY(2px)} 75%{transform:translateY(-1px)} 100%{transform:translateY(0)} }
-  .jl-mouth { animation:jl-mouth2 0.55s ease-in-out infinite; }
+  /* ---- 2. 兴奋：大笑夸张弧度 + 交替眨眼 + 嘴随眨眼微颤 ---- */
+  @keyframes xf-blink-L {
+    0%,100% { transform: scaleY(1); }
+    18%,24% { transform: scaleY(0.06); }
+    50%,56% { transform: scaleY(1); }
+    68%,74% { transform: scaleY(0.06); }
+  }
+  @keyframes xf-blink-R {
+    0%,20%  { transform: scaleY(1); }
+    26%,32% { transform: scaleY(0.06); }
+    58%,64% { transform: scaleY(1); }
+    76%,82% { transform: scaleY(0.06); }
+    100%    { transform: scaleY(1); }
+  }
+  .xf-eye-L {
+    animation: xf-blink-L 1.5s ease-in-out infinite;
+    transform-origin: 112px 140px;
+  }
+  .xf-eye-R {
+    animation: xf-blink-R 1.5s ease-in-out infinite;
+    transform-origin: 288px 140px;
+  }
+  /* 笑嘴随眨眼节奏微颤 */
+  @keyframes xf-mouth-quiver {
+    0%,16%  { transform: scale(1); }
+    20%,28% { transform: scale(1.04, 0.97); }
+    40%,48% { transform: scale(1); }
+    52%,60% { transform: scale(1.03, 0.97); }
+    64%,72% { transform: scale(1); }
+    76%,84% { transform: scale(1.04, 0.97); }
+    88%,100%{ transform: scale(1); }
+  }
+  .xf-mouth {
+    animation: xf-mouth-quiver 1.5s ease-in-out infinite;
+    transform-origin: 200px 260px;
+  }
 
-  /* 6. 犹豫: 眼柔缓漂移 + 缩放呼吸 */
-  @keyframes yy-drift { 0%,100%{transform:translate(0,0) scale(1)} 25%{transform:translate(4px,-2px) scale(1.05)} 50%{transform:translate(-3px,2px) scale(0.96)} 75%{transform:translate(2px,0) scale(1.03)} }
-  .yy-eye-l { animation:yy-drift 2.5s ease-in-out infinite; transform-origin:114px 148px; }
-  .yy-eye-r { animation:yy-drift 2.5s ease-in-out infinite 0.35s; transform-origin:286px 148px; }
-  @keyframes yy-mouth2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(3px)} }
-  .yy-mouth { animation:yy-mouth2 2s ease-in-out infinite; }
+  /* ---- 3. 难过：眼睛不变，嘴巴大幅扩张收缩循环 ---- */
+  @keyframes ng-mouth-expand {
+    0%,100% { transform: scale(1); }
+    40%,60% { transform: scale(1.4, 1.35); }
+  }
+  .ng-mouth {
+    animation: ng-mouth-expand 1.6s ease-in-out infinite;
+    transform-origin: 200px 248px;
+  }
+  /* X 眼保持静止，去掉抖动 */
+
+  /* ---- 4. 疲惫：空心圆眼 + 缓速间歇眨眼，嘴巴静止 ---- */
+  @keyframes pb-slow-blink {
+    0%,76%  { transform: scaleY(1); }
+    84%,92% { transform: scaleY(0.08); }
+    100%    { transform: scaleY(1); }
+  }
+  .pb-eye-L {
+    animation: pb-slow-blink 3.8s ease-in-out infinite;
+    transform-origin: 113px 148px;
+  }
+  .pb-eye-R {
+    animation: pb-slow-blink 3.8s ease-in-out infinite;
+    transform-origin: 287px 148px;
+  }
+  /* 嘴巴完全静止 */
+
+  /* ---- 5. 焦虑：夸张眼型 + 同步放大嘴部，静态画面 ---- */
+  /* 无循环动画 — 静态夸张表情 */
+
+  /* ---- 6. 犹豫：保持原有眼型 + 缓速眨眼，大幅夸张嘴型 ---- */
+  @keyframes yy-gentle-blink {
+    0%,82%  { transform: scaleY(1); }
+    88%,94% { transform: scaleY(0.1); }
+    100%    { transform: scaleY(1); }
+  }
+  .yy-eye-L {
+    animation: yy-gentle-blink 4.5s ease-in-out infinite;
+    transform-origin: 114px 150px;
+  }
+  .yy-eye-R {
+    animation: yy-gentle-blink 4.5s ease-in-out infinite;
+    transform-origin: 286px 150px;
+  }
 
 
+  /* ===== 装饰动画 ===== */
 
-  /* 爱心飘落 (20s大循环, 每次最多2颗可见) */
+  /* 爱心飘落 (兴奋) */
   @keyframes hf {
     0%{transform:translate(0,0) rotate(0deg); opacity:0}
     2%{opacity:0.9}
@@ -136,7 +342,7 @@
   .h5 { animation:hf 20s ease-in infinite 12s backwards; }
   .h6 { animation:hf 20s ease-in infinite 15s backwards; }
 
-  /* 泪滴从上往下滑落 */
+  /* 泪滴滑落 (难过) */
   @keyframes tear-fall { 0%{transform:translate(0,0) scale(1); opacity:0.8} 60%{transform:translate(0,70px) scale(0.8); opacity:0.4} 100%{transform:translate(0,130px) scale(0.4); opacity:0} }
   .t1 { animation:tear-fall 2.5s ease-in infinite; }
   .t2 { animation:tear-fall 2.5s ease-in infinite 0.6s; }
@@ -179,6 +385,7 @@
 <div id="crt-screen" data-emotion="清醒" style="position:relative;width:400px;height:400px;background-color:#000000!important;overflow:hidden;">
   <svg viewBox="0 0 400 400" style="width:100%;height:100%;">
     <defs>
+      <!-- 柔和霓虹辉光 -->
       <filter id="soft-glow" x="-50%" y="-50%" width="200%" height="200%">
         <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="core"/>
         <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="ambient"/>
@@ -189,23 +396,38 @@
         </feMerge>
       </filter>
 
+      <!-- 轻微数字噪点 (OLED 纹理) -->
+      <filter id="digital-noise" x="0%" y="0%" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="3" result="noise"/>
+        <feComponentTransfer in="noise" result="alphaNoise">
+          <feFuncA type="linear" slope="0.025"/>
+        </feComponentTransfer>
+        <feBlend mode="screen" in="alphaNoise" in2="SourceGraphic"/>
+      </filter>
     </defs>
+
     <rect x="0" y="0" width="400" height="400" fill="#000000"/>
 
-    <!-- 比例: 眼跨260px(65%),眼Y=148(37%),嘴Y=240(60%) -->
+    <!-- ================================================================
+         表情组 — 按提示词重新设计
+         比例: 眼跨~260px(65%), 眼Y=148(37%), 嘴Y≈240(60%)
+         ================================================================ -->
 
-    <!-- 1. 清醒·浅青蓝 — 平淡呆萌脸（无装饰） -->
+    <!-- 1. 清醒·浅青蓝 — 嘴横向拉伸循环，眼静止 -->
     <g id="group-qx" class="pixel-face-group" filter="url(#soft-glow)">
       <line class="neon-eye" x1="58" y1="148" x2="170" y2="148"/>
       <line class="neon-eye" x1="230" y1="148" x2="342" y2="148"/>
-      <line class="neon-mouth" x1="185" y1="240" x2="215" y2="240"/>
+      <line class="neon-mouth" x1="183" y1="240" x2="217" y2="240"/>
     </g>
 
-    <!-- 2. 兴奋·薄荷绿 — 大笑脸 + 2颗飘落四芒星 (50,52)(350,52) -->
+    <!-- 2. 兴奋·薄荷绿 — 大笑眼弧 + 大张嘴 + 交替眨眼 + 嘴随眨眼微颤 + 飘落爱心 -->
     <g id="group-xf" class="pixel-face-group" filter="url(#soft-glow)">
-      <path class="neon-eye xf-eye-l" d="M65,148 Q113,118 160,148"/>
-      <path class="neon-eye xf-eye-r" d="M240,148 Q287,118 335,148"/>
-      <path class="neon-mouth xf-mouth" d="M148,240 Q200,278 252,240"/>
+      <!-- 夸张大笑眼弧 -->
+      <path class="neon-eye xf-eye-L" d="M58,152 Q112,108 168,148"/>
+      <path class="neon-eye xf-eye-R" d="M232,148 Q288,108 342,152"/>
+      <!-- 大笑嘴 -->
+      <path class="neon-mouth xf-mouth" d="M135,245 Q200,300 265,245"/>
+      <!-- 飘落爱心 -->
       <g opacity="0.35">
         <path class="h1" style="opacity:0" d="M120,10 C120,2 114,-2 110,2 C107,5 107,8 109,12 L120,24 L131,12 C133,8 133,5 130,2 C126,-2 120,2 120,10 Z" fill="#f5a0b8"/>
         <path class="h2" style="opacity:0" d="M300,30 C300,22 294,18 290,22 C287,25 287,28 289,32 L300,44 L311,32 C313,28 313,25 310,22 C306,18 300,22 300,30 Z" fill="#f5a0b8"/>
@@ -215,47 +437,61 @@
         <path class="h6" style="opacity:0" d="M160,70 C160,62 154,58 150,62 C147,65 147,68 149,72 L160,84 L171,72 C173,68 173,65 170,62 C166,58 160,62 160,70 Z" fill="#f5a0b8"/>
       </g>
     </g>
-    </g>
 
-    <!-- 3. 难过·淡薰衣草紫 — 委屈脸（无装饰） -->
+    <!-- 3. 难过·淡薰衣草紫 — X眼静止 + 嘴扩张收缩循环 + 泪滴 -->
     <g id="group-ng" class="pixel-face-group" filter="url(#soft-glow)">
-      <g class="ng-eye-l-g">
+      <!-- X眼静态 -->
+      <g>
         <line class="neon-eye" x1="76" y1="120" x2="154" y2="178"/>
         <line class="neon-eye" x1="154" y1="120" x2="76" y2="178"/>
       </g>
-      <g class="ng-eye-r-g">
+      <g>
         <line class="neon-eye" x1="246" y1="120" x2="324" y2="178"/>
         <line class="neon-eye" x1="324" y1="120" x2="246" y2="178"/>
       </g>
-      <path class="neon-mouth ng-mouth" d="M188,240 Q200,256 212,240"/>
-      <!-- 泪滴（从上往下滑落） -->
+      <!-- 嘴扩张收缩 -->
+      <g class="ng-mouth">
+        <path class="neon-mouth" d="M185,240 Q200,260 215,240"/>
+      </g>
+      <!-- 泪滴滑落 -->
       <g opacity="0.5">
         <ellipse class="t1" cx="115" cy="180" rx="5" ry="9" fill="#88b8e8" filter="url(#soft-glow)"/>
         <ellipse class="t2" cx="285" cy="180" rx="5" ry="9" fill="#88b8e8" filter="url(#soft-glow)"/>
       </g>
     </g>
 
-    <!-- 4. 疲惫·奶黄 — 懵懂脸（无装饰） -->
+    <!-- 4. 疲惫·奶黄 — 空心圆眼 + 缓速眨眼，嘴静止 -->
     <g id="group-pb" class="pixel-face-group" filter="url(#soft-glow)">
-      <circle class="neon-ring pb-eye-l" cx="113" cy="148" r="38"/>
-      <circle class="neon-ring pb-eye-r" cx="287" cy="148" r="38"/>
+      <g class="pb-eye-L">
+        <circle class="neon-ring" cx="113" cy="148" r="38"/>
+      </g>
+      <g class="pb-eye-R">
+        <circle class="neon-ring" cx="287" cy="148" r="38"/>
+      </g>
       <path class="neon-mouth" d="M190,240 Q200,234 210,240"/>
     </g>
 
-    <!-- 5. 焦虑·浅砖红 — 气鼓鼓脸（无装饰） -->
+    <!-- 5. 焦虑·浅砖红 — 夸张V型眼 + 同步放大锯齿嘴，静态画面 -->
     <g id="group-jl" class="pixel-face-group" filter="url(#soft-glow)">
-      <g class="jl-eye-l-g"><path class="neon-eye jl-eye-l" d="M74,118 Q114,160 148,118"/></g>
-      <g class="jl-eye-r-g"><path class="neon-eye jl-eye-r" d="M252,118 Q286,160 326,118"/></g>
-      <path class="neon-mouth jl-mouth" d="M175,240 Q185,228 195,240 Q205,252 215,240 Q225,228 225,240"/>
+      <!-- 夸张 V 型眼 -->
+      <path class="neon-eye" d="M64,112 Q114,170 158,112"/>
+      <path class="neon-eye" d="M242,112 Q286,170 336,112"/>
+      <!-- 放大锯齿嘴 -->
+      <path class="neon-mouth" d="M168,238 Q182,222 196,238 Q210,254 224,238 Q238,222 232,238"/>
     </g>
 
-    <!-- 6. 犹豫·嫩浅绿 — 害羞浅笑脸 + 1颗飘落爱心 (348,57) -->
+    <!-- 6. 犹豫·嫩浅绿 — 温和弧线眼(保持原风格) + 大幅夸张嘴，静态画面 -->
     <g id="group-yy" class="pixel-face-group" filter="url(#soft-glow)">
-      <path class="neon-eye yy-eye-l" d="M70,150 Q113,130 157,150"/>
-      <path class="neon-eye yy-eye-r" d="M243,150 Q287,130 330,150"/>
-      <path class="neon-mouth yy-mouth" d="M192,240 Q200,234 208,240"/>
-
+      <!-- 温和弧线眼 + 缓眨 -->
+      <path class="neon-eye yy-eye-L" d="M68,150 Q114,128 160,150"/>
+      <path class="neon-eye yy-eye-R" d="M240,150 Q286,128 332,150"/>
+      <!-- 大幅夸张宽嘴 -->
+      <path class="neon-mouth" d="M178,238 Q200,228 222,238"/>
     </g>
+
+    <!-- 数字噪点叠加层 (OLED 纹理) -->
+    <rect x="0" y="0" width="400" height="400" fill="none"
+          filter="url(#digital-noise)" style="pointer-events:none; opacity:0.6;"/>
   </svg>
   <div id="face-state-label">清醒</div>
 </div>
@@ -275,6 +511,23 @@ function F(t){s=t;var e=document.getElementById("face-state-label");if(e)e.textC
 function U(t){var e=document.getElementById("status-line");if(e)e.textContent=t||''}
 function R(t){var e=document.getElementById("reply-area");if(e){e.style.opacity='0';setTimeout(function(){e.textContent=t||'';e.style.opacity='1'},180)}}
 
+/* ---- 光晕闪现逻辑 ---- */
+function triggerHalo(c, emotion) {
+  // 清除所有光晕 class
+  var haloClasses = ['halo-清醒','halo-兴奋','halo-难过','halo-疲惫','halo-焦虑','halo-犹豫'];
+  haloClasses.forEach(function(cls){ c.classList.remove(cls); });
+  // 触发回流以重置动画
+  void c.offsetWidth;
+  // 每种情绪对应独特色光晕
+  if (emotion) {
+    c.classList.add('halo-' + emotion);
+  }
+  // 动画结束后自动移除 (动画时长 3s)
+  setTimeout(function() {
+    haloClasses.forEach(function(cls){ c.classList.remove(cls); });
+  }, 3100);
+}
+
 window.updateTenderState=function(d){
   var c=document.getElementById('crt-screen');if(!c)return;
   var l=(d.emotion_label||'').trim(),t=(d.face_state||'').trim(),e="清醒";
@@ -284,7 +537,15 @@ window.updateTenderState=function(d){
   else if(l==="清醒")e="清醒";
   else if(l==="兴奋"||t==="happy")e="兴奋";
   else if(l==="犹豫"||t==="thinking")e="犹豫";
-  c.setAttribute('data-emotion',e);if(d.face_state)F(d.face_state);
+
+  var prev = c.getAttribute('data-emotion');
+  c.setAttribute('data-emotion',e);
+  if(d.face_state)F(d.face_state);
+
+  // 情绪切换时触发一次光晕
+  if (prev !== e) {
+    triggerHalo(c, e);
+  }
 };
 
 const B="";
@@ -297,11 +558,26 @@ async function stopRecording(){
     var d=await C("/api/voice/stop");if(d.control_json)window.updateTenderState(d.control_json);if(d.robot_reply_text)R(d.robot_reply_text);U(d.turn_type==="bar_chat"?"IDLE":"● OK")}
   catch(e){U("IDLE");R("分析失败: "+(e.detail||e.message||"?"))}}
 async function resetSystem(){try{await C("/api/reset");I();R("")}catch(e){R("重置失败: "+(e.detail||e.message||"?"))}}
-function I(){var c=document.getElementById("crt-screen");if(c)c.setAttribute("data-emotion","清醒");F("清醒");U("IDLE")}
+function I(){
+  var c=document.getElementById("crt-screen");if(c){
+    var prev = c.getAttribute('data-emotion');
+    c.setAttribute("data-emotion","清醒");
+    F("清醒");U("IDLE");
+    // 重置时也触发光晕 (如果前一个情绪不同)
+    if (prev !== '清醒') {
+      triggerHalo(c, '清醒');
+    }
+  }
+}
 
 var M={1:{emotion_label:"清醒",face_state:"focused",bartender_line:"…嗯？我在。",emotion_blend:[{emotion:"清醒",weight:1}]},2:{emotion_label:"兴奋",face_state:"happy",bartender_line:"嘿嘿，今天状态超好！",emotion_blend:[{emotion:"兴奋",weight:1}]},3:{emotion_label:"难过",face_state:"gentle",bartender_line:"没关系的……慢慢来。",emotion_blend:[{emotion:"难过",weight:1}]},4:{emotion_label:"疲惫",face_state:"gentle",bartender_line:"呼……能量有点低。",emotion_blend:[{emotion:"疲惫",weight:1}]},5:{emotion_label:"焦虑",face_state:"focused",bartender_line:"深呼吸……我在这里陪你。",emotion_blend:[{emotion:"焦虑",weight:1}]},6:{emotion_label:"犹豫",face_state:"thinking",bartender_line:"唔…不着急，慢慢想~",emotion_blend:[{emotion:"犹豫",weight:1}]}};
 document.addEventListener("keydown",function(e){if(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA")return;var k=e.key;if(M[k]){e.preventDefault();var p=M[k];window.updateTenderState(p);R(p.bartender_line||"");U("● MOCK")}});
-document.addEventListener("DOMContentLoaded",I);
+document.addEventListener("DOMContentLoaded",function(){
+  I();
+  // 首次加载也触发光晕
+  var c=document.getElementById('crt-screen');
+  if(c) { triggerHalo(c, '清醒'); }
+});
 </script>
 </body>
 </html>
