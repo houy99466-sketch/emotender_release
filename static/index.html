@@ -37,15 +37,15 @@
 
   .neon-eye {
     fill:none; stroke:var(--neon-color) !important;
-    stroke-width:14; stroke-linecap:round; stroke-linejoin:round;
+    stroke-width:16; stroke-linecap:round; stroke-linejoin:round;
   }
   .neon-mouth {
     fill:none; stroke:var(--neon-color) !important;
-    stroke-width:12; stroke-linecap:round; stroke-linejoin:round;
+    stroke-width:10; stroke-linecap:round; stroke-linejoin:round;
   }
   .neon-ring {
     fill:none; stroke:var(--neon-color) !important;
-    stroke-width:7; stroke-linecap:round; stroke-linejoin:round;
+    stroke-width:8; stroke-linecap:round; stroke-linejoin:round;
   }
 
   #face-state-label {
@@ -72,41 +72,74 @@
   }
 
   /* ===== 动画 ===== */
-  @keyframes qx-breathe { 0%,100%{opacity:0.72} 50%{opacity:1} }
-  #group-qx .neon-eye, #group-qx .neon-mouth { animation:qx-breathe 1.6s ease-in-out infinite; }
+  /* ===== 夸张动态动画 ===== */
 
-  @keyframes xf-eyes-lift { 0%,100%{transform:scaleY(1)} 35%,65%{transform:scaleY(1.10)} }
-  @keyframes xf-mouth-stretch { 0%,100%{transform:scaleX(1)} 35%,65%{transform:scaleX(1.06)} }
-  @keyframes xf-glow { 0%,100%{opacity:0.88} 35%,65%{opacity:1} }
-  .xf-eye-l { animation:xf-eyes-lift 1.5s ease-in-out infinite, xf-glow 1.5s ease-in-out infinite; transform-origin:113px 148px; }
-  .xf-eye-r { animation:xf-eyes-lift 1.5s ease-in-out infinite, xf-glow 1.5s ease-in-out infinite; transform-origin:287px 148px; }
-  .xf-mouth { animation:xf-mouth-stretch 1.5s ease-in-out infinite; transform-origin:200px 240px; }
+  /* 1. 清醒: 眼缩放脉冲 + 亮度呼吸 */
+  @keyframes qx-pulse { 0%,100%{transform:scale(1); opacity:0.72} 50%{transform:scale(1.06,1.12); opacity:1} }
+  #group-qx .neon-eye { animation:qx-pulse 1.8s ease-in-out infinite; transform-origin:114px 148px; }
+  #group-qx .neon-mouth { animation:qx-pulse 1.8s ease-in-out infinite; transform-origin:200px 240px; }
 
-  @keyframes ng-rotate { 0%,100%{transform:rotate(0deg)} 35%,70%{transform:rotate(4deg)} }
-  .ng-eye-l-g { animation:ng-rotate 1.6s ease-in-out infinite; transform-origin:113px 148px; }
-  .ng-eye-r-g { animation:ng-rotate 1.6s ease-in-out infinite; transform-origin:287px 148px; }
-  @keyframes ng-mouth-sway { 0%,100%{transform:translateX(0)} 25%,50%{transform:translateX(2px)} 62%,88%{transform:translateX(-2px)} }
-  .ng-mouth { animation:ng-mouth-sway 1.6s ease-in-out infinite; }
+  /* 2. 兴奋: 交替眨眼 + 眼弧抬升 + 亮度闪烁 */
+  @keyframes xf-blink-l { 0%,100%{opacity:1} 22%,26%{opacity:0.06} 50%,54%{opacity:1} 72%,76%{opacity:0.06} }
+  @keyframes xf-blink-r { 0%,22%{opacity:1} 26%,30%{opacity:0.06} 54%,58%{opacity:1} 76%,80%{opacity:0.06} 100%{opacity:1} }
+  @keyframes xf-lift { 0%,100%{transform:scaleY(1)} 40%,60%{transform:scaleY(1.14)} }
+  @keyframes xf-glow2 { 0%,100%{opacity:0.85} 40%,60%{opacity:1} }
+  .xf-eye-l { animation:xf-blink-l 1.6s ease-in-out infinite, xf-lift 1.6s ease-in-out infinite, xf-glow2 1.6s ease-in-out infinite; transform-origin:114px 148px; }
+  .xf-eye-r { animation:xf-blink-r 1.6s ease-in-out infinite, xf-lift 1.6s ease-in-out infinite, xf-glow2 1.6s ease-in-out infinite; transform-origin:286px 148px; }
+  @keyframes xf-mouth2 { 0%,100%{transform:scaleX(1)} 40%,60%{transform:scaleX(1.08)} }
+  .xf-mouth { animation:xf-mouth2 1.6s ease-in-out infinite; transform-origin:200px 240px; }
 
-  @keyframes pb-breathe { 0%,100%{opacity:0.68} 50%{opacity:1} }
-  #group-pb .neon-ring, #group-pb .neon-mouth { animation:pb-breathe 1.8s ease-in-out infinite; }
+  /* 3. 难过: X眼抖动旋转 + 缩放震颤 */
+  @keyframes ng-shake { 0%,100%{transform:rotate(0deg) scale(1)} 20%{transform:rotate(4deg) scale(1.05)} 40%{transform:rotate(-3deg) scale(0.96)} 60%{transform:rotate(3deg) scale(1.04)} 80%{transform:rotate(-2deg) scale(0.97)} }
+  .ng-eye-l-g { animation:ng-shake 1.2s ease-in-out infinite; transform-origin:114px 148px; }
+  .ng-eye-r-g { animation:ng-shake 1.2s ease-in-out infinite 0.15s; transform-origin:286px 148px; }
+  @keyframes ng-mouth2 { 0%,100%{transform:translateX(0)} 30%{transform:translateX(3px)} 70%{transform:translateX(-3px)} }
+  .ng-mouth { animation:ng-mouth2 1.4s ease-in-out infinite; }
 
-  @keyframes jl-eye-l-in { 0%,100%{transform:translateX(0)} 35%,60%{transform:translateX(3px)} }
-  @keyframes jl-eye-r-in { 0%,100%{transform:translateX(0)} 35%,60%{transform:translateX(-3px)} }
-  .jl-eye-l-g { animation:jl-eye-l-in 1.4s ease-in-out infinite; }
-  .jl-eye-r-g { animation:jl-eye-r-in 1.4s ease-in-out infinite; }
-  @keyframes jl-mouth-tremble {
-    0%{transform:translateY(0)} 12%,20%{transform:translateY(-2px)} 28%,36%{transform:translateY(2px)}
-    44%,52%{transform:translateY(-1px)} 60%,68%{transform:translateY(1px)} 100%{transform:translateY(0)}
+  /* 4. 疲惫: 缓眨眼 */
+  @keyframes pb-blink {
+    0%,78%{transform:scaleY(1)}
+    84%,90%{transform:scaleY(0.10)}
+    96%,100%{transform:scaleY(1)}
   }
-  .jl-mouth { animation:jl-mouth-tremble 1.4s ease-in-out infinite; }
+  .pb-eye-l { animation:pb-blink 3.5s ease-in-out infinite; transform-origin:113px 148px; }
+  .pb-eye-r { animation:pb-blink 3.5s ease-in-out infinite; transform-origin:287px 148px; }
+  #group-pb .neon-mouth { opacity:0.7; }
 
-  @keyframes yy-eyes-sink { 0%,100%{transform:translateY(0)} 45%,80%{transform:translateY(2px)} }
-  .yy-eye-l { animation:yy-eyes-sink 1.5s ease-in-out infinite; }
-  .yy-eye-r { animation:yy-eyes-sink 1.5s ease-in-out infinite; }
-  @keyframes yy-mouth-purse { 0%,100%{transform:translateY(0)} 45%,80%{transform:translateY(2px)} }
-  .yy-mouth { animation:yy-mouth-purse 1.5s ease-in-out infinite; }
+  /* 5. 焦虑: 眼剧烈颤动 + 缩放脉冲 */
+  @keyframes jl-twitch { 0%,100%{transform:translate(0,0) scale(1)} 15%{transform:translate(4px,-2px) scale(1.06)} 30%{transform:translate(-3px,3px) scale(0.95)} 45%{transform:translate(3px,0) scale(1.05)} 60%{transform:translate(-4px,-1px) scale(0.96)} 75%{transform:translate(2px,2px) scale(1.04)} }
+  .jl-eye-l-g { animation:jl-twitch 0.45s ease-in-out infinite; transform-origin:114px 148px; }
+  .jl-eye-r-g { animation:jl-twitch 0.45s ease-in-out infinite 0.07s; transform-origin:286px 148px; }
+  @keyframes jl-mouth2 { 0%{transform:translateY(0)} 15%{transform:translateY(-3px)} 30%{transform:translateY(3px)} 45%{transform:translateY(-2px)} 60%{transform:translateY(2px)} 75%{transform:translateY(-1px)} 100%{transform:translateY(0)} }
+  .jl-mouth { animation:jl-mouth2 0.55s ease-in-out infinite; }
 
+  /* 6. 犹豫: 眼柔缓漂移 + 缩放呼吸 */
+  @keyframes yy-drift { 0%,100%{transform:translate(0,0) scale(1)} 25%{transform:translate(4px,-2px) scale(1.05)} 50%{transform:translate(-3px,2px) scale(0.96)} 75%{transform:translate(2px,0) scale(1.03)} }
+  .yy-eye-l { animation:yy-drift 2.5s ease-in-out infinite; transform-origin:114px 148px; }
+  .yy-eye-r { animation:yy-drift 2.5s ease-in-out infinite 0.35s; transform-origin:286px 148px; }
+  @keyframes yy-mouth2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(3px)} }
+  .yy-mouth { animation:yy-mouth2 2s ease-in-out infinite; }
+
+
+
+  /* 爱心飘落 (20s大循环, 每次最多2颗可见) */
+  @keyframes hf {
+    0%{transform:translate(0,0) rotate(0deg); opacity:0}
+    2%{opacity:0.9}
+    15%{transform:translate(0,400px) rotate(10deg); opacity:0}
+    16%,100%{transform:translate(0,0) rotate(0deg); opacity:0}
+  }
+  .h1 { animation:hf 20s ease-in infinite 0s backwards; }
+  .h2 { animation:hf 20s ease-in infinite 3s backwards; }
+  .h3 { animation:hf 20s ease-in infinite 6s backwards; }
+  .h4 { animation:hf 20s ease-in infinite 9s backwards; }
+  .h5 { animation:hf 20s ease-in infinite 12s backwards; }
+  .h6 { animation:hf 20s ease-in infinite 15s backwards; }
+
+  /* 泪滴从上往下滑落 */
+  @keyframes tear-fall { 0%{transform:translate(0,0) scale(1); opacity:0.8} 60%{transform:translate(0,70px) scale(0.8); opacity:0.4} 100%{transform:translate(0,130px) scale(0.4); opacity:0} }
+  .t1 { animation:tear-fall 2.5s ease-in infinite; }
+  .t2 { animation:tear-fall 2.5s ease-in infinite 0.6s; }
 
   /* ===== 控制栏 ===== */
   #control-bar { display:flex; align-items:center; gap:14px; }
@@ -163,9 +196,9 @@
 
     <!-- 1. 清醒·浅青蓝 — 平淡呆萌脸（无装饰） -->
     <g id="group-qx" class="pixel-face-group" filter="url(#soft-glow)">
-      <line class="neon-eye" x1="65" y1="148" x2="160" y2="148"/>
-      <line class="neon-eye" x1="240" y1="148" x2="335" y2="148"/>
-      <line class="neon-mouth" x1="192" y1="240" x2="208" y2="240"/>
+      <line class="neon-eye" x1="58" y1="148" x2="170" y2="148"/>
+      <line class="neon-eye" x1="230" y1="148" x2="342" y2="148"/>
+      <line class="neon-mouth" x1="185" y1="240" x2="215" y2="240"/>
     </g>
 
     <!-- 2. 兴奋·薄荷绿 — 大笑脸 + 2颗飘落四芒星 (50,52)(350,52) -->
@@ -173,34 +206,47 @@
       <path class="neon-eye xf-eye-l" d="M65,148 Q113,118 160,148"/>
       <path class="neon-eye xf-eye-r" d="M240,148 Q287,118 335,148"/>
       <path class="neon-mouth xf-mouth" d="M148,240 Q200,278 252,240"/>
-
+      <g opacity="0.35">
+        <path class="h1" style="opacity:0" d="M120,10 C120,2 114,-2 110,2 C107,5 107,8 109,12 L120,24 L131,12 C133,8 133,5 130,2 C126,-2 120,2 120,10 Z" fill="#f5a0b8"/>
+        <path class="h2" style="opacity:0" d="M300,30 C300,22 294,18 290,22 C287,25 287,28 289,32 L300,44 L311,32 C313,28 313,25 310,22 C306,18 300,22 300,30 Z" fill="#f5a0b8"/>
+        <path class="h3" style="opacity:0" d="M200,50 C200,42 194,38 190,42 C187,45 187,48 189,52 L200,64 L211,52 C213,48 213,45 210,42 C206,38 200,42 200,50 Z" fill="#f5a0b8"/>
+        <path class="h4" style="opacity:0" d="M80,20 C80,12 74,8 70,12 C67,15 67,18 69,22 L80,34 L91,22 C93,18 93,15 90,12 C86,8 80,12 80,20 Z" fill="#f5a0b8"/>
+        <path class="h5" style="opacity:0" d="M340,55 C340,47 334,43 330,47 C327,50 327,53 329,57 L340,69 L351,57 C353,53 353,50 350,47 C346,43 340,47 340,55 Z" fill="#f5a0b8"/>
+        <path class="h6" style="opacity:0" d="M160,70 C160,62 154,58 150,62 C147,65 147,68 149,72 L160,84 L171,72 C173,68 173,65 170,62 C166,58 160,62 160,70 Z" fill="#f5a0b8"/>
+      </g>
+    </g>
     </g>
 
     <!-- 3. 难过·淡薰衣草紫 — 委屈脸（无装饰） -->
     <g id="group-ng" class="pixel-face-group" filter="url(#soft-glow)">
       <g class="ng-eye-l-g">
-        <line class="neon-eye" x1="83" y1="126" x2="147" y2="172"/>
-        <line class="neon-eye" x1="147" y1="126" x2="83" y2="172"/>
+        <line class="neon-eye" x1="76" y1="120" x2="154" y2="178"/>
+        <line class="neon-eye" x1="154" y1="120" x2="76" y2="178"/>
       </g>
       <g class="ng-eye-r-g">
-        <line class="neon-eye" x1="253" y1="126" x2="317" y2="172"/>
-        <line class="neon-eye" x1="317" y1="126" x2="253" y2="172"/>
+        <line class="neon-eye" x1="246" y1="120" x2="324" y2="178"/>
+        <line class="neon-eye" x1="324" y1="120" x2="246" y2="178"/>
       </g>
-      <path class="neon-mouth ng-mouth" d="M192,240 Q200,250 208,240"/>
+      <path class="neon-mouth ng-mouth" d="M188,240 Q200,256 212,240"/>
+      <!-- 泪滴（从上往下滑落） -->
+      <g opacity="0.5">
+        <ellipse class="t1" cx="115" cy="180" rx="5" ry="9" fill="#88b8e8" filter="url(#soft-glow)"/>
+        <ellipse class="t2" cx="285" cy="180" rx="5" ry="9" fill="#88b8e8" filter="url(#soft-glow)"/>
+      </g>
     </g>
 
     <!-- 4. 疲惫·奶黄 — 懵懂脸（无装饰） -->
     <g id="group-pb" class="pixel-face-group" filter="url(#soft-glow)">
-      <circle class="neon-ring" cx="113" cy="148" r="38"/>
-      <circle class="neon-ring" cx="287" cy="148" r="38"/>
+      <circle class="neon-ring pb-eye-l" cx="113" cy="148" r="38"/>
+      <circle class="neon-ring pb-eye-r" cx="287" cy="148" r="38"/>
       <path class="neon-mouth" d="M190,240 Q200,234 210,240"/>
     </g>
 
     <!-- 5. 焦虑·浅砖红 — 气鼓鼓脸（无装饰） -->
     <g id="group-jl" class="pixel-face-group" filter="url(#soft-glow)">
-      <g class="jl-eye-l-g"><path class="neon-eye jl-eye-l" d="M80,122 Q113,152 146,122"/></g>
-      <g class="jl-eye-r-g"><path class="neon-eye jl-eye-r" d="M254,122 Q287,152 320,122"/></g>
-      <path class="neon-mouth jl-mouth" d="M185,240 Q193,232 200,240 Q207,248 215,240"/>
+      <g class="jl-eye-l-g"><path class="neon-eye jl-eye-l" d="M74,118 Q114,160 148,118"/></g>
+      <g class="jl-eye-r-g"><path class="neon-eye jl-eye-r" d="M252,118 Q286,160 326,118"/></g>
+      <path class="neon-mouth jl-mouth" d="M175,240 Q185,228 195,240 Q205,252 215,240 Q225,228 225,240"/>
     </g>
 
     <!-- 6. 犹豫·嫩浅绿 — 害羞浅笑脸 + 1颗飘落爱心 (348,57) -->
