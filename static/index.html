@@ -325,6 +325,7 @@
     text-indent: 2em;
     padding: 4px 0;
     position: relative; z-index: 1;
+    white-space: pre-line;
   }
   #receipt .story-flavor {
     display: flex; gap: 6px; flex-wrap: wrap;
@@ -346,6 +347,38 @@
   #receipt .hand-tilt-1 { display:inline-block; transform:rotate(-1.5deg); }
   #receipt .hand-tilt-2 { display:inline-block; transform:rotate(1deg); }
 
+  /* ===== 账号与说明 ===== */
+  #top-panel {
+    position:fixed; top:14px; right:14px; z-index:50;
+    display:flex; align-items:center; gap:8px;
+    font-family:'Courier New','PingFang SC',monospace;
+  }
+  #username-input {
+    width:118px; height:30px; padding:4px 8px;
+    background:rgba(8,12,14,0.92); color:rgba(220,230,235,0.82);
+    border:1px solid rgba(140,200,224,0.22);
+    outline:none; font-size:11px; letter-spacing:0;
+  }
+  #top-panel button {
+    height:30px; min-width:30px; padding:0 8px;
+    background:rgba(8,12,14,0.92); color:rgba(140,200,224,0.82);
+    border:1px solid rgba(140,200,224,0.28);
+    font-family:'Courier New','PingFang SC',monospace; font-size:11px;
+    cursor:pointer;
+  }
+  #help-button {
+    width:30px; border-radius:50%; padding:0 !important; font-size:15px !important;
+  }
+  #help-popover {
+    position:fixed; top:52px; right:14px; z-index:60;
+    width:min(320px, calc(100vw - 28px)); padding:14px 16px;
+    display:none; background:rgba(4,7,9,0.96);
+    border:1px solid rgba(140,200,224,0.28);
+    color:rgba(210,225,232,0.78);
+    font-family:'Courier New','PingFang SC',monospace; font-size:12px; line-height:1.75;
+  }
+  #help-popover.open { display:block; }
+
   /* ===== 响应式 ===== */
   @media (max-width:500px) {
     #crt-screen { width:300px !important; height:300px !important; }
@@ -354,10 +387,22 @@
     #flavor-chart-wrap { width:220px; height:220px; }
     #receipt-wrapper { max-width:340px; }
     #receipt { padding: 20px 16px 18px; }
+    #top-panel { top:8px; right:8px; gap:5px; }
+    #username-input { width:92px; }
   }
 </style>
 </head>
 <body>
+
+<div id="top-panel">
+  <input id="username-input" placeholder="username" autocomplete="off">
+  <button id="login-button" onclick="loginUser()">Login</button>
+  <button id="logout-button" onclick="logoutUser()">Logout</button>
+  <button id="help-button" onclick="toggleHelp()">?</button>
+</div>
+<div id="help-popover">
+  你可以直接和 EmoTender 对话。系统会根据你的表达分析情绪，并生成适合此刻状态的饮品建议。登录用户名后，系统会建立你的个人偏好数据库，用于记住口味、情绪变化和过往饮品体验，让之后的推荐更贴近你。不登录也可以使用，但不会保存长期记忆。
+</div>
 
 <!-- ===== CRT 表情屏幕 ===== -->
 <div id="crt-screen" data-emotion="清醒" style="position:relative;width:400px;height:400px;background-color:#000000!important;overflow:hidden;">
@@ -680,6 +725,23 @@ function setFlavorValues(vals) {
   renderFlavorChart();
 }
 
+function drinkFromControl(controlJson, emotion) {
+  const base = DRINK_DB[emotion] || DRINK_DB["清醒"];
+  const meta = controlJson && controlJson.drink_metadata;
+  if (!meta) return base;
+
+  let story = meta.backstory || meta.serve_line || base.story || '';
+  if (meta.recipe) story += '\n\n配方：' + meta.recipe;
+  if (meta.color) story += '\n色泽：' + meta.color;
+
+  return {
+    name: meta.name || controlJson.drink_name || base.name,
+    en: meta.name_en || base.en || '',
+    flavor: base.flavor,
+    story: story
+  };
+}
+
 // ============ 小票渲染 ============
 function confirmFlavor() {
   const d = currentDrink || DRINK_DB["清醒"];
@@ -717,12 +779,12 @@ window.updateTenderState=function(d){
   else if(l==="兴奋"||t==="happy")e="兴奋";
   else if(l==="犹豫"||t==="thinking")e="犹豫";
   c.setAttribute('data-emotion',e);if(d.face_state)F(d.face_state);
-  onEmotionChange(e);
+  onEmotionChange(e,d);
 };
 
-function onEmotionChange(emotion) {
+function onEmotionChange(emotion, controlJson) {
   currentEmotion = emotion;
-  const d = DRINK_DB[emotion];
+  const d = drinkFromControl(controlJson, emotion);
   if (d) {
     currentDrink = d;
     setFlavorValues(d.flavor);
@@ -751,7 +813,11 @@ function triggerGlowFlash() {
 }
 
 const B="";
-async function C(p){var r=await fetch(B+p,{method:"POST"});var d=await r.json();if(!r.ok)throw d;return d}
+function usernameValue(){var e=document.getElementById("username-input");return e?(e.value||"").trim():""}
+async function C(p,b){var o={method:"POST"};if(b){o.headers={"Content-Type":"application/json"};o.body=JSON.stringify(b)}var r=await fetch(B+p,o);var d=await r.json();if(!r.ok)throw d;return d}
+function toggleHelp(){var e=document.getElementById("help-popover");if(e)e.classList.toggle("open")}
+async function loginUser(){var u=usernameValue();if(!u){R("先输入一个用户名。");return}try{await C("/api/user/login",{username:u});localStorage.setItem("emotender_username",u);U("USER "+u);R("已登录。之后的对话会用于形成你的个人偏好数据库。")}catch(e){R("登录失败: "+(e.detail||e.message||"?"))}}
+async function logoutUser(){var u=usernameValue()||localStorage.getItem("emotender_username")||"";if(!u){R("当前没有登录用户。");return}try{var d=await C("/api/user/logout",{username:u});localStorage.removeItem("emotender_username");var i=document.getElementById("username-input");if(i)i.value="";U("IDLE");R(d.saved_summary?"已退出，并保存本次对话摘要。":"已退出，本次没有需要保存的对话。")}catch(e){R("退出失败: "+(e.detail||e.message||"?"))}}
 async function startRecording(){
   try{U("● REC");var c=document.getElementById("crt-screen");if(c)c.classList.add("recording-active");await C("/api/voice/start")}
   catch(e){U("IDLE");var c=document.getElementById("crt-screen");if(c)c.classList.remove("recording-active");R("录音启动失败: "+(e.detail||e.message||"?"))}}
@@ -760,7 +826,7 @@ async function stopRecording(){
     var d=await C("/api/voice/stop");if(d.control_json)window.updateTenderState(d.control_json);if(d.robot_reply_text)R(d.robot_reply_text);U(d.turn_type==="bar_chat"?"IDLE":"● OK")}
   catch(e){U("IDLE");R("分析失败: "+(e.detail||e.message||"?"))}}
 async function resetSystem(){try{await C("/api/reset");I();R("");resetFlavorPanels()}catch(e){R("重置失败: "+(e.detail||e.message||"?"))}}
-function I(){var c=document.getElementById("crt-screen");if(c)c.setAttribute("data-emotion","清醒");F("清醒");U("IDLE")}
+function I(){var c=document.getElementById("crt-screen");if(c)c.setAttribute("data-emotion","清醒");F("清醒");U("IDLE");var u=localStorage.getItem("emotender_username")||"";var i=document.getElementById("username-input");if(i)i.value=u}
 function resetFlavorPanels(){
   document.getElementById('flavor-section').classList.remove('visible');
   document.getElementById('receipt-wrapper').classList.remove('visible');

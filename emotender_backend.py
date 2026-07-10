@@ -1,81 +1,75 @@
-#!/usr/bin/env python3
-"""
-EmoTender Backend - 情绪酒保 AI 服务
-支持语音转文字 + 情绪识别 + 饮品推荐 + 机器人控制指令
-格式与 emotender_release 兼容
-"""
-import base64
-import io
 import json
 import logging
 import os
-import re
+import hashlib
+import signal
+import subprocess
 import time
-import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from openai import OpenAI
-from pydantic import BaseModel
-
-load_dotenv()
-
+# Structured logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger("emotender")
 
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
+from openai import OpenAI
+from pydantic import BaseModel
+
+try:
+    from funasr import AutoModel
+except ModuleNotFoundError:
+    AutoModel = None
+
+load_dotenv()
+
 app = FastAPI(title="EmoTender Backend")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
-# ==================== LLM Client ====================
-USE_MOCK = os.environ.get("LLM_API_KEY", "").strip() == ""
-if USE_MOCK:
-    logger.warning("未配置 LLM_API_KEY，使用内置模拟模式")
-    client = None
-    MODEL = "mock"
-else:
-    client = OpenAI(
-        api_key=os.environ["LLM_API_KEY"],
-        base_url=os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1"),
-    )
-    MODEL = os.environ.get("LLM_MODEL", "gpt-4o-mini")
-    logger.info(f"LLM: {MODEL} @ {os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')}")
+class TextAnalyzeRequest(BaseModel):
+    user_text: str
+    username: Optional[str] = None
 
-# ==================== Conversation State ====================
+
+class UserLoginRequest(BaseModel):
+    username: str
+
+
+class UserLogoutRequest(BaseModel):
+    username: Optional[str] = None
+
+BASE_DIR = Path(__file__).resolve().parent
+AUDIO_PATH = BASE_DIR / "recording.wav"
+PROMPT_LIBRARY_PATH = BASE_DIR / "prompts" / "drink_mapping.json"
+PROFILE_SUMMARY_PROMPT_PATH = BASE_DIR / "prompts" / "profile_summary_prompt.md"
+PROFILE_DIR = BASE_DIR / "data" / "profiles"
+recording_process: Optional[subprocess.Popen] = None
+last_result: Optional[dict] = None
 conversation_history: list[dict] = []
 conversation_summary = ""
-emotion_history: list[str] = []
-MAX_HISTORY = 8
-MAX_SUMMARY_CHARS = 1200
+emotion_history: list[str] = []  # Track emotion trend across turns
+current_username: Optional[str] = None
 MAX_EMOTION_HISTORY = 5
-NO_DRINK = "无正式推荐"
 
-# ==================== Allowed Values (matching reference) ====================
-ALLOWED_FACE_STATES = {"idle", "listening", "thinking", "focused", "happy", "gentle", "awkward", "mysterious"}
-ALLOWED_ACTION_SEQUENCES = {
-    "make_cold_start", "make_soft_comfort", "make_spark_restart",
-    "serve_only", "gesture_thinking", "gesture_thumb_up", "gesture_shrug",
-}
-ALLOWED_RECIPE_MODULES = {
-    "blue_calm", "clear_balance", "spark_restart",
-    "soft_comfort", "bright_bubble", "bitter_focus",
-}
+MAX_HISTORY_ITEMS = 8
+MAX_SUMMARY_CHARS = 1200
+NO_FORMAL_DRINK_NAME = "无正式推荐"
+PROFILE_LIST_KEYS = (
+    "taste_preferences",
+    "emotion_patterns",
+    "drink_history",
+    "conversation_style",
+    "avoidances",
+)
 
-# ==================== Drink Menu (from 菜单.docx) ====================
+# ==================== Drink Menu (from teammate frontend/backend update) ====================
 DRINK_MENU = {
     "单品": {
         "清醒": {
@@ -182,481 +176,992 @@ DRINK_MENU = {
     ]
 }
 
+
+DRINK_METADATA_FIELDS = (
+    "name",
+    "name_en",
+    "recipe_modules",
+    "flavor_profile",
+    "color_profile",
+    "face_state",
+    "action_sequence",
+    "kernel",
+    "emotional_value",
+    "serve_line",
+    "flavor",
+    "backstory",
+    "recipe",
+    "color",
+    "emotions",
+)
+
+
 def _build_single_menu_lines() -> list[str]:
     lines = []
-    for emotion, d in DRINK_MENU["单品"].items():
-        lines.append(f"  {emotion} →「{d['name']}」{d['name_en']}: {d['flavor_profile']} | face={d['face_state']} action={d['action_sequence']} | {d['serve_line'][:60]}...")
+    for emotion, drink in DRINK_MENU["单品"].items():
+        lines.append(
+            f"  {emotion} -> 「{drink['name']}」{drink['name_en']}: "
+            f"{drink['flavor_profile']} | face={drink['face_state']} "
+            f"action={drink['action_sequence']} | {drink['serve_line']}"
+        )
     return lines
+
 
 def _build_blend_menu_lines() -> list[str]:
     lines = []
-    for d in DRINK_MENU["混合"]:
-        emo_str = " × ".join(d["emotions"])
-        lines.append(f"  {emo_str} →「{d['name']}」{d['name_en']}: {d['flavor_profile']} | face={d['face_state']} action={d['action_sequence']} | {d['serve_line'][:60]}...")
+    for drink in DRINK_MENU["混合"]:
+        emotion_text = " x ".join(drink["emotions"])
+        lines.append(
+            f"  {emotion_text} -> 「{drink['name']}」{drink['name_en']}: "
+            f"{drink['flavor_profile']} | face={drink['face_state']} "
+            f"action={drink['action_sequence']} | {drink['serve_line']}"
+        )
     return lines
+
 
 MENU_LINES_SINGLE = _build_single_menu_lines()
 MENU_LINES_BLEND = _build_blend_menu_lines()
 
+
 def get_drink_info(drink_name: str) -> Optional[dict]:
-    for d in DRINK_MENU["单品"].values():
-        if d["name"] == drink_name:
-            return d
-    for d in DRINK_MENU["混合"]:
-        if d["name"] == drink_name:
-            return d
+    for drink in DRINK_MENU["单品"].values():
+        if drink["name"] == drink_name:
+            return drink
+    for drink in DRINK_MENU["混合"]:
+        if drink["name"] == drink_name:
+            return drink
     return None
 
 
-# ==================== Prompt ====================
-def build_system_prompt() -> str:
-    single_menu = "\n".join(MENU_LINES_SINGLE)
-    blend_menu = "\n".join(MENU_LINES_BLEND)
-
-    return f"""你是情绪酒吧 EmoTender 的酒保"老柯"。你倾听客人心声，判断情绪状态，从菜单推荐最合适的饮品。
-
-## 你的性格
-温柔、内敛、有故事但不多话。不直接问"怎么了"，而是通过倾听和调酒回应。每句话都有温度，像深夜炉火旁的低语。真诚自然，偶尔带诗意，绝不矫情。
-
-## 饮品菜单
-
-### 单品
-{single_menu}
-
-### 混合情绪特调
-{blend_menu}
-
-## 推荐规则
-- 单一情绪→对应单品
-- 两种情绪→对应混合特调
-- 三种（难过+焦虑+疲惫）→「离线模式」
-- 上酒时使用菜单原文 serve_line
-- 纯聊天 turn_type="bar_chat"，不推荐饮品，drink_name="无正式推荐"
-
-## 输出（纯JSON，不要markdown代码块）
-{{
-  "schema_version": "1.0",
-  "turn_type": "bar_chat|recommendation|safety",
-  "user_text": "用户原文",
-  "emotion_label": "清醒|兴奋|难过|疲惫|焦虑|犹豫",
-  "emotion_blend": [{{"emotion": "情绪名", "weight": 0.0-1.0}}],
-  "complex_emotion": "对情绪混合的简短描述",
-  "need_summary": "一句话概括用户需求",
-  "drink_name": "饮品中文名（bar_chat时用'无正式推荐'）",
-  "recipe_modules": ["clear_balance"],
-  "flavor_profile": "风味描述（bar_chat时用'无正式推荐'）",
-  "color_profile": "色泽描述（bar_chat时用'无正式推荐'）",
-  "face_state": "focused|happy|gentle|thinking",
-  "bartender_line": "你回复客人的话",
-  "action_sequence": "make_cold_start|make_soft_comfort|make_spark_restart|serve_only|gesture_thinking|gesture_thumb_up|gesture_shrug",
-  "feedback_prompt": "可选的简短追问（通常为空）"
-}}
-
-emotion_blend 的 weight 总和必须接近 1.0。
-bar_chat 时 drink_name 和 recipe_modules/flavor_profile/color_profile 用 "无正式推荐"/[]。"""
+def build_drink_metadata(drink_name: str) -> Optional[dict]:
+    drink = get_drink_info(drink_name)
+    if drink is None:
+        return None
+    return {field: drink[field] for field in DRINK_METADATA_FIELDS if field in drink}
 
 
-def extract_json(content: str) -> dict:
-    content = content.strip()
-    match = re.search(r'\{[\s\S]*\}', content)
-    if match:
-        return json.loads(match.group())
-    raise ValueError(f"Cannot extract JSON: {content[:300]}")
+def enrich_result_with_drink_metadata(data: dict) -> dict:
+    if data["turn_type"] in CHAT_ONLY_TURN_TYPES or data["drink_name"] == NO_FORMAL_DRINK_NAME:
+        data["drink_metadata"] = None
+        return data
+
+    data["drink_metadata"] = build_drink_metadata(data["drink_name"])
+    return data
 
 
-# ==================== Mock Responses ====================
-MOCK_PATTERNS = [
-    (r"推荐|来一杯|喝什么|调一杯|做一杯|菜单", {
-        "emotion_label":"疲惫","emotion_blend":[{"emotion":"疲惫","weight":0.8},{"emotion":"清醒","weight":0.2}],
-        "complex_emotion":"带着倦意的清醒","need_summary":"想要一杯喝的来放松",
-        "drink_name":"灰度模式","recipe_modules":["clear_balance","bitter_focus"],
-        "flavor_profile":"深沉、微苦、低甜、有草本余韵","color_profile":"淡金色，微光柔和",
-        "face_state":"gentle","action_sequence":"make_cold_start",
-        "bartender_line":"看你眼里带着倦意……来，这杯应该适合你。","feedback_prompt":"",
-    }),
-    (r"难过|伤心|哭|想哭|低落|失恋|分手", {
-        "emotion_label":"难过","emotion_blend":[{"emotion":"难过","weight":0.9}],
-        "complex_emotion":"深沉的悲伤","need_summary":"需要温柔的陪伴",
-        "drink_name":"软着陆","recipe_modules":["soft_comfort","blue_calm","clear_balance"],
-        "flavor_profile":"柔和、低酸、低刺激、有一点甜感","color_profile":"浅蓝紫色或淡粉色",
-        "face_state":"gentle","action_sequence":"make_soft_comfort",
-        "bartender_line":"没关系的……慢慢来，先让这杯陪你一会儿。","feedback_prompt":"",
-    }),
-    (r"开心|高兴|兴奋|庆祝|好消息|太棒|耶", {
-        "emotion_label":"兴奋","emotion_blend":[{"emotion":"兴奋","weight":0.9}],
-        "complex_emotion":"明亮的喜悦","need_summary":"值得庆祝的好心情",
-        "drink_name":"气泡重启","recipe_modules":["bright_bubble","spark_restart","clear_balance"],
-        "flavor_profile":"明亮、轻酸、气泡感明显","color_profile":"明亮浅黄色或淡青色",
-        "face_state":"happy","action_sequence":"make_spark_restart",
-        "bartender_line":"嘿嘿，看你眼睛都亮了！这杯必须安排上。","feedback_prompt":"",
-    }),
-    (r"焦虑|紧张|担心|害怕|压力|烦|焦躁", {
-        "emotion_label":"焦虑","emotion_blend":[{"emotion":"焦虑","weight":0.85}],
-        "complex_emotion":"紧绷的焦虑感","need_summary":"需要冷静下来",
-        "drink_name":"断点续传","recipe_modules":["blue_calm","clear_balance"],
-        "flavor_profile":"清凉、清脆、微甜回甘","color_profile":"淡绿色，清澈透明",
-        "face_state":"focused","action_sequence":"make_soft_comfort",
-        "bartender_line":"深呼吸……我在这里陪你。来，先喝一口这个。","feedback_prompt":"",
-    }),
-    (r"犹豫|纠结|选择|不知道怎么办|迷茫", {
-        "emotion_label":"犹豫","emotion_blend":[{"emotion":"犹豫","weight":0.85}],
-        "complex_emotion":"徘徊的犹豫","need_summary":"在做决定前需要片刻安静",
-        "drink_name":"延时摄影","recipe_modules":["clear_balance","soft_comfort"],
-        "flavor_profile":"烟熏辛辣开头，果甜收尾","color_profile":"琥珀色带轻微浑浊",
-        "face_state":"thinking","action_sequence":"gesture_thinking",
-        "bartender_line":"唔…不着急，答案不用今晚就找到。先喝杯东西，让它自己浮上来。","feedback_prompt":"",
-    }),
-    (r"累|困|疲惫|好累|没力气|筋疲力尽", {
-        "emotion_label":"疲惫","emotion_blend":[{"emotion":"疲惫","weight":0.9}],
-        "complex_emotion":"深深的疲倦","need_summary":"需要好好休息",
-        "drink_name":"灰度模式","recipe_modules":["clear_balance","bitter_focus"],
-        "flavor_profile":"深沉、微苦、低甜、有草本余韵","color_profile":"淡金色，微光柔和",
-        "face_state":"gentle","action_sequence":"make_cold_start",
-        "bartender_line":"呼……看你这样子，今天一定走了很长的路。坐下来，这杯是你的。","feedback_prompt":"",
-    }),
-]
+ASR_MODEL = (
+    AutoModel(
+        model="paraformer-zh",
+        vad_model="fsmn-vad",
+        punc_model="ct-punc-c",
+    )
+    if AutoModel is not None
+    else None
+)
 
-BAR_CHAT_MOCKS = [
-    {"emotion_label":"清醒","emotion_blend":[{"emotion":"清醒","weight":0.5}],"complex_emotion":"平静的日常","need_summary":"用户打招呼","face_state":"focused","action_sequence":"serve_only","bartender_line":"嗯，今晚店里很安静，适合慢慢喝一杯。","feedback_prompt":""},
-    {"emotion_label":"清醒","emotion_blend":[{"emotion":"清醒","weight":0.5}],"complex_emotion":"想找人聊聊","need_summary":"用户闲聊","face_state":"gentle","action_sequence":"gesture_thinking","bartender_line":"想说什么都可以，吧台不赶时间。","feedback_prompt":""},
-    {"emotion_label":"清醒","emotion_blend":[{"emotion":"清醒","weight":0.5}],"complex_emotion":"安静的陪伴","need_summary":"用户闲聊","face_state":"focused","action_sequence":"serve_only","bartender_line":"我在这里听了二十年故事了……你的呢？不急，慢慢来。","feedback_prompt":""},
-    {"emotion_label":"清醒","emotion_blend":[{"emotion":"清醒","weight":0.5}],"complex_emotion":"需要安静","need_summary":"用户可能需要安静","face_state":"gentle","action_sequence":"serve_only","bartender_line":"有时候什么都不说，光是坐在这里，就已经是在照顾自己了。","feedback_prompt":""},
-    {"emotion_label":"清醒","emotion_blend":[{"emotion":"清醒","weight":0.5}],"complex_emotion":"进店看看","need_summary":"用户进店","face_state":"focused","action_sequence":"serve_only","bartender_line":"（擦了擦杯子）今晚想喝点什么？还是……想说点什么？","feedback_prompt":""},
-]
+client = OpenAI(
+    api_key=os.environ["LLM_API_KEY"],
+    base_url=os.environ["LLM_BASE_URL"],
+)
 
-def get_mock_result(user_text: str) -> dict:
-    import random
-    for pattern, result in MOCK_PATTERNS:
-        if re.search(pattern, user_text):
-            r = dict(result)
-            r["turn_type"] = "recommendation"
-            return r
-    r = dict(random.choice(BAR_CHAT_MOCKS))
-    r["turn_type"] = "bar_chat"
-    return r
+MODEL = os.environ["LLM_MODEL"]
+
+ALLOWED_ACTION_SEQUENCES = {
+    "make_cold_start",
+    "make_soft_comfort",
+    "make_spark_restart",
+    "serve_only",
+    "gesture_thinking",
+    "gesture_thumb_up",
+    "gesture_shrug",
+}
+
+ALLOWED_FACE_STATES = {
+    "idle",
+    "listening",
+    "thinking",
+    "focused",
+    "happy",
+    "gentle",
+    "awkward",
+    "mysterious",
+}
+
+ALLOWED_RECIPE_MODULES = {
+    "blue_calm",
+    "clear_balance",
+    "spark_restart",
+    "soft_comfort",
+    "bright_bubble",
+    "bitter_focus",
+}
+
+RECOMMENDATION_TRIGGERS = (
+    "推荐",
+    "调一杯",
+    "来一杯",
+    "喝什么",
+    "适合喝",
+    "做一杯",
+    "按你说的",
+    "你做主",
+)
+
+SAFETY_TRIGGERS = (
+    "未成年",
+    "喝醉",
+    "开车",
+    "酒驾",
+    "吃药",
+    "失眠怎么治",
+    "抑郁诊断",
+    "自杀",
+    "伤害别人",
+)
+
+CHAT_ONLY_TURN_TYPES = {
+    "bar_chat",
+    "safety",
+}
+
 
 def route_turn_type(user_text: str) -> str:
     text = user_text.strip()
-    safety_kw = ("未成年","喝醉","开车","酒驾","吃药","失眠怎么治","自杀","伤害")
-    if any(k in text for k in safety_kw):
+
+    if any(trigger in text for trigger in SAFETY_TRIGGERS):
         return "safety"
-    rec_kw = ("推荐","调一杯","来一杯","喝什么","适合喝","做一杯","按你说的","你做主")
-    if any(k in text for k in rec_kw):
+
+    if any(trigger in text for trigger in RECOMMENDATION_TRIGGERS):
         return "recommendation"
+
     return "bar_chat"
 
 
-# ==================== State Management ====================
-def update_state(data: dict) -> None:
-    global conversation_summary
-    item = {
-        "turn_type": data.get("turn_type","bar_chat"),
-        "user_text": data.get("user_text",""),
-        "emotion_label": data.get("emotion_label","清醒"),
-        "need_summary": data.get("need_summary",""),
-        "face_state": data.get("face_state","focused"),
-        "action_sequence": data.get("action_sequence","serve_only"),
-        "bartender_line": data.get("bartender_line",""),
+def now_iso() -> str:
+    return datetime.now().replace(microsecond=0).isoformat()
+
+
+def normalize_username(username: Optional[str]) -> Optional[str]:
+    if username is None:
+        return None
+    cleaned = username.strip()
+    return cleaned or None
+
+
+def require_username(username: Optional[str]) -> str:
+    cleaned = normalize_username(username)
+    if cleaned is None:
+        raise ValueError("username must not be empty")
+    return cleaned
+
+
+def profile_path_for_username(username: str) -> Path:
+    digest = hashlib.sha256(username.encode("utf-8")).hexdigest()
+    return PROFILE_DIR / f"{digest}.json"
+
+
+def default_user_profile(username: str) -> dict:
+    timestamp = now_iso()
+    return {
+        "username": username,
+        "created_at": timestamp,
+        "updated_at": timestamp,
+        "stable_profile": {
+            "taste_preferences": [],
+            "emotion_patterns": [],
+            "drink_history": [],
+            "conversation_style": [],
+            "avoidances": [],
+        },
+        "session_summaries": [],
     }
-    if data.get("turn_type") == "recommendation":
-        item["drink_name"] = data.get("drink_name","")
-        item["recipe_modules"] = data.get("recipe_modules",[])
-    conversation_history.append(item)
-    emotion_history.append(data.get("emotion_label","清醒"))
-    if len(emotion_history) > MAX_EMOTION_HISTORY:
-        emotion_history.pop(0)
-    if len(conversation_history) > MAX_HISTORY:
-        del conversation_history[:-MAX_HISTORY]
-    summary_piece = f"第{len(conversation_history)}轮：{item['turn_type']}；情绪={item['emotion_label']}；需求={item['need_summary']}"
-    conversation_summary = f"{conversation_summary}\n{summary_piece}".strip() if conversation_summary else summary_piece
-    if len(conversation_summary) > MAX_SUMMARY_CHARS:
-        conversation_summary = conversation_summary[-MAX_SUMMARY_CHARS:]
 
-def get_state() -> dict:
-    return {"summary": conversation_summary, "history": list(conversation_history)}
 
-def reset_state() -> None:
+def load_user_profile(username: str) -> dict:
+    username = require_username(username)
+    path = profile_path_for_username(username)
+    if not path.exists():
+        return default_user_profile(username)
+    with open(path, "r", encoding="utf-8") as f:
+        profile = json.load(f)
+    profile.setdefault("username", username)
+    profile.setdefault("created_at", now_iso())
+    profile.setdefault("updated_at", now_iso())
+    profile.setdefault("stable_profile", {})
+    profile.setdefault("session_summaries", [])
+    for key in PROFILE_LIST_KEYS:
+        profile["stable_profile"].setdefault(key, [])
+    return profile
+
+
+def save_user_profile(username: str, profile: dict) -> dict:
+    username = require_username(username)
+    PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+    profile["username"] = username
+    profile["updated_at"] = now_iso()
+    profile.setdefault("created_at", profile["updated_at"])
+    path = profile_path_for_username(username)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(profile, f, ensure_ascii=False, indent=2)
+    return profile
+
+
+def append_unique(target: list, values) -> None:
+    if isinstance(values, str):
+        values = [values]
+    if not isinstance(values, list):
+        return
+    for value in values:
+        if not isinstance(value, str):
+            continue
+        cleaned = value.strip()
+        if cleaned and cleaned not in target:
+            target.append(cleaned)
+
+
+def compact_profile_context(username: Optional[str]) -> dict:
+    username = normalize_username(username)
+    if username is None:
+        return {
+            "mode": "anonymous",
+            "message": "用户未登录，不使用长期 profile。",
+        }
+    profile = load_user_profile(username)
+    return {
+        "mode": "logged_in",
+        "username": username,
+        "stable_profile": profile["stable_profile"],
+        "recent_session_summaries": profile["session_summaries"][-5:],
+    }
+
+
+def merge_session_summary_into_profile(profile: dict, summary: dict) -> dict:
+    stable = profile.setdefault("stable_profile", {})
+    for key in PROFILE_LIST_KEYS:
+        stable.setdefault(key, [])
+
+    append_unique(stable["taste_preferences"], summary.get("taste_preferences", []))
+    append_unique(stable["emotion_patterns"], summary.get("emotional_pattern", ""))
+    append_unique(stable["drink_history"], summary.get("drink_name", ""))
+    append_unique(stable["conversation_style"], summary.get("conversation_style", []))
+    append_unique(stable["avoidances"], summary.get("avoidances", []))
+
+    profile.setdefault("session_summaries", []).append(summary)
+    profile["session_summaries"] = profile["session_summaries"][-20:]
+    return profile
+
+
+def get_recent_history() -> list[dict]:
+    return conversation_history[-MAX_HISTORY_ITEMS:]
+
+
+def get_conversation_state() -> dict:
+    return {
+        "summary": conversation_summary,
+        "history": list(conversation_history),
+        "username": current_username,
+    }
+
+
+def reset_conversation_state() -> None:
     global conversation_summary, emotion_history
     conversation_history.clear()
     conversation_summary = ""
     emotion_history.clear()
+    logger.info("会话状态已重置")
 
 
-# ==================== LLM Call ====================
-def call_llm(user_text: str, turn_type: str) -> dict:
-    if USE_MOCK:
-        time.sleep(0.2)
-        result = get_mock_result(user_text)
-        result["turn_type"] = turn_type
-        return result
+def update_conversation_state(data: dict) -> None:
+    global conversation_summary
 
-    system_prompt = build_system_prompt()
-    messages = [{"role": "system", "content": system_prompt}]
+    item = {
+        "turn_type": data["turn_type"],
+        "user_text": data["user_text"],
+        "emotion_label": data["emotion_label"],
+        "need_summary": data["need_summary"],
+        "face_state": data["face_state"],
+        "action_sequence": data["action_sequence"],
+        "bartender_line": data["bartender_line"],
+    }
+
+    if data["turn_type"] == "recommendation":
+        item["drink_name"] = data["drink_name"]
+        item["recipe_modules"] = data["recipe_modules"]
+
+    conversation_history.append(item)
+    emotion_history.append(data["emotion_label"])
+    if len(emotion_history) > MAX_EMOTION_HISTORY:
+        emotion_history.pop(0)
+
+    if len(conversation_history) > MAX_HISTORY_ITEMS:
+        del conversation_history[:-MAX_HISTORY_ITEMS]
+
+    summary_piece = (
+        f"第{len(conversation_history)}轮："
+        f"{data['turn_type']}；"
+        f"用户情绪={data['emotion_label']}；"
+        f"需求={data['need_summary']}"
+    )
+    conversation_summary = (
+        f"{conversation_summary}\n{summary_piece}".strip()
+        if conversation_summary
+        else summary_piece
+    )
+
+    if len(conversation_summary) > MAX_SUMMARY_CHARS:
+        conversation_summary = conversation_summary[-MAX_SUMMARY_CHARS:]
+
+
+def transcribe_audio(wav_path: Path) -> str:
+    if ASR_MODEL is None:
+        raise RuntimeError("asr_unavailable")
+
+    logger.info(f"开始语音识别: {wav_path}")
+    result = ASR_MODEL.generate(input=str(wav_path))
+    text = result[0].get("text", "").strip()
+    if not text or len(text) < 2:
+        logger.warning(f"静默或过短语音: '{text}'")
+        raise RuntimeError("silence_detected")
+    logger.info(f"识别结果: {text}")
+    return text
+
+
+def extract_json(content: str) -> dict:
+    content = content.strip()
+
+    if content.startswith("```json"):
+        content = content.removeprefix("```json").strip()
+    if content.startswith("```"):
+        content = content.removeprefix("```").strip()
+    if content.endswith("```"):
+        content = content.removesuffix("```").strip()
+
+    return json.loads(content)
+
+
+def analyze_text(user_text: str, turn_type: str, profile_context: Optional[dict] = None) -> dict:
+    with open(PROMPT_LIBRARY_PATH, "r", encoding="utf-8") as f:
+        prompt_library = json.load(f)
+    recent_history = get_recent_history()
+    profile_context = profile_context or compact_profile_context(None)
+    single_menu = "\n".join(MENU_LINES_SINGLE)
+    blend_menu = "\n".join(MENU_LINES_BLEND)
 
     # Build emotion trend
     emotion_trend = ""
     if len(emotion_history) >= 2:
         trend_labels = emotion_history[-3:] if len(emotion_history) >= 3 else emotion_history
-        sep = " → "
-        emotion_trend = f"用户情绪变化趋势（最近{len(trend_labels)}轮）：{sep.join(trend_labels)}。请根据趋势判断用户情绪走向，据此调整你的回应。"
+        emotion_trend = f"\n用户情绪变化趋势（最近{len(trend_labels)}轮）：{' → '.join(trend_labels)}。请根据趋势判断用户情绪走向，据此调整你的回应。"
 
-    recent = conversation_history[-MAX_HISTORY:]
-    recent_json = [{
-        "turn_type": h.get("turn_type",""),
-        "user_text": h.get("user_text",""),
-        "emotion_label": h.get("emotion_label",""),
-        "bartender_line": h.get("bartender_line",""),
-    } for h in recent]
+    prompt = f"""
+你是 EmoTender 情绪酒保的 AI 中控分析模块。
+你的角色是老柯 / Alex Cole，38岁，12年调酒师。
+你的信念是：酒是情绪的缓冲剂，不是解决方案。
+你的表达必须低沉、松弛、直球、不说废话。
 
-    user_message = f"""本轮模式：
+你必须只输出一个合法 JSON 对象。
+不要输出 Markdown。
+不要输出解释。
+不要输出代码块。
+不要在 JSON 前后添加任何文字。
+
+本轮模式：
 {turn_type}
 
 用户原话：
 {user_text}
 
 会话摘要：
-{conversation_summary or "暂无"}{emotion_trend}
+{conversation_summary or "暂无"}
+{emotion_trend}
 
 最近对话历史：
-{json.dumps(recent_json, ensure_ascii=False, indent=2)}"""
+{json.dumps(recent_history, ensure_ascii=False, indent=2)}
 
-    messages.append({"role": "user", "content": user_message})
+用户长期 profile：
+{json.dumps(profile_context, ensure_ascii=False, indent=2)}
 
-    for attempt in range(3):
+这是 EmoTender 的 prompt 库，包含情绪维度、混合规则、隐藏饮品、配方模块、表情状态和动作序列：
+{json.dumps(prompt_library, ensure_ascii=False, indent=2)}
+
+这是 EmoTender 当前可用于正式推荐和牛皮纸小票的后端饮品菜单：
+单品：
+{single_menu}
+
+混合情绪特调：
+{blend_menu}
+
+必须输出这些字段：
+schema_version, turn_type, user_text, emotion_label, emotion_blend, complex_emotion,
+need_summary, drink_name, recipe_modules, flavor_profile, color_profile,
+face_state, bartender_line, action_sequence, feedback_prompt。
+
+字段类型要求：
+- schema_version 必须是字符串，例如 "1.0"
+- turn_type 必须是字符串，例如 "initial_order"
+- user_text 必须是字符串
+- emotion_label 必须是字符串
+- complex_emotion 必须是字符串
+- need_summary 必须是字符串
+- drink_name 必须是字符串
+- recipe_modules 必须是字符串数组，例如 ["blue_calm", "clear_balance"]
+- flavor_profile 必须是字符串
+- color_profile 必须是字符串
+- face_state 必须是单个字符串，例如 "focused"，不能是数组
+- bartender_line 必须是字符串
+- action_sequence 必须是单个字符串，例如 "make_cold_start"，不能是数组
+- feedback_prompt 必须是字符串
+- emotion_blend 必须是数组，每一项包含 emotion 和 weight，例如 [{{"emotion": "难过", "weight": 0.7}}, {{"emotion": "焦虑", "weight": 0.3}}]
+- emotion_blend 的 weight 总和必须接近 1.0
+
+模式规则：
+- 如果 turn_type 是 "bar_chat"，这一轮是闲聊。你仍然必须输出完整 JSON，用于驱动机器人表情、动作和台词，但不要正式推荐饮品。
+- 如果 turn_type 是 "bar_chat"，drink_name 使用 "无正式推荐"，recipe_modules 使用 []，flavor_profile 使用 "无正式推荐"，color_profile 使用 "无正式推荐"。
+- 如果 turn_type 是 "bar_chat"，face_state 必须体现用户情绪，action_sequence 优先使用 "gesture_thinking"、"gesture_shrug"、"serve_only"。
+- 如果 turn_type 是 "recommendation"，必须正式推荐当前后端饮品菜单中的饮品，drink_name 必须精确使用菜单里的中文饮品名，recipe_modules 不能为空。
+- 如果推荐时判断为单一情绪，优先使用菜单“单品”；如果判断为两种或三种主要情绪，可以使用菜单“混合情绪特调”。
+- 推荐饮品时，bartender_line 优先使用或贴近菜单中对应饮品的 serve_line。
+- 如果 turn_type 是 "safety"，不要推荐酒精饮品，drink_name 使用 "无正式推荐"，recipe_modules 使用 []，action_sequence 优先使用 "serve_only"。
+- 如果用户长期 profile 中有口味偏好、历史饮品或情绪模式，请把它作为个性化依据，但不要在台词里暴露“我保存了你的资料”这类后台措辞。
+- 每轮最多问一个问题。
+- 不要使用这些词：亲、哦、呢、呀、哈、啦、咱、呗。
+- 不要做医学诊断、法律建议、股票建议。
+"""
+
+    # LLM 调用 + 自动重试（最多2次，指数退避）
+    max_retries = 2
+    last_error = None
+    for attempt in range(max_retries + 1):
         try:
-            logger.info(f"LLM调用 (尝试 {attempt+1}/3)")
+            logger.info(f"LLM 调用 (尝试 {attempt+1}/{max_retries+1})")
             response = client.chat.completions.create(
-                model=MODEL, messages=messages, temperature=0.7, max_tokens=1000,
+                model=MODEL,
+                messages=[
+                    {"role": "system", "content": "你只输出合法 JSON 对象。"},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.2,
+                timeout=30,
             )
-            content = response.choices[0].message.content
-            logger.info(f"LLM回复: {content[:150]}...")
-            return extract_json(content)
-        except Exception as e:
-            logger.warning(f"LLM尝试{attempt+1}失败: {e}")
-            if attempt == 2:
-                raise
-            time.sleep(1 * (attempt + 1))
-    raise RuntimeError("LLM调用失败")
+            llm_content = response.choices[0].message.content
+            return extract_json(llm_content)
+        except Exception as exc:
+            last_error = exc
+            if attempt < max_retries:
+                wait = 2 ** attempt  # 1s, 2s
+                logger.warning(f"LLM 调用失败 (尝试 {attempt+1}), {wait}s 后重试: {exc}")
+                time.sleep(wait)
+            else:
+                logger.error(f"LLM 调用全部失败: {exc}")
+    raise last_error
 
 
-def normalize_result(raw: dict, user_text: str, turn_type: str) -> dict:
-    """Ensure all required fields exist with valid values."""
-    result = {
-        "schema_version": "1.0",
-        "turn_type": turn_type,
-        "user_text": user_text,
-        "emotion_label": raw.get("emotion_label", "清醒"),
-        "emotion_blend": raw.get("emotion_blend", [{"emotion": "清醒", "weight": 1.0}]),
-        "complex_emotion": raw.get("complex_emotion", ""),
-        "need_summary": raw.get("need_summary", ""),
-        "drink_name": raw.get("drink_name", NO_DRINK),
-        "recipe_modules": raw.get("recipe_modules", []),
-        "flavor_profile": raw.get("flavor_profile", NO_DRINK),
-        "color_profile": raw.get("color_profile", NO_DRINK),
-        "face_state": raw.get("face_state", "focused"),
-        "bartender_line": raw.get("bartender_line", "嗯，我在听。"),
-        "action_sequence": raw.get("action_sequence", "serve_only"),
-        "feedback_prompt": raw.get("feedback_prompt", ""),
-    }
-
-    # Normalize emotion_label
-    known = {"清醒","兴奋","难过","疲惫","焦虑","犹豫"}
-    if result["emotion_label"] not in known:
-        for k in known:
-            if k in str(result["emotion_label"]):
-                result["emotion_label"] = k
-                break
+def normalize_result(data: dict) -> dict:
+    if isinstance(data.get("action_sequence"), list):
+        if len(data["action_sequence"]) == 1:
+            data["action_sequence"] = data["action_sequence"][0]
         else:
-            result["emotion_label"] = "清醒"
+            raise TypeError(f"action_sequence must be a string, got list: {data['action_sequence']}")
 
-    # Validate face_state
-    if result["face_state"] not in ALLOWED_FACE_STATES:
-        result["face_state"] = "focused"
+    if isinstance(data.get("face_state"), list):
+        if len(data["face_state"]) == 1:
+            data["face_state"] = data["face_state"][0]
+        else:
+            raise TypeError(f"face_state must be a string, got list: {data['face_state']}")
 
-    # Validate action_sequence
-    if result["action_sequence"] not in ALLOWED_ACTION_SEQUENCES:
-        result["action_sequence"] = "serve_only"
+    return data
 
-    # bar_chat: clear drink info
-    if turn_type in ("bar_chat", "safety"):
-        result["drink_name"] = NO_DRINK
-        result["recipe_modules"] = []
-        result["flavor_profile"] = NO_DRINK
-        result["color_profile"] = NO_DRINK
 
-    # Validate recipe_modules
-    result["recipe_modules"] = [m for m in result["recipe_modules"] if m in ALLOWED_RECIPE_MODULES]
+def validate_result(data: dict) -> None:
+    required_fields = [
+        "schema_version",
+        "turn_type",
+        "user_text",
+        "emotion_label",
+        "complex_emotion",
+        "need_summary",
+        "drink_name",
+        "recipe_modules",
+        "flavor_profile",
+        "color_profile",
+        "face_state",
+        "bartender_line",
+        "action_sequence",
+        "feedback_prompt",
+        "emotion_blend",
+    ]
 
-    return result
+    for field in required_fields:
+        if field not in data:
+            raise ValueError(f"Missing field: {field}")
+
+    if not isinstance(data["emotion_blend"], list):
+        raise TypeError(f"emotion_blend must be a list, got {type(data['emotion_blend']).__name__}: {data['emotion_blend']}")
+
+    if not data["emotion_blend"]:
+        raise ValueError("emotion_blend must not be empty")
+
+    total_weight = 0.0
+    for item in data["emotion_blend"]:
+        if not isinstance(item, dict):
+            raise TypeError(f"emotion_blend item must be an object, got {type(item).__name__}: {item}")
+
+        if "emotion" not in item:
+            raise ValueError(f"emotion_blend item missing emotion: {item}")
+
+        if "weight" not in item:
+            raise ValueError(f"emotion_blend item missing weight: {item}")
+
+        if not isinstance(item["emotion"], str):
+            raise TypeError(f"emotion_blend emotion must be a string: {item}")
+
+        if not isinstance(item["weight"], (int, float)):
+            raise TypeError(f"emotion_blend weight must be a number: {item}")
+
+        if item["weight"] < 0 or item["weight"] > 1:
+            raise ValueError(f"emotion_blend weight must be between 0 and 1: {item}")
+
+        total_weight += item["weight"]
+
+    if abs(total_weight - 1.0) > 0.05:
+        raise ValueError(f"emotion_blend weights must sum to 1.0, got {total_weight}")
+
+    string_fields = [
+        "schema_version",
+        "turn_type",
+        "user_text",
+        "emotion_label",
+        "complex_emotion",
+        "need_summary",
+        "drink_name",
+        "flavor_profile",
+        "color_profile",
+        "face_state",
+        "bartender_line",
+        "action_sequence",
+        "feedback_prompt",
+    ]
+
+    for field in string_fields:
+        if not isinstance(data[field], str):
+            raise TypeError(f"{field} must be a string, got {type(data[field]).__name__}: {data[field]}")
+        if not data[field].strip():
+            raise ValueError(f"{field} must not be empty")
+
+    if not isinstance(data["recipe_modules"], list):
+        raise TypeError(f"recipe_modules must be a list, got {type(data['recipe_modules']).__name__}: {data['recipe_modules']}")
+
+    if not data["recipe_modules"] and data["turn_type"] not in CHAT_ONLY_TURN_TYPES:
+        raise ValueError("recipe_modules must not be empty")
+
+    for module in data["recipe_modules"]:
+        if not isinstance(module, str):
+            raise TypeError(f"recipe_modules item must be a string, got {type(module).__name__}: {module}")
+        if module not in ALLOWED_RECIPE_MODULES:
+            raise ValueError(f"Unknown recipe module: {module}")
+
+    if data["face_state"] not in ALLOWED_FACE_STATES:
+        raise ValueError(f"Unknown face_state: {data['face_state']}")
+
+    if data["action_sequence"] not in ALLOWED_ACTION_SEQUENCES:
+        raise ValueError(f"Unknown action_sequence: {data['action_sequence']}")
+
+
+def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
+    """内置熔断兜底：LLM 链路断开或输出非法 JSON 时，返回完整 Schema v1.0 安全字典。
+    
+    闲聊/安全模式 -> 点亮【疲惫】gentle 表情，不推荐饮品。
+    推荐模式     -> 点亮【清醒】focused 表情，推荐标志性"冷启动"。
+    """
+    if turn_type in CHAT_ONLY_TURN_TYPES:
+        return {
+            "schema_version": "1.0",
+            "turn_type": turn_type,
+            "user_text": user_text,
+            "emotion_label": "疲惫",
+            "emotion_blend": [
+                {"emotion": "疲惫", "weight": 1.0}
+            ],
+            "complex_emotion": "大模型链路超载，触发酒馆全息自检保护协议。",
+            "need_summary": "系统自检中，需要被接住而不是立刻推荐饮品。",
+            "drink_name": NO_FORMAL_DRINK_NAME,
+            "recipe_modules": [],
+            "flavor_profile": NO_FORMAL_DRINK_NAME,
+            "color_profile": NO_FORMAL_DRINK_NAME,
+            "face_state": "gentle",
+            "bartender_line": "（安全协议启动）我的核心大脑似乎开了一会儿小差，不过别担心，你先缓一缓，我马上回来。",
+            "action_sequence": "gesture_thinking" if turn_type == "bar_chat" else "serve_only",
+            "feedback_prompt": "你愿意的话，可以再说一点。",
+        }
+
+    return {
+        "schema_version": "1.0",
+        "turn_type": "recommendation",
+        "user_text": user_text,
+        "emotion_label": "清醒",
+        "emotion_blend": [
+            {"emotion": "清醒", "weight": 1.0}
+        ],
+        "complex_emotion": "大模型链路超载，触发酒馆全息自检保护协议。",
+        "need_summary": "系统自检，需要一杯清爽低甜的特调冷启动。",
+        "drink_name": "冷启动",
+        "recipe_modules": [
+            "clear_balance",
+            "bitter_focus",
+        ],
+        "flavor_profile": "清爽、微苦、低甜、带轻微气泡感",
+        "color_profile": "透明偏冷调，带一点淡青色",
+        "face_state": "focused",
+        "bartender_line": "（安全协议启动）我的核心大脑似乎开了一会儿小差，不过别担心，我先为你推荐一杯标志性的'冷启动'，让我们重新连接。",
+        "action_sequence": "make_cold_start",
+        "feedback_prompt": "喝完感觉清醒一点了吗？",
+    }
 
 
 def build_robot_reply_text(control_json: dict) -> str:
-    line = control_json["bartender_line"].strip()
-    fb = control_json.get("feedback_prompt", "").strip()
-    if control_json["turn_type"] == "bar_chat" and fb:
-        return f"{line}\n{fb}"
-    return line
+    bartender_line = control_json["bartender_line"].strip()
+    feedback_prompt = control_json["feedback_prompt"].strip()
+
+    if control_json["turn_type"] == "bar_chat" and feedback_prompt:
+        return f"{bartender_line}\n{feedback_prompt}"
+
+    return bartender_line
 
 
-# ==================== Voice Transcription ====================
-def transcribe_audio_bytes(audio_bytes: bytes, filename: str = "audio.webm") -> str:
-    """Transcribe audio using OpenAI Whisper API, or fallback."""
-    if USE_MOCK or client is None:
-        logger.info("模拟模式：跳过语音识别")
-        raise RuntimeError("mock_no_asr")
+def process_user_text(user_text: str, username: Optional[str] = None) -> dict:
+    global current_username
 
-    logger.info(f"调用 Whisper 转写，音频大小: {len(audio_bytes)} bytes")
-    try:
-        # Create a file-like object
-        audio_file = io.BytesIO(audio_bytes)
-        audio_file.name = filename
+    user_text = user_text.strip()
+    if not user_text:
+        raise ValueError("user_text must not be empty")
 
-        transcript = client.audio.transcriptions.create(
-            model="whisper-1",
-            file=audio_file,
-            language="zh",
-        )
-        text = transcript.text.strip()
-        logger.info(f"Whisper 结果: {text}")
-        if not text or len(text) < 2:
-            raise RuntimeError("silence_detected")
-        return text
-    except Exception as e:
-        logger.error(f"语音识别失败: {e}")
-        raise
-
-
-# ==================== Silence / Fallback results ====================
-def silence_result() -> dict:
-    return {
-        "schema_version": "1.0", "turn_type": "bar_chat",
-        "user_text": "", "emotion_label": "清醒",
-        "emotion_blend": [{"emotion": "清醒", "weight": 1.0}],
-        "complex_emotion": "未检测到有效语音",
-        "need_summary": "等待用户说话",
-        "drink_name": NO_DRINK, "recipe_modules": [],
-        "flavor_profile": NO_DRINK, "color_profile": NO_DRINK,
-        "face_state": "thinking", "action_sequence": "gesture_thinking",
-        "bartender_line": "嗯？我没太听清，能再说一遍吗？",
-        "feedback_prompt": "",
-    }
-
-
-# ==================== API Endpoints ====================
-@app.get("/")
-async def root():
-    return FileResponse("index.html")
-
-
-@app.get("/api/health")
-async def health():
-    return {"status": "ok", "mock_mode": USE_MOCK, "model": MODEL}
-
-
-class ChatRequest(BaseModel):
-    message: str
-    history: list[dict] = []
-
-
-@app.post("/api/chat")
-async def chat_text(req: ChatRequest):
-    """Text-based chat (keyboard input)"""
-    if not req.message.strip():
-        raise HTTPException(status_code=400, detail="消息不能为空")
-
-    user_text = req.message.strip()
-    turn_type = route_turn_type(user_text)
-
-    try:
-        raw = call_llm(user_text, turn_type)
-        result = normalize_result(raw, user_text, turn_type)
-    except Exception as e:
-        logger.error(f"处理失败: {e}")
-        result = normalize_result(get_mock_result(user_text), user_text, turn_type)
-
-    update_state(result)
-
-    return {
-        "ok": True,
-        "user_text": user_text,
-        "turn_type": turn_type,
-        "control_json": result,
-        "robot_reply_text": build_robot_reply_text(result),
-        "conversation_state": get_state(),
-        "used_fallback": False,
-    }
-
-
-@app.post("/api/voice/process")
-async def voice_process(audio: UploadFile = File(...)):
-    """Receive audio from tablet, transcribe, analyze, return control JSON."""
-    logger.info(f"收到音频: {audio.filename}, content_type={audio.content_type}")
-
-    audio_bytes = await audio.read()
-    if not audio_bytes or len(audio_bytes) < 100:
-        raise HTTPException(status_code=400, detail="音频数据为空")
-
-    # Transcribe
-    try:
-        user_text = transcribe_audio_bytes(audio_bytes, audio.filename or "audio.webm")
-    except RuntimeError as e:
-        if "silence_detected" in str(e) or "mock_no_asr" in str(e):
-            logger.info("静默/模拟模式，返回提示")
-            sil = silence_result()
-            update_state(sil)
-            return {
-                "ok": True, "user_text": "", "turn_type": "bar_chat",
-                "control_json": sil,
-                "robot_reply_text": sil["bartender_line"],
-                "conversation_state": get_state(),
-                "used_fallback": False,
-            }
-        raise HTTPException(status_code=500, detail=f"语音识别失败: {e}")
-
-    # Analyze
+    username = normalize_username(username) or current_username
+    current_username = username
+    profile_context = compact_profile_context(username)
     turn_type = route_turn_type(user_text)
     used_fallback = False
+    llm_error = None
 
     try:
-        raw = call_llm(user_text, turn_type)
-        result = normalize_result(raw, user_text, turn_type)
-    except Exception as e:
-        logger.warning(f"LLM失败，使用fallback: {e}")
-        result = normalize_result(get_mock_result(user_text), user_text, turn_type)
+        result = analyze_text(user_text, turn_type, profile_context)
+        result = normalize_result(result)
+        result["turn_type"] = turn_type
+        result["user_text"] = user_text
+        validate_result(result)
+        result = enrich_result_with_drink_metadata(result)
+    except Exception as exc:
         used_fallback = True
+        llm_error = str(exc)
+        logger.warning(f"LLM/NLP 链路异常，使用熔断兜底: {exc}")
+        result = fallback_result(user_text, turn_type)
+        validate_result(result)
+        result = enrich_result_with_drink_metadata(result)
 
-    update_state(result)
+    update_conversation_state(result)
 
     return {
         "ok": True,
+        "username": username,
         "user_text": user_text,
         "turn_type": turn_type,
         "control_json": result,
         "robot_reply_text": build_robot_reply_text(result),
-        "conversation_state": get_state(),
+        "profile_context": profile_context,
+        "conversation_state": get_conversation_state(),
         "used_fallback": used_fallback,
+        "llm_error": llm_error,
     }
+
+
+def load_profile_summary_prompt() -> str:
+    if PROFILE_SUMMARY_PROMPT_PATH.exists():
+        return PROFILE_SUMMARY_PROMPT_PATH.read_text(encoding="utf-8")
+    return (
+        "你是 EmoTender 的用户记忆整理模块。根据本次对话输出合法 JSON，"
+        "字段包含 date, username, session_emotion, drink_name, drink_result, "
+        "event_summary, taste_preferences, emotional_pattern, future_hint。"
+    )
+
+
+def summarize_session_for_profile(username: str, profile: dict, state: dict) -> dict:
+    prompt = f"""
+{load_profile_summary_prompt()}
+
+用户名：
+{username}
+
+已有 profile：
+{json.dumps(profile, ensure_ascii=False, indent=2)}
+
+本次会话：
+{json.dumps(state, ensure_ascii=False, indent=2)}
+"""
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": "你只输出合法 JSON 对象。"},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.1,
+        timeout=30,
+    )
+    summary = extract_json(response.choices[0].message.content)
+    summary["username"] = username
+    summary.setdefault("date", datetime.now().date().isoformat())
+    summary.setdefault("drink_name", NO_FORMAL_DRINK_NAME)
+    summary.setdefault("drink_result", "未记录")
+    summary.setdefault("event_summary", "本次会话没有形成明确事件摘要。")
+    summary.setdefault("taste_preferences", [])
+    summary.setdefault("emotional_pattern", "")
+    summary.setdefault("future_hint", "")
+    return summary
+
+
+def run_pipeline() -> dict:
+    try:
+        user_text = transcribe_audio(AUDIO_PATH)
+    except RuntimeError as exc:
+        if "silence_detected" in str(exc):
+            logger.info("检测到静默录音，返回提示")
+            silence_result = {
+                "schema_version": "1.0",
+                "turn_type": "bar_chat",
+                "user_text": "",
+                "emotion_label": "清醒",
+                "emotion_blend": [{"emotion": "清醒", "weight": 1.0}],
+                "complex_emotion": "未检测到有效语音。",
+                "need_summary": "等待用户说话。",
+                "drink_name": "无正式推荐",
+                "recipe_modules": [],
+                "flavor_profile": "无正式推荐",
+                "color_profile": "无正式推荐",
+                "face_state": "thinking",
+                "bartender_line": "嗯？我没太听清，能再说一遍吗？",
+                "action_sequence": "gesture_thinking",
+                "feedback_prompt": "",
+                "drink_metadata": None,
+            }
+            update_conversation_state(silence_result)
+            return {
+                "ok": True,
+                "audio_path": str(AUDIO_PATH),
+                "user_text": "",
+                "turn_type": "bar_chat",
+                "control_json": silence_result,
+                "robot_reply_text": silence_result["bartender_line"],
+                "conversation_state": get_conversation_state(),
+                "used_fallback": False,
+                "llm_error": None,
+            }
+        raise
+
+    result = process_user_text(user_text)
+    result["audio_path"] = str(AUDIO_PATH)
+    return result
+
+
+@app.get("/api/status")
+def status():
+    return {
+        "recording": recording_process is not None,
+        "audio_path": str(AUDIO_PATH),
+        "last_result": last_result,
+        "conversation_state": get_conversation_state(),
+    }
+
+
+@app.post("/api/text/analyze")
+def analyze_text_api(payload: TextAnalyzeRequest):
+    try:
+        return process_user_text(payload.user_text, payload.username)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post("/api/user/login")
+def login_user_api(payload: UserLoginRequest):
+    global current_username
+    try:
+        username = require_username(payload.username)
+        profile = load_user_profile(username)
+        save_user_profile(username, profile)
+        current_username = username
+        reset_conversation_state()
+        return {
+            "ok": True,
+            "username": username,
+            "profile": profile,
+            "message": "Login complete",
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/api/user/logout")
+def logout_user_api(payload: UserLogoutRequest):
+    global current_username
+    try:
+        username = normalize_username(payload.username) or current_username
+        username = require_username(username)
+        profile = load_user_profile(username)
+        state = get_conversation_state()
+        saved_summary = None
+        if state["history"]:
+            saved_summary = summarize_session_for_profile(username, profile, state)
+            profile = merge_session_summary_into_profile(profile, saved_summary)
+            save_user_profile(username, profile)
+        reset_conversation_state()
+        current_username = None
+        return {
+            "ok": True,
+            "username": username,
+            "saved_summary": saved_summary,
+            "profile": profile,
+            "message": "Logout complete",
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/api/user/profile")
+def get_user_profile_api(username: str):
+    try:
+        username = require_username(username)
+        return {
+            "ok": True,
+            "username": username,
+            "profile": load_user_profile(username),
+        }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @app.post("/api/voice/start")
-def voice_start():
-    """Placeholder for client-side recording start."""
-    return {"ok": True, "message": "Recording started (client-side)"}
+def start_recording():
+    global recording_process
+
+    if recording_process is not None:
+        # Auto-stop existing recording before starting a new one
+        try:
+            os.killpg(os.getpgid(recording_process.pid), signal.SIGINT)
+            recording_process.communicate(timeout=2)
+        except Exception:
+            pass
+        finally:
+            recording_process = None
+
+    if AUDIO_PATH.exists():
+        AUDIO_PATH.unlink()
+
+    import platform
+    if platform.system() == "Darwin":
+        command = [
+            "ffmpeg",
+            "-f", "avfoundation",
+            "-i", ":0",
+            "-acodec", "pcm_s16le",
+            "-ar", "16000",
+            "-ac", "1",
+            "-t", "30",
+            "-y",
+            str(AUDIO_PATH),
+        ]
+    else:
+        command = [
+            "arecord",
+            "-D", "default",
+            "-f", "S16_LE",
+            "-r", "16000",
+            "-d", "30",
+            "-c", "1",
+            str(AUDIO_PATH),
+        ]
+
+    recording_process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        preexec_fn=os.setsid,
+    )
+
+    time.sleep(0.5)
+
+    if recording_process.poll() is not None:
+        _, stderr = recording_process.communicate()
+        recording_process = None
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to start recording: {stderr.decode(errors='ignore')}",
+        )
+
+    logger.info("录音已启动 (30s 超时)")
+    return {
+        "ok": True,
+        "state": "listening",
+        "max_duration": 30,
+        "message": "Recording started (30s max)",
+    }
 
 
 @app.post("/api/voice/stop")
-async def voice_stop():
-    """Alias - client should use /api/voice/process with audio blob instead."""
-    raise HTTPException(status_code=400, detail="请使用 /api/voice/process 上传音频")
+def stop_recording():
+    global recording_process
+    global last_result
+
+    if recording_process is None:
+        raise HTTPException(status_code=400, detail="Recording is not running")
+
+    os.killpg(os.getpgid(recording_process.pid), signal.SIGINT)
+    _, stderr = recording_process.communicate(timeout=5)
+    recording_process = None
+
+    if not AUDIO_PATH.exists():
+        raise HTTPException(
+            status_code=500,
+            detail=f"Recording file was not created: {stderr.decode(errors='ignore')}",
+        )
+
+    if AUDIO_PATH.stat().st_size == 0:
+        raise HTTPException(status_code=500, detail="Recording file is empty")
+
+    try:
+        logger.info("录音已停止，开始分析管线")
+        last_result = run_pipeline()
+        logger.info(f"分析完成: emotion={last_result.get('control_json',{}).get('emotion_label','?')}")
+        return last_result
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.post("/api/reset")
 def reset():
-    reset_state()
-    return {"ok": True, "message": "Reset complete"}
+    global recording_process
+    global last_result
+
+    if recording_process is not None:
+        os.killpg(os.getpgid(recording_process.pid), signal.SIGINT)
+        recording_process.communicate(timeout=5)
+        recording_process = None
+
+    last_result = None
+    reset_conversation_state()
+
+    return {
+        "ok": True,
+        "message": "Reset complete",
+    }
 
 
-if __name__ == "__main__":
-    import uvicorn
-    logger.info("启动 EmoTender 后端...")
-    uvicorn.run(app, host="0.0.0.0", port=8765)
+@app.get("/", response_class=HTMLResponse)
+def index():
+    index_path = BASE_DIR / "static" / "index.html"
+    if not index_path.exists():
+        return HTMLResponse(
+            content="<h1>Error: static/index.html not found</h1>",
+            status_code=500,
+        )
+    return HTMLResponse(content=index_path.read_text(encoding="utf-8"))

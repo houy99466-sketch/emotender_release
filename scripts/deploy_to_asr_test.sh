@@ -9,6 +9,7 @@ mkdir -p "${TARGET_DIR}/static"
 
 cp "${RELEASE_DIR}/emotender_backend.py" "${TARGET_DIR}/emotender_backend.py"
 cp "${RELEASE_DIR}/prompts/drink_mapping.json" "${TARGET_DIR}/prompts/drink_mapping.json"
+cp "${RELEASE_DIR}/prompts/profile_summary_prompt.md" "${TARGET_DIR}/prompts/profile_summary_prompt.md"
 cp "${RELEASE_DIR}/requirements.txt" "${TARGET_DIR}/requirements.txt"
 cp "${RELEASE_DIR}/static/index.html" "${TARGET_DIR}/static/index.html"
 

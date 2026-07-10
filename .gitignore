@@ -10,3 +10,4 @@ mic_vad.pcm
 mic_denoise.pcm
 *.log
 *.tmp
+data/profiles/

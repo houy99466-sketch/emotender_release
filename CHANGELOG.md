@@ -2,6 +2,17 @@
 
 后续每次改动都请在这里记录，方便队友同步。
 
+## 2026-07-10
+
+- 重写 `README.md`，按当前版本补全项目定位、Demo 架构、浏览器/平板/机器人交互链路、API、profile、饮品小票、部署、测试和协作规范。
+- `emotender_backend.py` 新增用户 profile 体系：`/api/user/login`、`/api/user/logout`、`/api/user/profile`，并支持 `/api/text/analyze` 传入可选 `username`。
+- 新增 `prompts/profile_summary_prompt.md`，用于 Logout 时把本次会话压缩进用户长期 profile。
+- 合并队友的饮品故事体系：后端加入 `DRINK_MENU`，推荐模式会自动输出 `drink_metadata`，供牛皮纸小票展示英文名、故事、配方和色泽。
+- 前端 `static/index.html` 合并六维风味图、牛皮纸小票、CRT 动画和登录/退出 UI，小票优先读取后端 `drink_metadata`。
+- `scripts/deploy_to_asr_test.sh` 现在会同步复制 `prompts/profile_summary_prompt.md`。
+- 新增 `tests/test_user_profiles.py`，覆盖登录、profile 注入、Logout 保存 summary、推荐模式小票元数据和闲聊模式无饮品元数据。
+- 需要重启后端生效；如果部署到 `~/asr_test`，请重新运行部署脚本。
+
 ## 2026-07-08 (2)
 
 - 新增 CRT 像素风表情系统前端页面 `static/index.html`，包含 6 种 SVG 面部动画（清醒/难过/焦虑/兴奋/疲惫/犹豫）。
