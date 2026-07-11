@@ -20,6 +20,7 @@ logger = logging.getLogger("emotender")
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
 from pydantic import BaseModel
 
@@ -50,6 +51,7 @@ AUDIO_PATH = BASE_DIR / "recording.wav"
 PROMPT_LIBRARY_PATH = BASE_DIR / "prompts" / "drink_mapping.json"
 PROFILE_SUMMARY_PROMPT_PATH = BASE_DIR / "prompts" / "profile_summary_prompt.md"
 PROFILE_DIR = BASE_DIR / "data" / "profiles"
+STATIC_DIR = BASE_DIR / "static"
 recording_process: Optional[subprocess.Popen] = None
 last_result: Optional[dict] = None
 conversation_history: list[dict] = []
@@ -307,6 +309,8 @@ RECOMMENDATION_TRIGGERS = (
     "你做主",
 )
 
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
 RECOMMENDATION_CONFIRMATIONS = (
     "好",
     "好的",
@@ -485,6 +489,25 @@ def compact_profile_context(username: Optional[str]) -> dict:
     }
 
 
+def build_prompt_profile_context(profile_context: dict) -> dict:
+    """Expose only stable recommendation preferences, never historical emotion evidence."""
+    if profile_context.get("mode") != "logged_in":
+        return {
+            "mode": "anonymous",
+            "message": "用户未登录，不使用长期 profile。",
+        }
+
+    stable = profile_context.get("stable_profile", {})
+    return {
+        "mode": "logged_in",
+        "username": profile_context.get("username"),
+        "taste_preferences": list(stable.get("taste_preferences", [])),
+        "drink_history": list(stable.get("drink_history", [])),
+        "conversation_style": list(stable.get("conversation_style", [])),
+        "avoidances": list(stable.get("avoidances", [])),
+    }
+
+
 def merge_session_summary_into_profile(profile: dict, summary: dict) -> dict:
     stable = profile.setdefault("stable_profile", {})
     for key in PROFILE_LIST_KEYS:
@@ -538,6 +561,7 @@ def update_conversation_state(data: dict) -> None:
     if data["turn_type"] == "recommendation":
         item["drink_name"] = data["drink_name"]
         item["recipe_modules"] = data["recipe_modules"]
+        item["recommendation_reason"] = data["recommendation_reason"]
 
     conversation_history.append(item)
     emotion_history.append(data["emotion_label"])
@@ -595,6 +619,7 @@ def analyze_text(user_text: str, turn_type: str, profile_context: Optional[dict]
         prompt_library = json.load(f)
     recent_history = get_recent_history()
     profile_context = profile_context or compact_profile_context(None)
+    prompt_profile_context = build_prompt_profile_context(profile_context)
     single_menu = "\n".join(MENU_LINES_SINGLE)
     blend_menu = "\n".join(MENU_LINES_BLEND)
 
@@ -632,10 +657,15 @@ def analyze_text(user_text: str, turn_type: str, profile_context: Optional[dict]
 最近对话历史：
 {json.dumps(recent_history, ensure_ascii=False, indent=2)}
 
-用户长期 profile：
-{json.dumps(profile_context, ensure_ascii=False, indent=2)}
+用户长期 profile 中可用于推荐的稳定偏好：
+{json.dumps(prompt_profile_context, ensure_ascii=False, indent=2)}
 
-这是 EmoTender 的 prompt 库，包含情绪维度、混合规则、隐藏饮品、配方模块、表情状态和动作序列：
+本轮情绪隔离规则：
+- emotion_label、emotion_blend、emotion_blend.source 和 complex_emotion 只能依据用户本轮原话与当前会话历史判断。
+- 不得根据用户长期 profile、历史会话摘要、上次来店时的情绪或过去发生的事件判断本轮情绪。
+- 长期 profile 只能用于口味偏好、避忌、交流风格和历史饮品参考。
+
+这是 EmoTender 的 prompt 库，包含情绪维度、混合规则、配方模块、表情状态和动作序列：
 {json.dumps(prompt_library, ensure_ascii=False, indent=2)}
 
 这是 EmoTender 当前可用于正式推荐和牛皮纸小票的后端饮品菜单：
@@ -648,7 +678,7 @@ def analyze_text(user_text: str, turn_type: str, profile_context: Optional[dict]
 必须输出这些字段：
 schema_version, turn_type, user_text, emotion_label, emotion_blend, complex_emotion,
 need_summary, drink_name, recipe_modules, flavor_profile, color_profile,
-face_state, bartender_line, action_sequence, feedback_prompt。
+face_state, bartender_line, action_sequence, feedback_prompt, recommendation_reason。
 
 字段类型要求：
 - schema_version 必须是字符串，例如 "1.0"
@@ -665,21 +695,26 @@ face_state, bartender_line, action_sequence, feedback_prompt。
 - bartender_line 必须是字符串
 - action_sequence 必须是单个字符串，例如 "make_cold_start"，不能是数组
 - feedback_prompt 必须是字符串
-- emotion_blend 必须是数组，每一项包含 emotion 和 weight，例如 [{{"emotion": "难过", "weight": 0.7}}, {{"emotion": "焦虑", "weight": 0.3}}]
+- recommendation_reason 必须是字符串
+- emotion_blend 必须是数组，每一项包含 emotion、weight 和 source，例如 [{{"emotion": "难过", "weight": 0.7, "source": "用户说今天考试没有考好"}}, {{"emotion": "焦虑", "weight": 0.3, "source": "用户担心明天仍然没有状态"}}]
 - emotion_blend 的 weight 总和必须接近 1.0
+- emotion_blend.source 必须简短说明该情绪在当前会话中的来源，不能引用长期 profile 或过去会话。
 
 模式规则：
 - turn_type 只能是 "bar_chat"、"recommendation" 或 "safety"。
 - 如果 turn_type 是 "bar_chat"，这一轮是闲聊。你仍然必须输出完整 JSON，用于驱动机器人表情、动作和台词，但不要正式推荐饮品。
 - 如果 turn_type 是 "bar_chat"，drink_name 使用 "无正式推荐"，recipe_modules 使用 []，flavor_profile 使用 "无正式推荐"，color_profile 使用 "无正式推荐"。
+- 如果 turn_type 是 "bar_chat"，recommendation_reason 使用 "无正式推荐"。
 - 如果 turn_type 是 "bar_chat"，face_state 必须体现用户情绪，action_sequence 优先使用 "gesture_thinking"、"gesture_shrug"、"serve_only"。
 - 如果 turn_type 是 "recommendation"，必须正式推荐当前后端饮品菜单中的饮品，drink_name 必须精确使用菜单里的中文饮品名，recipe_modules 不能为空。
+- 如果 turn_type 是 "recommendation"，recommendation_reason 使用 2 到 4 句话：先准确接住用户在当前会话中提到的具体经历，再说明这款饮品为什么适合此刻；不能引用历史 profile 中的事件或情绪，不能承诺饮品能够解决现实问题。
 - 如果推荐时判断为单一情绪，优先使用菜单“单品”；如果判断为两种或三种主要情绪，可以使用菜单“混合情绪特调”。
 - 推荐饮品时，bartender_line 优先使用或贴近菜单中对应饮品的 serve_line。
 - 如果用户明确要求推荐、调酒、来一杯、让你做主，turn_type 必须是 "recommendation"。
 - 如果最近一轮你询问是否正式推荐饮品，而用户本轮表达同意、接受、让你安排，turn_type 必须是 "recommendation"。
 - 如果用户只是继续倾诉、闲聊、打招呼，且没有表达要饮品推荐，turn_type 使用 "bar_chat"。
 - 如果 turn_type 是 "safety"，不要推荐酒精饮品，drink_name 使用 "无正式推荐"，recipe_modules 使用 []，action_sequence 优先使用 "serve_only"。
+- 如果 turn_type 是 "safety"，recommendation_reason 使用 "无正式推荐"。
 - 如果用户长期 profile 中有口味偏好、历史饮品或情绪模式，请把它作为个性化依据，但不要在台词里暴露“我保存了你的资料”这类后台措辞。
 - 每轮最多问一个问题。
 - 不要使用这些词：亲、哦、呢、呀、哈、啦、咱、呗。
@@ -746,6 +781,7 @@ def validate_result(data: dict) -> None:
         "bartender_line",
         "action_sequence",
         "feedback_prompt",
+        "recommendation_reason",
         "emotion_blend",
     ]
 
@@ -770,11 +806,20 @@ def validate_result(data: dict) -> None:
         if "weight" not in item:
             raise ValueError(f"emotion_blend item missing weight: {item}")
 
+        if "source" not in item:
+            raise ValueError(f"emotion_blend item missing source: {item}")
+
         if not isinstance(item["emotion"], str):
             raise TypeError(f"emotion_blend emotion must be a string: {item}")
 
         if not isinstance(item["weight"], (int, float)):
             raise TypeError(f"emotion_blend weight must be a number: {item}")
+
+        if not isinstance(item["source"], str):
+            raise TypeError(f"emotion_blend source must be a string: {item}")
+
+        if not item["source"].strip():
+            raise ValueError(f"emotion_blend source must not be empty: {item}")
 
         if item["weight"] < 0 or item["weight"] > 1:
             raise ValueError(f"emotion_blend weight must be between 0 and 1: {item}")
@@ -798,6 +843,7 @@ def validate_result(data: dict) -> None:
         "bartender_line",
         "action_sequence",
         "feedback_prompt",
+        "recommendation_reason",
     ]
 
     for field in string_fields:
@@ -808,6 +854,9 @@ def validate_result(data: dict) -> None:
 
     if data["turn_type"] not in ALLOWED_TURN_TYPES:
         raise ValueError(f"Unknown turn_type: {data['turn_type']}")
+
+    if data["turn_type"] == "recommendation" and get_drink_info(data["drink_name"]) is None:
+        raise ValueError(f"Unknown drink_name: {data['drink_name']}")
 
     if not isinstance(data["recipe_modules"], list):
         raise TypeError(f"recipe_modules must be a list, got {type(data['recipe_modules']).__name__}: {data['recipe_modules']}")
@@ -841,7 +890,7 @@ def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
             "user_text": user_text,
             "emotion_label": "疲惫",
             "emotion_blend": [
-                {"emotion": "疲惫", "weight": 1.0}
+                {"emotion": "疲惫", "weight": 1.0, "source": "系统无法完成本轮情绪分析。"}
             ],
             "complex_emotion": "大模型链路超载，触发酒馆全息自检保护协议。",
             "need_summary": "系统自检中，需要被接住而不是立刻推荐饮品。",
@@ -853,6 +902,7 @@ def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
             "bartender_line": "（安全协议启动）我的核心大脑似乎开了一会儿小差，不过别担心，你先缓一缓，我马上回来。",
             "action_sequence": "gesture_thinking" if turn_type == "bar_chat" else "serve_only",
             "feedback_prompt": "你愿意的话，可以再说一点。",
+            "recommendation_reason": NO_FORMAL_DRINK_NAME,
         }
 
     return {
@@ -861,7 +911,7 @@ def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
         "user_text": user_text,
         "emotion_label": "清醒",
         "emotion_blend": [
-            {"emotion": "清醒", "weight": 1.0}
+            {"emotion": "清醒", "weight": 1.0, "source": "系统进入推荐 fallback。"}
         ],
         "complex_emotion": "大模型链路超载，触发酒馆全息自检保护协议。",
         "need_summary": "系统自检，需要一杯清爽低甜的特调冷启动。",
@@ -876,6 +926,7 @@ def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
         "bartender_line": "（安全协议启动）我的核心大脑似乎开了一会儿小差，不过别担心，我先为你推荐一杯标志性的'冷启动'，让我们重新连接。",
         "action_sequence": "make_cold_start",
         "feedback_prompt": "喝完感觉清醒一点了吗？",
+        "recommendation_reason": "这次分析没有完整返回，我先用一杯清爽低甜的冷启动接住这一轮。它不能替你解决正在面对的事情，但能让推荐流程保持完整。",
     }
 
 
@@ -992,7 +1043,7 @@ def run_pipeline() -> dict:
                 "turn_type": "bar_chat",
                 "user_text": "",
                 "emotion_label": "清醒",
-                "emotion_blend": [{"emotion": "清醒", "weight": 1.0}],
+                "emotion_blend": [{"emotion": "清醒", "weight": 1.0, "source": "本轮没有检测到有效语音。"}],
                 "complex_emotion": "未检测到有效语音。",
                 "need_summary": "等待用户说话。",
                 "drink_name": "无正式推荐",
@@ -1003,6 +1054,7 @@ def run_pipeline() -> dict:
                 "bartender_line": "嗯？我没太听清，能再说一遍吗？",
                 "action_sequence": "gesture_thinking",
                 "feedback_prompt": "",
+                "recommendation_reason": NO_FORMAL_DRINK_NAME,
                 "drink_metadata": None,
             }
             update_conversation_state(silence_result)

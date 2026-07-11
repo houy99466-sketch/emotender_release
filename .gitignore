@@ -11,3 +11,6 @@ mic_denoise.pcm
 *.log
 *.tmp
 data/profiles/
+android/**/.gradle/
+android/**/build/
+android/**/local.properties

@@ -39,7 +39,7 @@ def base_result(turn_type="recommendation"):
         "turn_type": turn_type,
         "user_text": "今天想喝点清爽的。",
         "emotion_label": "清醒",
-        "emotion_blend": [{"emotion": "清醒", "weight": 1.0}],
+        "emotion_blend": [{"emotion": "清醒", "weight": 1.0, "source": "用户明确说想喝清爽一点的。"}],
         "complex_emotion": "用户表达稳定，需求明确。",
         "need_summary": "希望获得一杯清爽定制饮品。",
         "drink_name": "冷启动",
@@ -50,6 +50,7 @@ def base_result(turn_type="recommendation"):
         "bartender_line": "我给你一杯清爽一点的。",
         "action_sequence": "make_cold_start",
         "feedback_prompt": "喝完告诉我你的感受。",
+        "recommendation_reason": "你现在想把状态理清楚，这杯冷启动会用清爽低甜的味道陪你找回节奏。",
     }
 
 
@@ -76,6 +77,31 @@ class UserProfileTests(unittest.TestCase):
         profile = backend.load_user_profile("alice")
         self.assertEqual(profile["username"], "alice")
         self.assertEqual(profile["session_summaries"], [])
+
+    def test_prompt_profile_context_excludes_historical_emotions_and_sessions(self):
+        profile_context = {
+            "mode": "logged_in",
+            "username": "alice",
+            "stable_profile": {
+                "taste_preferences": ["低甜"],
+                "emotion_patterns": ["上次心情很好"],
+                "drink_history": ["冷启动"],
+                "conversation_style": ["偏好简短交流"],
+                "avoidances": ["乳制品"],
+            },
+            "recent_session_summaries": [
+                {"session_emotion": "兴奋", "event_summary": "上次考试考得很好。"}
+            ],
+        }
+
+        prompt_context = backend.build_prompt_profile_context(profile_context)
+
+        self.assertEqual(prompt_context["taste_preferences"], ["低甜"])
+        self.assertEqual(prompt_context["drink_history"], ["冷启动"])
+        self.assertEqual(prompt_context["conversation_style"], ["偏好简短交流"])
+        self.assertEqual(prompt_context["avoidances"], ["乳制品"])
+        self.assertNotIn("emotion_patterns", prompt_context)
+        self.assertNotIn("recent_session_summaries", prompt_context)
 
     def test_process_user_text_accepts_username_and_returns_profile_context(self):
         backend.save_user_profile(

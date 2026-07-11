@@ -2,6 +2,26 @@
 
 每次修改代码、prompt、前端、APK 或使用方式后，请在这里记录，方便队友同步。
 
+## 2026-07-11
+
+### 个性化推荐结果与长图导出
+
+- 新增 `recommendation_reason`，正式推荐时结合当前会话中的具体经历说明为什么推荐这款酒。
+- `emotion_blend` 每项新增 `source`，用于说明该情绪在本次会话中的来源。
+- 本轮情绪判断 Prompt 不再注入历史 `emotion_patterns` 和历史会话摘要；长期 profile 只提供口味、避忌、交流风格和历史饮品参考。
+- 正式推荐页面新增带来源引线的情绪占比饼图，排列在六维风味图上方。
+- 新增 PNG 长图导出，内容覆盖表情、最终回复、推荐理由、情绪饼图、六维图和牛皮纸小票。
+- 本地引入 `html2canvas 1.4.1`，现场不依赖 CDN。
+- APK 升级为 `1.2.0`（`versionCode 103`），新增保存图片到 `Pictures/EmoTender` 的 Android bridge。
+- 新增后端回归测试，覆盖情绪来源、推荐理由和历史情绪隔离。
+
+### 菜单单一来源
+
+- 删除 `prompts/drink_mapping.json` 中重复的 `hidden_drinks`，饮品菜单统一以 `emotender_backend.py` 的 `DRINK_MENU` 为唯一来源。
+- 更新 LLM Prompt 描述，不再把 Prompt 库描述为包含隐藏饮品。
+- 正式推荐时校验 `drink_name` 必须存在于 `DRINK_MENU`；菜单外名称会进入现有 fallback，并返回“冷启动”的完整小票元数据。
+- 新增回归测试，覆盖菜单外饮品拒绝、fallback 元数据以及 Prompt 库不重复保存饮品菜单。
+
 ## 2026-07-10
 
 ### 本次提交

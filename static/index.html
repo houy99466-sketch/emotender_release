@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EmoTender · 情绪酒保</title>
+<link rel="icon" href="data:,">
 <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -16,6 +17,29 @@
     background: #0a0a0a; overflow-x: hidden;
     padding: 20px 0 60px;
   }
+
+  #result-capture {
+    width: min(480px, 100%);
+    display: flex; flex-direction: column; align-items: center;
+    gap: 22px; padding: 0 20px 12px;
+    background: #0a0a0a;
+  }
+  #result-capture.exporting {
+    padding-top: 24px; padding-bottom: 32px;
+  }
+  #result-capture.exporting [data-export-ignore] { display: none !important; }
+  #result-capture.exporting #receipt {
+    background:#c8b692 !important;
+    box-shadow:none !important;
+    clip-path:none !important;
+  }
+  #result-capture.exporting #receipt::before,
+  #result-capture.exporting #receipt::after { display:none !important; }
+  #result-capture.exporting #crt-screen {
+    background:#000 !important; box-shadow:none !important;
+  }
+  #result-capture.exporting #crt-screen::before,
+  #result-capture.exporting #crt-screen::after { display:none !important; }
 
   /* CRT 四周粗光晕 — 情绪切换时闪现2秒后淡出 */
   #crt-screen::before {
@@ -214,11 +238,60 @@
     min-height:1.1em; text-align:center;
   }
   #reply-area {
-    max-width:420px; text-align:center;
+    width:100%; max-width:420px; text-align:center;
     font-family:'Courier New',monospace; font-size:13px;
     color:rgba(200,210,220,0.6); line-height:1.7;
     min-height:2.4em; transition:opacity 0.4s ease;
+    white-space:pre-line;
   }
+
+  /* ===== 最终推荐理由 ===== */
+  #recommendation-reason-section {
+    display:none; width:100%; max-width:420px;
+    padding:18px 20px; border-left:2px solid rgba(200,170,120,0.58);
+    background:rgba(200,170,120,0.055);
+  }
+  #recommendation-reason-section.visible { display:block; }
+  .result-kicker {
+    margin-bottom:10px; color:rgba(200,170,120,0.68);
+    font-family:'Courier New','PingFang SC',monospace;
+    font-size:10px; letter-spacing:0.16em;
+  }
+  #recommendation-reason {
+    color:rgba(225,220,210,0.82); font-size:14px; line-height:1.9;
+    font-family:'Ma Shan Zheng','STKaiti','KaiTi','PingFang SC',cursive;
+  }
+
+  /* ===== 当前情绪饼图 ===== */
+  #emotion-section {
+    display:none; width:100%; max-width:440px;
+    flex-direction:column; align-items:center; gap:8px;
+  }
+  #emotion-section.visible { display:flex; }
+  #emotion-chart-wrap {
+    width:100%; aspect-ratio:11/8; min-height:280px;
+  }
+  #emotion-chart { width:100%; height:100%; overflow:visible; }
+  .emotion-sector { stroke:#0a0a0a; stroke-width:2; }
+  .emotion-leader { fill:none; stroke-width:1.2; opacity:0.72; }
+  .emotion-label {
+    font-family:'Courier New','PingFang SC',monospace;
+    font-size:12px; font-weight:bold;
+  }
+  .emotion-source {
+    font-family:'Courier New','PingFang SC',monospace;
+    font-size:9px; fill:rgba(205,215,220,0.58);
+  }
+
+  #save-result-button {
+    display:none; min-height:38px; padding:8px 22px;
+    border:1px solid rgba(140,200,224,0.34);
+    background:rgba(140,200,224,0.06); color:rgba(170,215,230,0.9);
+    font-family:'Courier New','PingFang SC',monospace; font-size:12px;
+    cursor:pointer;
+  }
+  #save-result-button.visible { display:block; }
+  #save-result-button:disabled { opacity:0.45; cursor:wait; }
 
   /* ===== 风味六维图（无标题、无滑块） ===== */
   #flavor-section {
@@ -397,6 +470,9 @@
   @media (max-width:500px) {
     #crt-screen { width:300px !important; height:300px !important; }
     #reply-area { font-size:11px; max-width:300px; }
+    #recommendation-reason-section { max-width:340px; padding:16px; }
+    #emotion-section { max-width:360px; }
+    #emotion-chart-wrap { min-height:260px; }
     #control-bar button { font-size:10px; padding:5px 12px; }
     #flavor-chart-wrap { width:220px; height:220px; }
     #receipt-wrapper { max-width:340px; }
@@ -419,6 +495,7 @@
   你可以直接和 EmoTender 对话。系统会根据你的表达分析情绪，并生成适合此刻状态的饮品建议。登录用户名后，系统会建立你的个人偏好数据库，用于记住口味、情绪变化和过往饮品体验，让之后的推荐更贴近你。不登录也可以使用，但不会保存长期记忆。
 </div>
 
+<div id="result-capture">
 <!-- ===== CRT 表情屏幕 ===== -->
 <div id="crt-screen" data-emotion="清醒" style="position:relative;width:400px;height:400px;background-color:#000000!important;overflow:hidden;">
   <svg viewBox="0 0 400 400" style="width:100%;height:100%;">
@@ -499,21 +576,35 @@
 </div>
 
 <div id="reply-area"></div>
-<input id="manual-input" placeholder="可手动输入文字后点 Send" autocomplete="off">
 
-<div id="control-bar">
+<section id="recommendation-reason-section">
+  <div class="result-kicker">WHY THIS POUR</div>
+  <div id="recommendation-reason"></div>
+</section>
+
+<input id="manual-input" data-export-ignore placeholder="可手动输入文字后点 Send" autocomplete="off">
+
+<div id="control-bar" data-export-ignore>
   <button id="btnStart" onclick="startRecording()">Start</button>
   <button id="btnSend" onclick="sendText()">Send</button>
   <span id="status-line"></span>
   <button id="btnReset" onclick="resetSystem()">Reset</button>
 </div>
 
+<!-- ===== 当前情绪占比 ===== -->
+<section id="emotion-section">
+  <div class="result-kicker">EMOTION MIX · 此刻</div>
+  <div id="emotion-chart-wrap">
+    <svg id="emotion-chart" viewBox="0 0 440 320" role="img" aria-label="当前情绪占比"></svg>
+  </div>
+</section>
+
 <!-- ===== 风味六维图 ===== -->
 <div id="flavor-section">
   <div id="flavor-chart-wrap">
     <svg viewBox="-20 -20 340 340" id="flavor-svg"></svg>
   </div>
-  <button id="btnConfirm" onclick="confirmFlavor()">✓ 确认方案</button>
+  <button id="btnConfirm" data-export-ignore onclick="confirmFlavor()">✓ 确认方案</button>
 </div>
 
 <!-- ===== 牛皮纸小票 ===== -->
@@ -529,7 +620,11 @@
     </div>
   </div>
 </div>
+</div>
 
+<button id="save-result-button" data-export-ignore onclick="saveResultImage()">保存为图片</button>
+
+<script src="/static/vendor/html2canvas.min.js"></script>
 <script>
 // ============ 饮品数据库 ============
 const DRINK_DB = {
@@ -741,6 +836,143 @@ function setFlavorValues(vals) {
   renderFlavorChart();
 }
 
+const EMOTION_COLORS = {
+  "清醒":"#8cc8e0",
+  "兴奋":"#90d8b0",
+  "难过":"#c8bbe0",
+  "疲惫":"#f2da90",
+  "焦虑":"#e8a8a0",
+  "犹豫":"#a8d8a0"
+};
+
+function svgNode(name, attrs) {
+  const node = document.createElementNS('http://www.w3.org/2000/svg', name);
+  Object.keys(attrs || {}).forEach(key => node.setAttribute(key, attrs[key]));
+  return node;
+}
+
+function piePoint(cx, cy, radius, angle) {
+  return {
+    x: cx + radius * Math.cos(angle),
+    y: cy + radius * Math.sin(angle)
+  };
+}
+
+function pieSectorPath(cx, cy, radius, startAngle, endAngle) {
+  const start = piePoint(cx, cy, radius, startAngle);
+  const end = piePoint(cx, cy, radius, endAngle);
+  const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
+  return `M ${cx} ${cy} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
+}
+
+function distributeEmotionLabels(items) {
+  ['left','right'].forEach(side => {
+    const sideItems = items.filter(item => item.side === side).sort((a,b) => a.naturalY - b.naturalY);
+    let nextY = 34;
+    sideItems.forEach(item => {
+      item.labelY = Math.max(item.naturalY, nextY);
+      nextY = item.labelY + 48;
+    });
+    if (sideItems.length) {
+      const overflow = sideItems[sideItems.length - 1].labelY - 286;
+      if (overflow > 0) sideItems.forEach(item => { item.labelY -= overflow; });
+    }
+  });
+}
+
+function shortEmotionSource(source) {
+  const text = (source || '来自本轮表达').trim();
+  return text.length > 18 ? text.slice(0,18) + '…' : text;
+}
+
+function renderEmotionPie(blend) {
+  const svg = document.getElementById('emotion-chart');
+  if (!svg) return;
+  svg.replaceChildren();
+
+  const entries = (Array.isArray(blend) ? blend : [])
+    .filter(item => item && typeof item.weight === 'number' && item.weight > 0);
+  if (!entries.length) return;
+
+  const cx = 220, cy = 160, radius = 76;
+  let angle = -Math.PI / 2;
+  const labels = [];
+
+  entries.forEach((item, index) => {
+    const span = item.weight * Math.PI * 2;
+    const endAngle = angle + span;
+    const midAngle = angle + span / 2;
+    const color = EMOTION_COLORS[item.emotion] || '#aebbc2';
+
+    if (entries.length === 1 || item.weight >= 0.999) {
+      svg.appendChild(svgNode('circle', {
+        cx, cy, r:radius, fill:color, class:'emotion-sector'
+      }));
+    } else {
+      svg.appendChild(svgNode('path', {
+        d:pieSectorPath(cx,cy,radius,angle,endAngle), fill:color, class:'emotion-sector'
+      }));
+    }
+
+    const anchor = piePoint(cx,cy,radius + 2,midAngle);
+    const outer = piePoint(cx,cy,radius + 28,midAngle);
+    const side = Math.cos(midAngle) < 0 ? 'left' : 'right';
+    labels.push({item,index,color,anchor,outer,side,naturalY:outer.y});
+    angle = endAngle;
+  });
+
+  distributeEmotionLabels(labels);
+  labels.forEach(label => {
+    const isLeft = label.side === 'left';
+    const elbowX = isLeft ? 126 : 314;
+    const textX = isLeft ? 12 : 428;
+    const lineEndX = isLeft ? 122 : 318;
+    const textAnchor = isLeft ? 'start' : 'end';
+    const percent = Math.round(label.item.weight * 100);
+
+    svg.appendChild(svgNode('polyline', {
+      points:`${label.anchor.x},${label.anchor.y} ${label.outer.x},${label.outer.y} ${elbowX},${label.labelY} ${lineEndX},${label.labelY}`,
+      stroke:label.color, class:'emotion-leader'
+    }));
+
+    const title = svgNode('text', {
+      x:textX, y:label.labelY - 4, fill:label.color,
+      class:'emotion-label', 'text-anchor':textAnchor
+    });
+    title.textContent = `${label.item.emotion} ${percent}%`;
+    svg.appendChild(title);
+
+    const source = svgNode('text', {
+      x:textX, y:label.labelY + 13,
+      class:'emotion-source', 'text-anchor':textAnchor
+    });
+    source.textContent = shortEmotionSource(label.item.source);
+    svg.appendChild(source);
+  });
+}
+
+function renderRecommendationInsight(controlJson) {
+  const reasonSection = document.getElementById('recommendation-reason-section');
+  const reason = document.getElementById('recommendation-reason');
+  const emotionSection = document.getElementById('emotion-section');
+  if (!reasonSection || !reason || !emotionSection) return;
+
+  reason.textContent = controlJson.recommendation_reason || '';
+  renderEmotionPie(controlJson.emotion_blend || []);
+  reasonSection.classList.add('visible');
+  emotionSection.classList.add('visible');
+  document.getElementById('save-result-button').classList.add('visible');
+}
+
+function resetRecommendationInsight() {
+  const reasonSection = document.getElementById('recommendation-reason-section');
+  const emotionSection = document.getElementById('emotion-section');
+  const saveButton = document.getElementById('save-result-button');
+  if (reasonSection) reasonSection.classList.remove('visible');
+  if (emotionSection) emotionSection.classList.remove('visible');
+  if (saveButton) saveButton.classList.remove('visible');
+}
+
 function hasFormalRecommendation(controlJson) {
   return !!(
     controlJson &&
@@ -813,6 +1045,7 @@ function onEmotionChange(emotion, controlJson) {
   if (hasFormalRecommendation(controlJson)) {
     const d = drinkFromControl(controlJson, emotion);
     currentDrink = d;
+    renderRecommendationInsight(controlJson);
     setFlavorValues(d.flavor);
     document.getElementById('flavor-section').classList.add('visible');
     confirmFlavor();
@@ -877,11 +1110,75 @@ function onAndroidSpeechStatus(status){
   U(status||"IDLE");
 }
 function sendText(){var i=document.getElementById("manual-input");analyzeUserText(i?(i.value||""):"")}
+function downloadCanvasPng(canvas, filename){
+  canvas.toBlob(function(blob){
+    if(!blob){U("保存失败");return}
+    var url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(function(){URL.revokeObjectURL(url)},1000);U("● SAVED");
+  },'image/png');
+}
+async function createFaceSnapshotDataUrl(){
+  var screen=document.getElementById('crt-screen'),source=screen&&screen.querySelector('svg');
+  if(!screen||!source)throw new Error('face_snapshot_unavailable');
+  var emotion=screen.getAttribute('data-emotion')||'清醒';
+  var groupIds={"清醒":"group-qx","兴奋":"group-xf","难过":"group-ng","疲惫":"group-pb","焦虑":"group-jl","犹豫":"group-yy"};
+  var color=(getComputedStyle(screen).getPropertyValue('--neon-color')||'#8cc8e0').trim();
+  var clone=source.cloneNode(true);
+  clone.setAttribute('xmlns','http://www.w3.org/2000/svg');clone.setAttribute('width','400');clone.setAttribute('height','400');
+  clone.querySelectorAll('[filter]').forEach(function(node){node.removeAttribute('filter')});
+  clone.querySelectorAll('.pixel-face-group').forEach(function(node){node.setAttribute('display','none');node.removeAttribute('style')});
+  var active=clone.querySelector('#'+(groupIds[emotion]||'group-qx'));if(active)active.setAttribute('display','inline');
+  clone.querySelectorAll('.neon-eye').forEach(function(node){node.setAttribute('fill','none');node.setAttribute('stroke',color);node.setAttribute('stroke-width','16');node.setAttribute('stroke-linecap','round');node.setAttribute('stroke-linejoin','round')});
+  clone.querySelectorAll('.neon-mouth').forEach(function(node){node.setAttribute('fill','none');node.setAttribute('stroke',color);node.setAttribute('stroke-width','10');node.setAttribute('stroke-linecap','round');node.setAttribute('stroke-linejoin','round')});
+  clone.querySelectorAll('.neon-ring').forEach(function(node){node.setAttribute('fill','none');node.setAttribute('stroke',color);node.setAttribute('stroke-width','8')});
+  var markup=new XMLSerializer().serializeToString(clone);
+  var url=URL.createObjectURL(new Blob([markup],{type:'image/svg+xml;charset=utf-8'}));
+  try{
+    var image=await new Promise(function(resolve,reject){var img=new Image();img.onload=function(){resolve(img)};img.onerror=reject;img.src=url});
+    var canvas=document.createElement('canvas');canvas.width=400;canvas.height=400;
+    var ctx=canvas.getContext('2d');ctx.fillStyle='#000';ctx.fillRect(0,0,400,400);ctx.drawImage(image,0,0,400,400);
+    return canvas.toDataURL('image/png');
+  }finally{URL.revokeObjectURL(url)}
+}
+async function saveResultImage(){
+  var button=document.getElementById('save-result-button');
+  var target=document.getElementById('result-capture');
+  if(!button||!target||typeof html2canvas!=='function'){U("保存组件不可用");return}
+  button.disabled=true;button.textContent="正在生成图片…";U("● EXPORT");
+  try{
+    if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    var faceSnapshot=await createFaceSnapshotDataUrl();
+    var canvas=await html2canvas(target,{
+      backgroundColor:'#0a0a0a',
+      scale:Math.min(2,window.devicePixelRatio||1),
+      useCORS:true,
+      logging:false,
+      onclone:function(doc){
+        var capture=doc.getElementById('result-capture');if(capture)capture.classList.add('exporting');
+        var receipt=doc.getElementById('receipt-wrapper');if(receipt){receipt.style.maxHeight='none';receipt.style.overflow='visible'}
+        var face=doc.getElementById('crt-screen');if(face){face.replaceChildren();var img=doc.createElement('img');img.src=faceSnapshot;img.style.width='100%';img.style.height='100%';img.style.display='block';face.appendChild(img)}
+        doc.querySelectorAll('*').forEach(function(node){node.style.animation='none';node.style.transition='none'});
+      }
+    });
+    var filename='EmoTender-'+new Date().toISOString().replace(/[:.]/g,'-')+'.png';
+    if(window.EmoTenderAndroid&&window.EmoTenderAndroid.saveImage){
+      window.EmoTenderAndroid.saveImage(canvas.toDataURL('image/png'),filename);U("● SAVING");
+    }else{
+      downloadCanvasPng(canvas,filename);
+    }
+  }catch(error){
+    U("保存失败");R("图片生成失败: "+(error&&error.message?error.message:"?"));
+  }finally{
+    button.disabled=false;button.textContent="保存为图片";
+  }
+}
 async function resetSystem(){try{await C("/api/reset");I();R("");resetFlavorPanels()}catch(e){R("重置失败: "+(e.detail||e.message||"?"))}}
 function I(){var c=document.getElementById("crt-screen");if(c)c.setAttribute("data-emotion","清醒");F("清醒");U("IDLE");var u=localStorage.getItem("emotender_username")||"";var i=document.getElementById("username-input");if(i)i.value=u}
 function resetFlavorPanels(){
   document.getElementById('flavor-section').classList.remove('visible');
   document.getElementById('receipt-wrapper').classList.remove('visible');
+  resetRecommendationInsight();
 }
 
 var M={1:{emotion_label:"清醒",face_state:"focused",bartender_line:"…嗯？我在。",emotion_blend:[{emotion:"清醒",weight:1}]},2:{emotion_label:"兴奋",face_state:"happy",bartender_line:"嘿嘿，今天状态超好！",emotion_blend:[{emotion:"兴奋",weight:1}]},3:{emotion_label:"难过",face_state:"gentle",bartender_line:"没关系的……慢慢来。",emotion_blend:[{emotion:"难过",weight:1}]},4:{emotion_label:"疲惫",face_state:"gentle",bartender_line:"呼……能量有点低。",emotion_blend:[{emotion:"疲惫",weight:1}]},5:{emotion_label:"焦虑",face_state:"focused",bartender_line:"深呼吸……我在这里陪你。",emotion_blend:[{emotion:"焦虑",weight:1}]},6:{emotion_label:"犹豫",face_state:"thinking",bartender_line:"唔…不着急，慢慢想~",emotion_blend:[{emotion:"犹豫",weight:1}]}};

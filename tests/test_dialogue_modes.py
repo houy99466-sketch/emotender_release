@@ -1,4 +1,5 @@
 import importlib
+import json
 import os
 import sys
 import types
@@ -37,7 +38,7 @@ def base_result(turn_type="recommendation"):
         "turn_type": turn_type,
         "user_text": "今天真的挺累的。",
         "emotion_label": "疲惫",
-        "emotion_blend": [{"emotion": "疲惫", "weight": 1.0}],
+        "emotion_blend": [{"emotion": "疲惫", "weight": 1.0, "source": "用户说今天真的挺累。"}],
         "complex_emotion": "用户处在低能量状态。",
         "need_summary": "需要被接住。",
         "drink_name": "冷启动",
@@ -48,6 +49,7 @@ def base_result(turn_type="recommendation"):
         "bartender_line": "我先给你一杯清醒一点的。",
         "action_sequence": "make_cold_start",
         "feedback_prompt": "喝完告诉我感受。",
+        "recommendation_reason": "你今天真的挺累，这杯冷启动会用清爽低甜的口感陪你把节奏慢慢拉回来。",
     }
 
 
@@ -76,6 +78,45 @@ class DialogueModeTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "recipe_modules must not be empty"):
             backend.validate_result(data)
+
+    def test_emotion_blend_requires_current_session_source(self):
+        data = base_result("recommendation")
+        del data["emotion_blend"][0]["source"]
+
+        with self.assertRaisesRegex(ValueError, "emotion_blend item missing source"):
+            backend.validate_result(data)
+
+    def test_recommendation_requires_personalized_reason(self):
+        data = base_result("recommendation")
+        data["recommendation_reason"] = ""
+
+        with self.assertRaisesRegex(ValueError, "recommendation_reason must not be empty"):
+            backend.validate_result(data)
+
+    def test_prompt_library_does_not_duplicate_backend_drink_menu(self):
+        with backend.PROMPT_LIBRARY_PATH.open("r", encoding="utf-8") as prompt_file:
+            prompt_library = json.load(prompt_file)
+
+        self.assertNotIn("hidden_drinks", prompt_library)
+
+    def test_recommendation_rejects_drink_name_outside_backend_menu(self):
+        data = base_result("recommendation")
+        data["drink_name"] = "不存在的饮品"
+
+        with self.assertRaisesRegex(ValueError, "Unknown drink_name"):
+            backend.validate_result(data)
+
+    def test_unknown_recommendation_drink_falls_back_with_receipt_metadata(self):
+        llm_result = base_result("recommendation")
+        llm_result["drink_name"] = "不存在的饮品"
+
+        with patch.object(backend, "analyze_text", return_value=llm_result):
+            response = backend.process_user_text("推荐一杯清爽一点的。")
+
+        self.assertTrue(response["used_fallback"])
+        self.assertIn("Unknown drink_name", response["llm_error"])
+        self.assertEqual(response["control_json"]["drink_name"], "冷启动")
+        self.assertEqual(response["control_json"]["drink_metadata"]["name"], "冷启动")
 
     def test_memory_writer_records_chat_turn_without_drink_plan(self):
         data = base_result("bar_chat")

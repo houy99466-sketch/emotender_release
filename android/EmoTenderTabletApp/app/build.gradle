@@ -1,0 +1,16 @@
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "com.emotender.tablet"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.emotender.tablet"
+        minSdk 23
+        targetSdk 35
+        versionCode 103
+        versionName "1.2.0"
+    }
+}

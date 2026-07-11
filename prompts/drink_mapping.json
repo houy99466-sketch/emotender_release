@@ -56,32 +56,6 @@
       "rule": "兴奋权重较高时，可以提高 bright_bubble 和 spark_restart 的占比。"
     }
   ],
-  "hidden_drinks": {
-    "冷启动": {
-      "emotion_fit": ["疲惫", "清醒"],
-      "recipe_modules": ["clear_balance", "bitter_focus", "spark_restart"],
-      "flavor_profile": "清爽、微苦、低甜、带轻微气泡感",
-      "color_profile": "透明偏冷调，带一点淡青色",
-      "face_state": "focused",
-      "action_sequence": "make_cold_start"
-    },
-    "软着陆": {
-      "emotion_fit": ["难过", "焦虑"],
-      "recipe_modules": ["soft_comfort", "blue_calm", "clear_balance"],
-      "flavor_profile": "柔和、低酸、低刺激、有一点甜感",
-      "color_profile": "浅蓝紫色或淡粉色",
-      "face_state": "gentle",
-      "action_sequence": "make_soft_comfort"
-    },
-    "气泡重启": {
-      "emotion_fit": ["兴奋", "清醒"],
-      "recipe_modules": ["bright_bubble", "spark_restart", "clear_balance"],
-      "flavor_profile": "明亮、轻酸、气泡感明显",
-      "color_profile": "明亮浅黄色或淡青色",
-      "face_state": "happy",
-      "action_sequence": "make_spark_restart"
-    }
-  },
   "allowed_recipe_modules": [
     "blue_calm",
     "clear_balance",
