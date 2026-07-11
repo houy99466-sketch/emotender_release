@@ -15,31 +15,89 @@
     min-height: 100vh; gap: 22px;
     font-family: 'Courier New','PingFang SC',monospace;
     background: #0a0a0a; overflow-x: hidden;
-    padding: 20px 0 60px;
+    padding: 62px 0 132px;
   }
 
-  #result-capture {
+  .app-view { display:none; }
+  .app-view.active { display:flex; }
+  #conversation-view {
     width: min(480px, 100%);
-    display: flex; flex-direction: column; align-items: center;
-    gap: 22px; padding: 0 20px 12px;
-    background: #0a0a0a;
+    flex-direction:column; align-items:center; gap:18px;
+    padding:0 20px;
   }
-  #result-capture.exporting {
+  #conversation-panel {
+    width:100%; max-width:440px; min-height:170px; max-height:330px;
+    overflow-y:auto; padding:8px 4px 24px;
+    border-top:1px solid rgba(200,170,120,0.18);
+    scrollbar-width:thin; scrollbar-color:rgba(200,170,120,0.28) transparent;
+  }
+  #conversation-list { display:flex; flex-direction:column; gap:16px; }
+  .chat-message { display:flex; flex-direction:column; gap:5px; max-width:88%; }
+  .chat-message.user { align-self:flex-end; text-align:right; }
+  .chat-message.robot { align-self:flex-start; text-align:left; }
+  .chat-role {
+    color:rgba(200,170,120,0.5); font-size:9px; letter-spacing:0.12em;
+  }
+  .chat-text {
+    color:rgba(220,225,225,0.78); font-size:13px; line-height:1.8;
+    padding:10px 12px; border:1px solid rgba(255,255,255,0.07);
+    background:rgba(255,255,255,0.025); white-space:pre-line;
+  }
+  .chat-message.user .chat-text {
+    border-color:rgba(140,200,224,0.16); background:rgba(140,200,224,0.045);
+  }
+  #conversation-empty {
+    color:rgba(205,215,220,0.28); font-size:11px; line-height:1.8;
+    text-align:center; padding:30px 18px;
+  }
+
+  #recommendation-preview {
+    width:min(480px,100%); flex-direction:column; align-items:center;
+    gap:18px; padding:34px 20px 28px;
+  }
+  .preview-kicker, .report-kicker {
+    color:rgba(200,170,120,0.58); font-size:10px; letter-spacing:0.16em;
+  }
+  #preview-drink-name {
+    color:rgba(238,230,215,0.9); font-family:'Ma Shan Zheng','STKaiti','KaiTi',cursive;
+    font-size:32px; font-weight:400; letter-spacing:0;
+  }
+  #preview-flavor-host, #report-flavor-host { width:100%; display:flex; justify-content:center; }
+
+  #final-report {
+    width:min(480px,100%); flex-direction:column; align-items:center;
+    gap:0; padding:34px 20px 42px;
+    background: #0a0a0a;
+    background-image:linear-gradient(180deg,#0a0a0a 0%,#11100e 72%,#19150f 100%);
+  }
+  #final-report.exporting {
     padding-top: 24px; padding-bottom: 32px;
   }
-  #result-capture.exporting [data-export-ignore] { display: none !important; }
-  #result-capture.exporting #receipt {
+  #final-report.exporting [data-export-ignore] { display: none !important; }
+  #final-report.exporting #receipt {
     background:#c8b692 !important;
     box-shadow:none !important;
     clip-path:none !important;
   }
-  #result-capture.exporting #receipt::before,
-  #result-capture.exporting #receipt::after { display:none !important; }
-  #result-capture.exporting #crt-screen {
-    background:#000 !important; box-shadow:none !important;
+  #final-report.exporting #receipt::before,
+  #final-report.exporting #receipt::after { display:none !important; }
+  .report-header { width:100%; text-align:center; padding-bottom:18px; }
+  .report-title {
+    color:rgba(240,231,214,0.94); font-family:'Ma Shan Zheng','STKaiti','KaiTi',cursive;
+    font-size:30px; font-weight:400; letter-spacing:0;
   }
-  #result-capture.exporting #crt-screen::before,
-  #result-capture.exporting #crt-screen::after { display:none !important; }
+  .report-subtitle { margin-top:6px; color:rgba(200,170,120,0.5); font-size:9px; letter-spacing:0.16em; }
+  #report-face-block { display:flex; flex-direction:column; align-items:center; gap:9px; padding:6px 0 28px; }
+  #report-face-image {
+    width:190px; height:190px; object-fit:contain; display:block;
+    background:#000; border:1px solid rgba(200,170,120,0.22);
+  }
+  #report-face-emotion { color:rgba(220,208,188,0.7); font-size:11px; letter-spacing:0.12em; }
+  .report-block { width:100%; padding:24px 0 30px; border-top:1px solid rgba(200,170,120,0.26); }
+  .report-section-label {
+    margin-bottom:18px; color:rgba(200,170,120,0.72);
+    font-size:10px; letter-spacing:0.16em;
+  }
 
   /* CRT 四周粗光晕 — 情绪切换时闪现2秒后淡出 */
   #crt-screen::before {
@@ -218,9 +276,21 @@
   .t1 { animation:tear-fall 2.5s ease-in infinite; }
   .t2 { animation:tear-fall 2.5s ease-in infinite 0.6s; }
 
-  /* ===== 控制栏 ===== */
-  #control-bar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; justify-content:center; }
-  #control-bar button {
+  /* ===== 底部交互栏 ===== */
+  #interaction-dock {
+    position:fixed; left:0; right:0; bottom:0; z-index:45;
+    display:flex; flex-direction:column; align-items:center; gap:9px;
+    padding:10px 16px max(12px,env(safe-area-inset-bottom));
+    background:rgba(7,9,10,0.96); border-top:1px solid rgba(200,170,120,0.18);
+    backdrop-filter:blur(10px);
+  }
+  #control-bar, #collapsed-control-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center; }
+  #collapsed-control-bar { display:none; }
+  #interaction-dock.collapsed #manual-input,
+  #interaction-dock.collapsed #control-bar { display:none; }
+  #interaction-dock.collapsed #collapsed-control-bar { display:flex; }
+  #interaction-dock.report-mode { display:none; }
+  #control-bar button, #collapsed-control-bar button {
     font-family:'Courier New',monospace; font-size:12px;
     padding:7px 16px; border:1px solid; cursor:pointer;
     background:transparent; transition:all 0.2s ease;
@@ -232,13 +302,16 @@
   #btnSend:hover  { background:rgba(144,216,176,0.1); border-color:rgba(144,216,176,0.42); }
   #btnReset { color:rgba(180,180,190,0.45); border-color:rgba(180,180,190,0.12); }
   #btnReset:hover { color:rgba(200,200,210,0.75); border-color:rgba(200,200,210,0.28); }
+  #collapsed-control-bar button {
+    color:rgba(210,190,160,0.86); border-color:rgba(200,170,120,0.3);
+  }
   #status-line {
     font-family:'Courier New',monospace; font-size:10px;
     color:rgba(140,200,224,0.32); letter-spacing:0.14em;
     min-height:1.1em; text-align:center;
   }
   #reply-area {
-    width:100%; max-width:420px; text-align:center;
+    display:none; width:100%; max-width:420px; text-align:center;
     font-family:'Courier New',monospace; font-size:13px;
     color:rgba(200,210,220,0.6); line-height:1.7;
     min-height:2.4em; transition:opacity 0.4s ease;
@@ -284,7 +357,7 @@
   }
 
   #save-result-button {
-    display:none; min-height:38px; padding:8px 22px;
+    display:none; min-height:40px; margin-top:28px; padding:8px 22px;
     border:1px solid rgba(140,200,224,0.34);
     background:rgba(140,200,224,0.06); color:rgba(170,215,230,0.9);
     font-family:'Courier New','PingFang SC',monospace; font-size:12px;
@@ -421,13 +494,14 @@
   #receipt .hand-tilt-2 { display:inline-block; transform:rotate(1deg); }
 
   #manual-input {
-    width:min(420px, calc(100vw - 40px));
+    width:min(440px, calc(100vw - 32px));
     height:34px; padding:6px 10px;
     background:rgba(8,12,14,0.92); color:rgba(220,230,235,0.78);
     border:1px solid rgba(140,200,224,0.18);
     outline:none; font-family:'Courier New','PingFang SC',monospace;
     font-size:12px; text-align:center;
   }
+  #final-report #btnConfirm { display:none; }
 
   /* ===== 账号与说明 ===== */
   #account-panel {
@@ -469,17 +543,19 @@
   /* ===== 响应式 ===== */
   @media (max-width:500px) {
     #crt-screen { width:300px !important; height:300px !important; }
-    #reply-area { font-size:11px; max-width:300px; }
+    #conversation-panel { max-height:290px; }
+    .chat-text { font-size:12px; }
     #recommendation-reason-section { max-width:340px; padding:16px; }
     #emotion-section { max-width:360px; }
     #emotion-chart-wrap { min-height:260px; }
-    #control-bar button { font-size:10px; padding:5px 12px; }
+    #control-bar button { font-size:10px; padding:7px 11px; }
     #flavor-chart-wrap { width:220px; height:220px; }
     #receipt-wrapper { max-width:340px; }
     #receipt { padding: 20px 16px 18px; }
     #account-panel { top:8px; left:8px; gap:5px; }
     #help-button { top:8px; right:8px; }
     #username-input { width:92px; }
+    #report-face-image { width:160px; height:160px; }
   }
 </style>
 </head>
@@ -487,15 +563,15 @@
 
 <div id="account-panel">
   <input id="username-input" placeholder="username" autocomplete="off">
-  <button id="login-button" onclick="loginUser()">Login</button>
-  <button id="logout-button" onclick="logoutUser()">Logout</button>
+  <button id="login-button" onclick="loginUser()">登录</button>
+  <button id="logout-button" onclick="logoutUser()">退出</button>
 </div>
 <button id="help-button" onclick="toggleHelp()">?</button>
 <div id="help-popover">
   你可以直接和 EmoTender 对话。系统会根据你的表达分析情绪，并生成适合此刻状态的饮品建议。登录用户名后，系统会建立你的个人偏好数据库，用于记住口味、情绪变化和过往饮品体验，让之后的推荐更贴近你。不登录也可以使用，但不会保存长期记忆。
 </div>
 
-<div id="result-capture">
+<main id="conversation-view" class="app-view active">
 <!-- ===== CRT 表情屏幕 ===== -->
 <div id="crt-screen" data-emotion="清醒" style="position:relative;width:400px;height:400px;background-color:#000000!important;overflow:hidden;">
   <svg viewBox="0 0 400 400" style="width:100%;height:100%;">
@@ -575,54 +651,92 @@
   <div id="face-state-label">清醒</div>
 </div>
 
-<div id="reply-area"></div>
-
-<section id="recommendation-reason-section">
-  <div class="result-kicker">WHY THIS POUR</div>
-  <div id="recommendation-reason"></div>
-</section>
-
-<input id="manual-input" data-export-ignore placeholder="可手动输入文字后点 Send" autocomplete="off">
-
-<div id="control-bar" data-export-ignore>
-  <button id="btnStart" onclick="startRecording()">Start</button>
-  <button id="btnSend" onclick="sendText()">Send</button>
-  <span id="status-line"></span>
-  <button id="btnReset" onclick="resetSystem()">Reset</button>
-</div>
-
-<!-- ===== 当前情绪占比 ===== -->
-<section id="emotion-section">
-  <div class="result-kicker">EMOTION MIX · 此刻</div>
-  <div id="emotion-chart-wrap">
-    <svg id="emotion-chart" viewBox="0 0 440 320" role="img" aria-label="当前情绪占比"></svg>
+<section id="conversation-panel" aria-label="本轮对话">
+  <div id="conversation-list">
+    <div id="conversation-empty">说点什么。老柯会记住本轮对话，再决定此刻适合你的风味。</div>
   </div>
 </section>
+</main>
 
-<!-- ===== 风味六维图 ===== -->
-<div id="flavor-section">
-  <div id="flavor-chart-wrap">
-    <svg viewBox="-20 -20 340 340" id="flavor-svg"></svg>
-  </div>
-  <button id="btnConfirm" data-export-ignore onclick="confirmFlavor()">✓ 确认方案</button>
-</div>
-
-<!-- ===== 牛皮纸小票 ===== -->
-<div id="receipt-wrapper">
-  <div id="receipt">
-    <div class="drink-name" id="receipt-drink-name">—</div>
-    <div class="drink-en" id="receipt-drink-en"></div>
-    <div class="story-flavor" id="receipt-flavors"></div>
-    <div class="story-label">▸ 背景故事</div>
-    <div class="story-text" id="receipt-story"></div>
-    <div class="receipt-footer">
-      <span class="hand-tilt-1">EmoTender</span> · <span class="hand-tilt-2">深夜情绪酒馆</span>
+<section id="recommendation-preview" class="app-view" aria-labelledby="preview-drink-name">
+  <div class="preview-kicker">本轮定制方案</div>
+  <h1 id="preview-drink-name">—</h1>
+  <div id="preview-flavor-host">
+    <div id="flavor-section">
+      <div id="flavor-chart-wrap">
+        <svg viewBox="-20 -20 340 340" id="flavor-svg"></svg>
+      </div>
+      <button id="btnConfirm" data-export-ignore onclick="confirmFlavor()">确认风味</button>
     </div>
   </div>
-</div>
-</div>
+</section>
 
-<button id="save-result-button" data-export-ignore onclick="saveResultImage()">保存为图片</button>
+<section id="final-report" class="app-view" aria-labelledby="report-title">
+  <header class="report-header">
+    <h1 class="report-title" id="report-title">情绪风味报告</h1>
+    <div class="report-subtitle">EMOTENDER · PERSONAL POUR</div>
+  </header>
+
+  <div id="report-face-block">
+    <img id="report-face-image" alt="确认风味时的机器人表情">
+    <div id="report-face-emotion">—</div>
+  </div>
+
+  <div class="report-block">
+    <div class="report-section-label">01 / EMOTION MIX</div>
+    <section id="emotion-section">
+      <div id="emotion-chart-wrap">
+        <svg id="emotion-chart" viewBox="0 0 440 320" role="img" aria-label="当前情绪占比"></svg>
+      </div>
+    </section>
+  </div>
+
+  <div class="report-block">
+    <div class="report-section-label">02 / WHY THIS POUR</div>
+    <section id="recommendation-reason-section">
+      <div id="recommendation-reason"></div>
+    </section>
+  </div>
+
+  <div class="report-block">
+    <div class="report-section-label">03 / FLAVOR PROFILE</div>
+    <div id="report-flavor-host"></div>
+  </div>
+
+  <div class="report-block receipt-report-block">
+    <div class="report-section-label">04 / YOUR RECEIPT</div>
+    <div id="receipt-wrapper">
+      <div id="receipt">
+        <div class="drink-name" id="receipt-drink-name">—</div>
+        <div class="drink-en" id="receipt-drink-en"></div>
+        <div class="story-flavor" id="receipt-flavors"></div>
+        <div class="story-label">▸ 背景故事</div>
+        <div class="story-text" id="receipt-story"></div>
+        <div class="receipt-footer">
+          <span class="hand-tilt-1">EmoTender</span> · <span class="hand-tilt-2">深夜情绪酒馆</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button id="save-result-button" data-export-ignore onclick="saveResultImage()">保存为图片</button>
+</section>
+
+<div id="reply-area" aria-live="polite"></div>
+
+<div id="interaction-dock" data-export-ignore>
+  <input id="manual-input" placeholder="输入文字，或点击开始说话" autocomplete="off">
+  <div id="control-bar">
+    <button id="btnStart" onclick="startRecording()">开始说话</button>
+    <button id="btnSend" onclick="sendText()">发送</button>
+    <span id="status-line"></span>
+    <button id="btnReset" onclick="resetSystem()">重置</button>
+  </div>
+  <div id="collapsed-control-bar">
+    <button onclick="continueConversation()">继续对话</button>
+    <button onclick="resetSystem()">重新开始</button>
+  </div>
+</div>
 
 <script src="/static/vendor/html2canvas.min.js"></script>
 <script>
@@ -662,6 +776,10 @@ const DRINK_DB = {
 
 let currentDrink = null;
 let currentEmotion = "清醒";
+let currentControlJson = null;
+let currentRobotReply = "";
+let pendingUserText = "";
+let interfaceMode = "conversation";
 
 // ============ 六维风味图 ============
 const FLAVOR_KEYS = ["甜","鲜","酸","咸","涩","苦"];
@@ -961,7 +1079,6 @@ function renderRecommendationInsight(controlJson) {
   renderEmotionPie(controlJson.emotion_blend || []);
   reasonSection.classList.add('visible');
   emotionSection.classList.add('visible');
-  document.getElementById('save-result-button').classList.add('visible');
 }
 
 function resetRecommendationInsight() {
@@ -1000,10 +1117,66 @@ function drinkFromControl(controlJson, emotion) {
   };
 }
 
-// ============ 小票渲染 ============
-function confirmFlavor() {
+function setInterfaceMode(mode) {
+  interfaceMode = mode;
+  const viewIds = {
+    conversation: 'conversation-view',
+    recommendation: 'recommendation-preview',
+    report: 'final-report'
+  };
+  document.querySelectorAll('.app-view').forEach(function(view) {
+    view.classList.toggle('active', view.id === viewIds[mode]);
+  });
+  const dock = document.getElementById('interaction-dock');
+  if (dock) {
+    dock.classList.toggle('collapsed', mode !== 'conversation');
+    dock.classList.toggle('report-mode', mode === 'report');
+  }
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function enterConversationMode() {
+  setInterfaceMode('conversation');
+}
+
+function continueConversation() {
+  enterConversationMode();
+}
+
+function enterRecommendationPreview(controlJson) {
+  currentControlJson = controlJson;
+  const previewName = document.getElementById('preview-drink-name');
+  if (previewName) previewName.textContent = currentDrink ? currentDrink.name : controlJson.drink_name;
+  const flavorSection = document.getElementById('flavor-section');
+  const previewHost = document.getElementById('preview-flavor-host');
+  if (flavorSection && previewHost) previewHost.appendChild(flavorSection);
+  resetRecommendationInsight();
+  document.getElementById('receipt-wrapper').classList.remove('visible');
+  document.getElementById('save-result-button').classList.remove('visible');
+  flavorSection.classList.add('visible');
+  setInterfaceMode('recommendation');
+}
+
+function enterFinalReport(faceSnapshot) {
+  const faceImage = document.getElementById('report-face-image');
+  const faceEmotion = document.getElementById('report-face-emotion');
+  if (faceImage) faceImage.src = faceSnapshot;
+  if (faceEmotion) {
+    const label = currentControlJson && currentControlJson.emotion_label;
+    faceEmotion.textContent = label || currentEmotion;
+  }
+  renderRecommendationInsight(currentControlJson || {});
+  const flavorSection = document.getElementById('flavor-section');
+  const reportHost = document.getElementById('report-flavor-host');
+  if (flavorSection && reportHost) reportHost.appendChild(flavorSection);
+  document.getElementById('receipt-wrapper').classList.add('visible');
+  document.getElementById('save-result-button').classList.add('visible');
+  setInterfaceMode('report');
+}
+
+// ============ 小票渲染与最终报告 ============
+async function confirmFlavor() {
   const d = currentDrink || DRINK_DB["清醒"];
-  const wrapper = document.getElementById('receipt-wrapper');
 
   document.getElementById('receipt-drink-name').textContent = d.name;
   document.getElementById('receipt-drink-en').textContent = d.en || '';
@@ -1017,15 +1190,50 @@ function confirmFlavor() {
   });
   document.getElementById('receipt-flavors').innerHTML = flavorsHtml || '<span class="flavor-tag">定制风味</span>';
   document.getElementById('receipt-story').textContent = d.story || '';
-
-  wrapper.classList.add('visible');
+  try {
+    const faceSnapshot = await createFaceSnapshotDataUrl();
+    enterFinalReport(faceSnapshot);
+  } catch (error) {
+    R("表情快照生成失败: " + (error && error.message ? error.message : "?"));
+  }
 }
 
 // ============ 原有系统逻辑 ============
 let s="standby";
 function F(t){s=t;var e=document.getElementById("face-state-label");if(e)e.textContent=(t||'').toUpperCase()}
 function U(t){var e=document.getElementById("status-line");if(e)e.textContent=t||''}
-function R(t){var e=document.getElementById("reply-area");if(e){e.style.opacity='0';setTimeout(function(){e.textContent=t||'';e.style.opacity='1'},180)}}
+function appendChatMessage(role,text){
+  var clean=(text||'').trim();if(!clean)return;
+  var list=document.getElementById('conversation-list');if(!list)return;
+  var empty=document.getElementById('conversation-empty');if(empty)empty.remove();
+  var item=document.createElement('article');item.className='chat-message '+role;
+  var label=document.createElement('div');label.className='chat-role';label.textContent=role==='user'?'你':'老柯';
+  var body=document.createElement('div');body.className='chat-text';body.textContent=clean;
+  item.appendChild(label);item.appendChild(body);list.appendChild(item);
+  var panel=document.getElementById('conversation-panel');if(panel)panel.scrollTop=panel.scrollHeight;
+}
+function R(t){appendChatMessage('robot',t);var e=document.getElementById("reply-area");if(e)e.textContent=t||''}
+
+function renderConversationHistory(state,fallbackUser,fallbackReply){
+  var list=document.getElementById('conversation-list');if(!list)return;
+  var history=state&&Array.isArray(state.history)?state.history:[];
+  list.replaceChildren();
+  if(!history.length){
+    if(fallbackUser)appendChatMessage('user',fallbackUser);
+    if(fallbackReply)appendChatMessage('robot',fallbackReply);
+    if(!fallbackUser&&!fallbackReply){
+      var empty=document.createElement('div');empty.id='conversation-empty';
+      empty.textContent='说点什么。老柯会记住本轮对话，再决定此刻适合你的风味。';list.appendChild(empty);
+    }
+    return;
+  }
+  history.forEach(function(turn,index){
+    appendChatMessage('user',turn.user_text||'');
+    var isLast=index===history.length-1;
+    var reply=isLast&&fallbackReply?fallbackReply:[turn.bartender_line,turn.turn_type==='bar_chat'?turn.feedback_prompt:''].filter(Boolean).join(' ');
+    appendChatMessage('robot',reply);
+  });
+}
 
 window.updateTenderState=function(d){
   var c=document.getElementById('crt-screen');if(!c)return;
@@ -1042,16 +1250,16 @@ window.updateTenderState=function(d){
 
 function onEmotionChange(emotion, controlJson) {
   currentEmotion = emotion;
+  currentControlJson = controlJson;
   if (hasFormalRecommendation(controlJson)) {
     const d = drinkFromControl(controlJson, emotion);
     currentDrink = d;
-    renderRecommendationInsight(controlJson);
     setFlavorValues(d.flavor);
-    document.getElementById('flavor-section').classList.add('visible');
-    confirmFlavor();
+    enterRecommendationPreview(controlJson);
   } else {
     currentDrink = null;
     resetFlavorPanels();
+    enterConversationMode();
   }
   window._suppressDrinkMsg = false;
   // 触发 CRT 光晕闪烁
@@ -1091,14 +1299,17 @@ async function stopRecording(){
 async function analyzeUserText(text){
   var clean=(text||"").trim();if(!clean){R("先说一句话，或者手动输入一句话。");return}
   try{
+    pendingUserText=clean;appendChatMessage('user',clean);
     U("● PROC");var c=document.getElementById("crt-screen");if(c)c.classList.remove("recording-active");
     var body={user_text:clean};var u=usernameValue();if(u)body.username=u;
     var d=await C("/api/text/analyze",body);handleAnalyzeResponse(d)
   }catch(e){U("IDLE");R("分析失败: "+(e.detail||e.message||"?"))}
 }
 function handleAnalyzeResponse(d){
+  currentRobotReply=d.robot_reply_text||"";
   if(d.control_json)window.updateTenderState(d.control_json);
-  if(d.robot_reply_text)R(d.robot_reply_text);
+  renderConversationHistory(d.conversation_state,pendingUserText,currentRobotReply);
+  pendingUserText="";
   U(d.turn_type==="bar_chat"?"IDLE":"● OK");
 }
 function submitRecognizedText(text){
@@ -1143,21 +1354,19 @@ async function createFaceSnapshotDataUrl(){
 }
 async function saveResultImage(){
   var button=document.getElementById('save-result-button');
-  var target=document.getElementById('result-capture');
+  var target=document.getElementById('final-report');
   if(!button||!target||typeof html2canvas!=='function'){U("保存组件不可用");return}
   button.disabled=true;button.textContent="正在生成图片…";U("● EXPORT");
   try{
     if(document.fonts&&document.fonts.ready)await document.fonts.ready;
-    var faceSnapshot=await createFaceSnapshotDataUrl();
     var canvas=await html2canvas(target,{
       backgroundColor:'#0a0a0a',
       scale:Math.min(2,window.devicePixelRatio||1),
       useCORS:true,
       logging:false,
       onclone:function(doc){
-        var capture=doc.getElementById('result-capture');if(capture)capture.classList.add('exporting');
+        var capture=doc.getElementById('final-report');if(capture)capture.classList.add('exporting');
         var receipt=doc.getElementById('receipt-wrapper');if(receipt){receipt.style.maxHeight='none';receipt.style.overflow='visible'}
-        var face=doc.getElementById('crt-screen');if(face){face.replaceChildren();var img=doc.createElement('img');img.src=faceSnapshot;img.style.width='100%';img.style.height='100%';img.style.display='block';face.appendChild(img)}
         doc.querySelectorAll('*').forEach(function(node){node.style.animation='none';node.style.transition='none'});
       }
     });
@@ -1173,10 +1382,17 @@ async function saveResultImage(){
     button.disabled=false;button.textContent="保存为图片";
   }
 }
-async function resetSystem(){try{await C("/api/reset");I();R("");resetFlavorPanels()}catch(e){R("重置失败: "+(e.detail||e.message||"?"))}}
+async function resetSystem(){try{await C("/api/reset");I();resetConversation();resetFlavorPanels();enterConversationMode()}catch(e){R("重置失败: "+(e.detail||e.message||"?"))}}
 function I(){var c=document.getElementById("crt-screen");if(c)c.setAttribute("data-emotion","清醒");F("清醒");U("IDLE");var u=localStorage.getItem("emotender_username")||"";var i=document.getElementById("username-input");if(i)i.value=u}
+function resetConversation(){
+  currentControlJson=null;currentRobotReply="";pendingUserText="";
+  renderConversationHistory(null,"","");
+}
 function resetFlavorPanels(){
-  document.getElementById('flavor-section').classList.remove('visible');
+  var flavorSection=document.getElementById('flavor-section');
+  var previewHost=document.getElementById('preview-flavor-host');
+  if(flavorSection&&previewHost)previewHost.appendChild(flavorSection);
+  if(flavorSection)flavorSection.classList.remove('visible');
   document.getElementById('receipt-wrapper').classList.remove('visible');
   resetRecommendationInsight();
 }
@@ -1190,6 +1406,7 @@ document.addEventListener("DOMContentLoaded", function(){
   // 初始化风味数据但不显示六维图，等用户选择情绪后才出现
   setFlavorValues(DRINK_DB["清醒"].flavor);
   currentDrink = DRINK_DB["清醒"];
+  enterConversationMode();
 });
 </script>
 
