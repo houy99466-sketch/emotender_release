@@ -395,10 +395,42 @@
   #flavor-section.visible { opacity: 1; transform: translateY(0); }
 
   #flavor-chart-wrap {
-    position: relative; width: 280px; height: 280px;
+    position: relative; width: 320px; height: 320px;
     margin: 8px 0;
+    background: radial-gradient(ellipse at center, #dcc8a0 0%, #c8a878 60%, #b8956a 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px #5a3a1a, 0 0 0 8px #8b6914, 0 0 0 12px #3a2210,
+                inset 0 0 30px rgba(0,0,0,0.15);
   }
   #flavor-chart-wrap svg { width: 100%; height: 100%; }
+  @keyframes flavorBloom {
+    0% { transform:scale(0); transform-origin:150px 150px; opacity:0; }
+    60% { opacity:0.9; }
+    100% { transform:scale(1); transform-origin:150px 150px; opacity:1; }
+  }
+  .flavor-bloom {
+    animation:flavorBloom 1.5s cubic-bezier(0.22,0.61,0.36,1) forwards;
+  }
+  #flavor-reference.photo-reveal {
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    visibility:hidden; opacity:0; transform:translateY(-60px);
+    transition:opacity 1.5s ease-out,
+               transform 1.5s cubic-bezier(0.22,0.61,0.36,1),
+               visibility 0s 1.5s;
+  }
+  #flavor-reference.photo-reveal.show {
+    visibility:visible; opacity:1; transform:translateY(0);
+    transition:opacity 1.5s ease-out,
+               transform 1.5s cubic-bezier(0.22,0.61,0.36,1),
+               visibility 0s 0s;
+  }
+  #flavor-photo {
+    width:min(280px,calc(100vw - 64px)); max-height:300px;
+    object-fit:contain; display:block;
+  }
+  #flavor-photo-note {
+    color:rgba(205,190,166,0.52); font-size:10px; letter-spacing:0.08em;
+  }
 
   /* 确认按钮 */
   #btnConfirm {
@@ -682,9 +714,13 @@
   <div id="preview-flavor-host">
     <div id="flavor-section">
       <div id="flavor-chart-wrap">
-        <svg viewBox="-20 -20 340 340" id="flavor-svg"></svg>
+        <svg viewBox="-30 -30 360 360" id="flavor-svg"></svg>
       </div>
     </div>
+  </div>
+  <div id="flavor-reference" class="photo-reveal">
+    <img id="flavor-photo" src="" alt="饮品参考图">
+    <div id="flavor-photo-note">图片仅供参考</div>
   </div>
   <div class="view-actions">
     <button id="btnConfirm" onclick="confirmFlavor()">确认风味</button>
@@ -825,60 +861,67 @@ function getHexCorner(cx, cy, r, idx) {
   return { x: cx + r*Math.cos(angle), y: cy + r*Math.sin(angle) };
 }
 
-function renderFlavorChart() {
+function renderFlavorChart(animate) {
   const svg = document.getElementById('flavor-svg');
-  const cx = 150, cy = 150, R = 130;
+  const cx = 150, cy = 150, R = 118;
 
   let html = '';
-  // 同心六边形背景 (5层)
-  for (let level=1; level<=5; level++) {
-    const r = R * level/5;
+
+  // 外圈齿轮环
+  for (let i=0; i<6; i++) {
+    const angle = -Math.PI/2 + i * (Math.PI/3);
+    const rOuter = R + 18;
+    const rInner = R + 8;
+    const startAngle = angle - Math.PI/6;
+    const endAngle = angle + Math.PI/6;
+    const x1o = cx + rOuter * Math.cos(startAngle);
+    const y1o = cy + rOuter * Math.sin(startAngle);
+    const x2o = cx + rOuter * Math.cos(endAngle);
+    const y2o = cy + rOuter * Math.sin(endAngle);
+    const x1i = cx + rInner * Math.cos(startAngle);
+    const y1i = cy + rInner * Math.sin(startAngle);
+    const x2i = cx + rInner * Math.cos(endAngle);
+    const y2i = cy + rInner * Math.sin(endAngle);
+    html += `<path d="M${x1o},${y1o} A${rOuter},${rOuter} 0 0,1 ${x2o},${y2o} L${x2i},${y2i} A${rInner},${rInner} 0 0,0 ${x1i},${y1i} Z" fill="rgba(60,30,10,0.6)" stroke="#3a2210" stroke-width="1.5"/>`;
+  }
+
+  // 四层同心六边形
+  for (let level=1; level<=4; level++) {
+    const r = R * level/4;
     let pts = '';
     for (let i=0; i<6; i++) {
       const p = getHexCorner(cx, cy, r, i);
       pts += `${p.x},${p.y} `;
     }
-    html += `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>`;
+    html += `<polygon points="${pts}" fill="none" stroke="rgba(80,50,20,0.2)" stroke-width="0.8"/>`;
   }
-  // 轴线
+
   for (let i=0; i<6; i++) {
     const p = getHexCorner(cx, cy, R, i);
-    html += `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="rgba(255,255,255,0.09)" stroke-width="1"/>`;
+    html += `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="rgba(80,50,20,0.25)" stroke-width="0.8"/>`;
   }
-  // 轴标签
-  for (let i=0; i<6; i++) {
-    const p = getHexCorner(cx, cy, R+25, i);
-    const col = FLAVOR_COLORS[FLAVOR_KEYS[i]];
-    html += `<text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="middle"
-      font-family="'Ma Shan Zheng','PingFang SC',cursive" font-size="20" fill="${col}" opacity="0.9" font-weight="bold">${FLAVOR_KEYS[i]}</text>`;
-  }
-  // 数据多边形填充
+
   let dataPts = '';
   for (let i=0; i<6; i++) {
     const p = getHexPoint(cx, cy, R, i, flavorValues[FLAVOR_KEYS[i]]);
     dataPts += `${p.x},${p.y} `;
   }
-  html += `<polygon points="${dataPts}" fill="rgba(200,170,120,0.18)" stroke="rgba(200,170,120,0.5)" stroke-width="1.5"/>`;
-  // 数据点（可拖拽）
+  html += `<polygon class="${animate ? 'flavor-bloom' : ''}" points="${dataPts}" fill="rgba(220,90,40,0.35)" stroke="#8b3a1a" stroke-width="2"/>`;
+
   for (let i=0; i<6; i++) {
-    const p = getHexPoint(cx, cy, R, i, flavorValues[FLAVOR_KEYS[i]]);
-    const col = FLAVOR_COLORS[FLAVOR_KEYS[i]];
-    html += `<circle cx="${p.x}" cy="${p.y}" r="8" fill="${col}" opacity="0.9"
-      class="flavor-dot" data-idx="${i}"
-      style="cursor:grab; filter:drop-shadow(0 0 5px ${col}55);"/>`;
+    const angle = -Math.PI/2 + i * (Math.PI/3);
+    const labelR = R + 38;
+    const lx = cx + labelR * Math.cos(angle);
+    const ly = cy + labelR * Math.sin(angle);
+    html += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle"
+      font-family="'Ma Shan Zheng','PingFang SC',cursive" font-size="24" fill="#5a3a10" font-weight="bold">${FLAVOR_KEYS[i]}</text>`;
   }
-  // 中心点
-  html += `<circle cx="${cx}" cy="${cy}" r="3" fill="rgba(255,255,255,0.15)"/>`;
+
+  html += `<circle cx="${cx}" cy="${cy}" r="5" fill="#8b3a1a" stroke="#3a2210" stroke-width="1"/>`;
 
   svg.innerHTML = html;
 
-  // 绑定拖拽事件
-  const dots = svg.querySelectorAll('.flavor-dot');
-  dots.forEach(dot => {
-    dot.addEventListener('mousedown', onDotMouseDown);
-    dot.addEventListener('touchstart', onDotTouchStart, {passive:false});
-  });
-  // 也允许在 SVG 空白区域点击来设置最近轴的值
+  // 点击六维图可调整最近轴的值
   svg.addEventListener('mousedown', onSvgClick);
 }
 
@@ -928,7 +971,7 @@ function onSvgClick(e) {
   const scaleY = 300 / rect.height;
   const mx = (e.clientX - rect.left) * scaleX;
   const my = (e.clientY - rect.top) * scaleY;
-  const cx = 150, cy = 150, R = 130;
+  const cx = 150, cy = 150, R = 118;
 
   // 找到最近的轴
   let bestIdx = 0, bestDist = Infinity;
@@ -950,7 +993,7 @@ function onSvgClick(e) {
   val = Math.max(0, Math.min(100, val));
 
   flavorValues[FLAVOR_KEYS[bestIdx]] = val;
-  renderFlavorChart();
+  renderFlavorChart(false);
 }
 
 function updateFlavorFromMouse(clientX, clientY) {
@@ -958,7 +1001,7 @@ function updateFlavorFromMouse(clientX, clientY) {
   const rect = svg.getBoundingClientRect();
   const scaleX = 300 / rect.width;
   const scaleY = 300 / rect.height;
-  const cx = 150, cy = 150, R = 130;
+  const cx = 150, cy = 150, R = 118;
   const mx = (clientX - rect.left) * scaleX - cx;
   const my = (clientY - rect.top) * scaleY - cy;
 
@@ -969,12 +1012,12 @@ function updateFlavorFromMouse(clientX, clientY) {
 
   const key = FLAVOR_KEYS[draggingIdx];
   flavorValues[key] = val;
-  renderFlavorChart();
+  renderFlavorChart(false);
 }
 
-function setFlavorValues(vals) {
+function setFlavorValues(vals, animate) {
   FLAVOR_KEYS.forEach(k => { flavorValues[k] = vals[k] || 50; });
-  renderFlavorChart();
+  renderFlavorChart(animate);
 }
 
 const EMOTION_COLORS = {
@@ -1178,6 +1221,28 @@ function prepareRecommendationPreview(controlJson) {
   const flavorSection = document.getElementById('flavor-section');
   const previewHost = document.getElementById('preview-flavor-host');
   if (flavorSection && previewHost) previewHost.appendChild(flavorSection);
+  const photoReference = document.getElementById('flavor-reference');
+  const photoImg = document.getElementById('flavor-photo');
+  if (photoReference && photoImg) {
+    const randIdx = Math.floor(Math.random() * 6) + 1;
+    photoReference.classList.remove('show');
+    photoImg.src = '/static/photo/' + randIdx + '.png';
+    const revealPhoto = function() {
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          photoReference.classList.add('show');
+        });
+      });
+    };
+    photoImg.onload = function() {
+      photoImg.onload = null;
+      revealPhoto();
+    };
+    if (photoImg.complete) {
+      photoImg.onload = null;
+      revealPhoto();
+    }
+  }
   resetRecommendationInsight();
   document.getElementById('receipt-wrapper').classList.remove('visible');
   document.getElementById('save-result-button').classList.remove('visible');
@@ -1188,6 +1253,7 @@ function prepareRecommendationPreview(controlJson) {
 
 function enterRecommendationPreview(controlJson) {
   prepareRecommendationPreview(controlJson || currentControlJson);
+  renderFlavorChart(true);
   setInterfaceMode('recommendation');
 }
 
@@ -1298,7 +1364,7 @@ function onEmotionChange(emotion, controlJson) {
   if (hasFormalRecommendation(controlJson)) {
     const d = drinkFromControl(controlJson, emotion);
     currentDrink = d;
-    setFlavorValues(d.flavor);
+    setFlavorValues(d.flavor, false);
     prepareRecommendationPreview(controlJson);
   } else {
     currentDrink = null;
@@ -1439,6 +1505,8 @@ function resetFlavorPanels(){
   var previewHost=document.getElementById('preview-flavor-host');
   if(flavorSection&&previewHost)previewHost.appendChild(flavorSection);
   if(flavorSection)flavorSection.classList.remove('visible');
+  var photoReference=document.getElementById('flavor-reference');
+  if(photoReference)photoReference.classList.remove('show');
   document.getElementById('receipt-wrapper').classList.remove('visible');
   resetRecommendationInsight();
 }
@@ -1450,7 +1518,7 @@ document.addEventListener("keydown",function(e){if(e.target.tagName==="INPUT"||e
 document.addEventListener("DOMContentLoaded", function(){
   I();
   // 初始化风味数据但不显示六维图，等用户选择情绪后才出现
-  setFlavorValues(DRINK_DB["清醒"].flavor);
+  setFlavorValues(DRINK_DB["清醒"].flavor, false);
   currentDrink = DRINK_DB["清醒"];
   enterConversationMode();
 });

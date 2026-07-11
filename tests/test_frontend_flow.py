@@ -78,6 +78,34 @@ class FrontendFlowTests(unittest.TestCase):
             "dock.classList.toggle('report-mode', mode === 'report')", self.html
         )
 
+    def test_flavor_chart_uses_latest_gear_and_bloom_visual(self):
+        chart = re.search(
+            r"function renderFlavorChart\(animate\).*?\n}", self.html, re.DOTALL
+        )
+        self.assertIsNotNone(chart)
+        body = chart.group(0)
+        self.assertIn("flavor-bloom", body)
+        self.assertIn("外圈齿轮环", body)
+        self.assertNotIn("flavor-dot", body)
+        preview = re.search(
+            r"function enterRecommendationPreview\(.*?\n}", self.html, re.DOTALL
+        )
+        self.assertIsNotNone(preview)
+        self.assertIn("renderFlavorChart(true)", preview.group(0))
+
+    def test_random_reference_photo_has_disclaimer(self):
+        self.assertIn('id="flavor-photo"', self.html)
+        self.assertIn('id="flavor-photo-note">图片仅供参考', self.html)
+        self.assertIn("Math.floor(Math.random() * 6) + 1", self.html)
+        self.assertIn("'/static/photo/' + randIdx + '.png'", self.html)
+
+    def test_all_six_reference_photos_exist(self):
+        photo_dir = INDEX.parent / "photo"
+        self.assertEqual(
+            [path.name for path in sorted(photo_dir.glob("*.png"))],
+            [f"{index}.png" for index in range(1, 7)],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
