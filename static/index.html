@@ -50,6 +50,14 @@
     color:rgba(205,215,220,0.28); font-size:11px; line-height:1.8;
     text-align:center; padding:30px 18px;
   }
+  #recommendation-entry {
+    display:none; min-height:40px; padding:8px 22px;
+    border:1px solid rgba(200,170,120,0.4);
+    background:rgba(200,170,120,0.08); color:rgba(220,198,164,0.9);
+    font-family:'Ma Shan Zheng','PingFang SC',cursive; font-size:15px;
+    cursor:pointer;
+  }
+  #recommendation-entry.visible { display:block; }
 
   #recommendation-preview {
     width:min(480px,100%); flex-direction:column; align-items:center;
@@ -365,6 +373,17 @@
   }
   #save-result-button.visible { display:block; }
   #save-result-button:disabled { opacity:0.45; cursor:wait; }
+  .view-actions {
+    display:flex; align-items:center; justify-content:center; gap:12px;
+    width:100%; margin-top:18px;
+  }
+  .view-actions button {
+    min-height:40px; padding:8px 22px; cursor:pointer;
+    border:1px solid rgba(200,170,120,0.35);
+    background:rgba(200,170,120,0.07); color:rgba(220,198,164,0.9);
+    font-family:'Courier New','PingFang SC',monospace; font-size:12px;
+  }
+  #report-actions #save-result-button { margin-top:0; }
 
   /* ===== 风味六维图（无标题、无滑块） ===== */
   #flavor-section {
@@ -501,8 +520,6 @@
     outline:none; font-family:'Courier New','PingFang SC',monospace;
     font-size:12px; text-align:center;
   }
-  #final-report #btnConfirm { display:none; }
-
   /* ===== 账号与说明 ===== */
   #account-panel {
     position:fixed; top:14px; left:14px; z-index:50;
@@ -656,6 +673,7 @@
     <div id="conversation-empty">说点什么。老柯会记住本轮对话，再决定此刻适合你的风味。</div>
   </div>
 </section>
+<button id="recommendation-entry" onclick="openRecommendationPreview()">查看推荐方案</button>
 </main>
 
 <section id="recommendation-preview" class="app-view" aria-labelledby="preview-drink-name">
@@ -666,8 +684,10 @@
       <div id="flavor-chart-wrap">
         <svg viewBox="-20 -20 340 340" id="flavor-svg"></svg>
       </div>
-      <button id="btnConfirm" data-export-ignore onclick="confirmFlavor()">确认风味</button>
     </div>
+  </div>
+  <div class="view-actions">
+    <button id="btnConfirm" onclick="confirmFlavor()">确认风味</button>
   </div>
 </section>
 
@@ -719,7 +739,10 @@
     </div>
   </div>
 
-  <button id="save-result-button" data-export-ignore onclick="saveResultImage()">保存为图片</button>
+  <div id="report-actions" class="view-actions" data-export-ignore>
+    <button onclick="returnToRecommendationPreview()">返回确认</button>
+    <button id="save-result-button" onclick="saveResultImage()">保存为图片</button>
+  </div>
 </section>
 
 <div id="reply-area" aria-live="polite"></div>
@@ -733,7 +756,7 @@
     <button id="btnReset" onclick="resetSystem()">重置</button>
   </div>
   <div id="collapsed-control-bar">
-    <button onclick="continueConversation()">继续对话</button>
+    <button onclick="returnToConversation()">返回聊天</button>
     <button onclick="resetSystem()">重新开始</button>
   </div>
 </div>
@@ -1139,11 +1162,16 @@ function enterConversationMode() {
   setInterfaceMode('conversation');
 }
 
-function continueConversation() {
+function returnToConversation() {
   enterConversationMode();
 }
 
-function enterRecommendationPreview(controlJson) {
+function showRecommendationEntry(visible) {
+  const entry = document.getElementById('recommendation-entry');
+  if (entry) entry.classList.toggle('visible', !!visible);
+}
+
+function prepareRecommendationPreview(controlJson) {
   currentControlJson = controlJson;
   const previewName = document.getElementById('preview-drink-name');
   if (previewName) previewName.textContent = currentDrink ? currentDrink.name : controlJson.drink_name;
@@ -1154,7 +1182,23 @@ function enterRecommendationPreview(controlJson) {
   document.getElementById('receipt-wrapper').classList.remove('visible');
   document.getElementById('save-result-button').classList.remove('visible');
   flavorSection.classList.add('visible');
+  showRecommendationEntry(true);
+  enterConversationMode();
+}
+
+function enterRecommendationPreview(controlJson) {
+  prepareRecommendationPreview(controlJson || currentControlJson);
   setInterfaceMode('recommendation');
+}
+
+function openRecommendationPreview() {
+  if (!currentControlJson || !currentDrink) return;
+  enterRecommendationPreview(currentControlJson);
+}
+
+function returnToRecommendationPreview() {
+  if (!currentControlJson || !currentDrink) return;
+  enterRecommendationPreview(currentControlJson);
 }
 
 function enterFinalReport(faceSnapshot) {
@@ -1255,9 +1299,10 @@ function onEmotionChange(emotion, controlJson) {
     const d = drinkFromControl(controlJson, emotion);
     currentDrink = d;
     setFlavorValues(d.flavor);
-    enterRecommendationPreview(controlJson);
+    prepareRecommendationPreview(controlJson);
   } else {
     currentDrink = null;
+    showRecommendationEntry(false);
     resetFlavorPanels();
     enterConversationMode();
   }
@@ -1386,6 +1431,7 @@ async function resetSystem(){try{await C("/api/reset");I();resetConversation();r
 function I(){var c=document.getElementById("crt-screen");if(c)c.setAttribute("data-emotion","清醒");F("清醒");U("IDLE");var u=localStorage.getItem("emotender_username")||"";var i=document.getElementById("username-input");if(i)i.value=u}
 function resetConversation(){
   currentControlJson=null;currentRobotReply="";pendingUserText="";
+  showRecommendationEntry(false);
   renderConversationHistory(null,"","");
 }
 function resetFlavorPanels(){
