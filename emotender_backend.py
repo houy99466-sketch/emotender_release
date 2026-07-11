@@ -261,12 +261,19 @@ ASR_MODEL = (
     else None
 )
 
-client = OpenAI(
-    api_key=os.environ["LLM_API_KEY"],
-    base_url=os.environ["LLM_BASE_URL"],
-)
-
-MODEL = os.environ["LLM_MODEL"]
+_api_key = os.environ.get("LLM_API_KEY", "").strip()
+USE_MOCK = (_api_key == "")
+if USE_MOCK:
+    logger.warning("未配置 LLM_API_KEY，使用内置模拟模式（即时响应）")
+    client = None
+    MODEL = "mock"
+else:
+    client = OpenAI(
+        api_key=_api_key,
+        base_url=os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1"),
+    )
+    MODEL = os.environ.get("LLM_MODEL", "gpt-4o-mini")
+    logger.info(f"LLM: {MODEL}")
 
 ALLOWED_ACTION_SEQUENCES = {
     "make_cold_start",
@@ -727,6 +734,8 @@ face_state, bartender_line, action_sequence, feedback_prompt, recommendation_rea
     for attempt in range(max_retries + 1):
         try:
             logger.info(f"LLM 调用 (尝试 {attempt+1}/{max_retries+1})")
+            if client is None:
+                raise RuntimeError("Mock mode - using local fallback")
             response = client.chat.completions.create(
                 model=MODEL,
                 messages=[
@@ -878,57 +887,58 @@ def validate_result(data: dict) -> None:
 
 
 def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
-    """内置熔断兜底：LLM 链路断开或输出非法 JSON 时，返回完整 Schema v1.0 安全字典。
+    """Mock 模式：根据用户输入关键词给出自然回复和推荐。"""
+    text = user_text if user_text else ""
     
-    闲聊/安全模式 -> 点亮【疲惫】gentle 表情，不推荐饮品。
-    推荐模式     -> 点亮【清醒】focused 表情，推荐标志性"冷启动"。
-    """
-    if turn_type in CHAT_ONLY_TURN_TYPES:
-        return {
-            "schema_version": "1.0",
-            "turn_type": turn_type,
-            "user_text": user_text,
-            "emotion_label": "疲惫",
-            "emotion_blend": [
-                {"emotion": "疲惫", "weight": 1.0, "source": "系统无法完成本轮情绪分析。"}
-            ],
-            "complex_emotion": "大模型链路超载，触发酒馆全息自检保护协议。",
-            "need_summary": "系统自检中，需要被接住而不是立刻推荐饮品。",
-            "drink_name": NO_FORMAL_DRINK_NAME,
-            "recipe_modules": [],
-            "flavor_profile": NO_FORMAL_DRINK_NAME,
-            "color_profile": NO_FORMAL_DRINK_NAME,
-            "face_state": "gentle",
-            "bartender_line": "（安全协议启动）我的核心大脑似乎开了一会儿小差，不过别担心，你先缓一缓，我马上回来。",
-            "action_sequence": "gesture_thinking" if turn_type == "bar_chat" else "serve_only",
-            "feedback_prompt": "你愿意的话，可以再说一点。",
-            "recommendation_reason": NO_FORMAL_DRINK_NAME,
-        }
-
+    # 关键词情绪判断（负面优先）
+    sad_words = ["难过", "伤心", "哭", "低落", "失落", "抑郁", "分手", "失恋"]
+    anxious_words = ["焦虑", "紧张", "压力", "担心", "害怕", "不安", "烦"]
+    tired_words = ["累", "困", "疲惫", "疲劳", "忙", "加班"]
+    happy_words = ["开心", "高兴", "快乐", "兴奋", "哈哈", "爽", "棒"]
+    
+    emotion = "清醒"
+    drink_info = {"name": "冷启动", "en": "Cold Start", "line": "给你一杯冷启动，清醒地面对今晚。", "face": "focused", "action": "make_cold_start", "flavor": "清爽微苦，带一点气泡感", "color": "透明偏冷调，淡青色"}
+    
+    if any(w in text for w in sad_words):
+        emotion = "难过"
+        drink_info = {"name": "软着陆", "en": "Soft Landing", "line": "没关系的，慢慢来。这杯软着陆，像围巾一样暖。", "face": "gentle", "action": "make_soft_comfort", "flavor": "柔和低酸，温暖甜润", "color": "浅蓝紫或淡粉"}
+    elif any(w in text for w in anxious_words):
+        emotion = "焦虑"
+        drink_info = {"name": "断点续传", "en": "Breakpoint Resume", "line": "深呼吸……先给你一杯断点续传，让节奏慢下来。", "face": "focused", "action": "make_cold_start", "flavor": "微酸清爽，帮你定一定神", "color": "淡红调"}
+    elif any(w in text for w in tired_words):
+        emotion = "疲惫"
+        drink_info = {"name": "灰度模式", "en": "Grayscale Mode", "line": "累了就别逞强。灰度模式，不选颜色才是最大的自由。", "face": "gentle", "action": "serve_only", "flavor": "深沉木质，微苦回甘", "color": "深灰调"}
+    elif any(w in text for w in happy_words):
+        emotion = "兴奋"
+        drink_info = {"name": "气泡重启", "en": "Spark Restart", "line": "今天状态不错！来杯气泡重启，让好心情继续冒泡。", "face": "happy", "action": "make_spark_restart", "flavor": "明亮轻酸，气泡感明显", "color": "明亮浅黄"}
+    
+    # Mock 模式总是返回 recommendation，确保六维图展示
+    actual_turn = "recommendation"
+    
     return {
         "schema_version": "1.0",
-        "turn_type": "recommendation",
+        "turn_type": actual_turn,
         "user_text": user_text,
-        "emotion_label": "清醒",
-        "emotion_blend": [
-            {"emotion": "清醒", "weight": 1.0, "source": "系统进入推荐 fallback。"}
-        ],
-        "complex_emotion": "大模型链路超载，触发酒馆全息自检保护协议。",
-        "need_summary": "系统自检，需要一杯清爽低甜的特调冷启动。",
-        "drink_name": "冷启动",
-        "recipe_modules": [
-            "clear_balance",
-            "bitter_focus",
-        ],
-        "flavor_profile": "清爽、微苦、低甜、带轻微气泡感",
-        "color_profile": "透明偏冷调，带一点淡青色",
-        "face_state": "focused",
-        "bartender_line": "（安全协议启动）我的核心大脑似乎开了一会儿小差，不过别担心，我先为你推荐一杯标志性的'冷启动'，让我们重新连接。",
-        "action_sequence": "make_cold_start",
-        "feedback_prompt": "喝完感觉清醒一点了吗？",
-        "recommendation_reason": "这次分析没有完整返回，我先用一杯清爽低甜的冷启动接住这一轮。它不能替你解决正在面对的事情，但能让推荐流程保持完整。",
+        "emotion_label": emotion,
+        "emotion_blend": [{"emotion": emotion, "weight": 1.0, "source": "本地关键词匹配"}],
+        "complex_emotion": f"用户表达了{emotion}的情绪。",
+        "need_summary": f"需要一杯适合{emotion}状态的饮品。",
+        "drink_name": drink_info["name"],
+        "recipe_modules": ["clear_balance", "soft_comfort"],
+        "flavor_profile": drink_info["flavor"],
+        "color_profile": drink_info["color"],
+        "face_state": drink_info["face"],
+        "bartender_line": drink_info["line"],
+        "action_sequence": drink_info["action"],
+        "feedback_prompt": "喝完感觉怎么样？",
+        "recommendation_reason": f"根据你的{emotion}情绪，推荐这杯{drink_info['name']}。",
+        "drink_metadata": {
+            "name": drink_info["name"],
+            "name_en": drink_info["en"],
+            "flavor": drink_info["flavor"],
+            "color": drink_info["color"],
+        },
     }
-
 
 def build_robot_reply_text(control_json: dict) -> str:
     bartender_line = control_json["bartender_line"].strip()
