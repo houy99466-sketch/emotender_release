@@ -385,7 +385,7 @@
   }
   #report-actions #save-result-button { margin-top:0; }
 
-  /* ===== 风味六维图（无标题、无滑块） ===== */
+  /* ===== 风味六维图（只读展示） ===== */
   #flavor-section {
     display: flex; flex-direction: column; align-items: center; gap: 24px;
     margin-top: 10px;
@@ -402,7 +402,7 @@
     box-shadow: 0 0 0 4px #5a3a1a, 0 0 0 8px #8b6914, 0 0 0 12px #3a2210,
                 inset 0 0 30px rgba(0,0,0,0.15);
   }
-  #flavor-chart-wrap svg { width: 100%; height: 100%; }
+  #flavor-chart-wrap svg { width: 100%; height: 100%; pointer-events:none; }
   @keyframes flavorBloom {
     0% { transform:scale(0); transform-origin:150px 150px; opacity:0; }
     60% { opacity:0.9; }
@@ -411,26 +411,115 @@
   .flavor-bloom {
     animation:flavorBloom 1.5s cubic-bezier(0.22,0.61,0.36,1) forwards;
   }
-  #flavor-reference.photo-reveal {
-    display:flex; flex-direction:column; align-items:center; gap:8px;
-    visibility:hidden; opacity:0; transform:translateY(-60px);
-    transition:opacity 1.5s ease-out,
-               transform 1.5s cubic-bezier(0.22,0.61,0.36,1),
-               visibility 0s 1.5s;
+  #btnCustomize {
+    min-height:42px; padding:9px 26px; cursor:pointer;
+    border:1px solid rgba(220,150,78,0.62); border-radius:6px;
+    background:rgba(220,150,78,0.08); color:#e6a45f;
+    font-family:'PingFang SC','Microsoft YaHei',sans-serif; font-size:14px;
   }
-  #flavor-reference.photo-reveal.show {
-    visibility:visible; opacity:1; transform:translateY(0);
-    transition:opacity 1.5s ease-out,
-               transform 1.5s cubic-bezier(0.22,0.61,0.36,1),
-               visibility 0s 0s;
+  #btnCustomize:hover { background:rgba(220,150,78,0.16); }
+  #spec-preview-summary {
+    max-width:360px; color:rgba(218,209,194,0.58); font-size:11px;
+    line-height:1.7; text-align:center;
   }
-  #flavor-photo {
-    width:min(280px,calc(100vw - 64px)); max-height:300px;
-    object-fit:contain; display:block;
+
+  /* ===== 饮品构成示意 ===== */
+  #drink-composition {
+    width:min(360px,calc(100vw - 48px)); padding:18px 20px 20px;
+    border-top:1px solid rgba(200,170,120,0.22);
+    border-bottom:1px solid rgba(200,170,120,0.14);
   }
-  #flavor-photo-note {
-    color:rgba(205,190,166,0.52); font-size:10px; letter-spacing:0.08em;
+  .composition-head {
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    margin-bottom:14px;
   }
+  #composition-caption {
+    color:rgba(230,214,188,0.8); font-size:12px; letter-spacing:0.08em;
+  }
+  #composition-preview-mark {
+    color:rgba(230,164,95,0.72); font-size:9px; letter-spacing:0.08em;
+  }
+  .composition-body { display:flex; align-items:center; gap:22px; }
+  .composition-cup {
+    position:relative; width:90px; height:118px; flex:0 0 auto;
+    border:2px solid rgba(222,205,176,0.62); border-top-width:1px;
+    clip-path:polygon(7% 0,93% 0,82% 100%,18% 100%);
+    overflow:hidden; background:rgba(255,255,255,0.025);
+  }
+  #composition-liquid {
+    position:absolute; left:0; right:0; bottom:0; height:74%;
+    background:#7d5841; transition:height 0.25s ease, background 0.25s ease;
+  }
+  .composition-ice {
+    position:absolute; width:19px; height:17px;
+    border:1px solid rgba(220,235,238,0.68); background:rgba(220,235,238,0.13);
+    transform:rotate(12deg);
+  }
+  .composition-ice.i1 { left:18px; top:22px; }
+  .composition-ice.i2 { right:17px; top:29px; transform:rotate(-15deg); }
+  .composition-ice.i3 { left:37px; top:48px; transform:rotate(4deg); }
+  #composition-details { display:flex; flex-direction:column; gap:8px; min-width:0; }
+  #composition-drink-name {
+    color:rgba(240,229,211,0.92); font-family:'Ma Shan Zheng','STKaiti',cursive;
+    font-size:22px;
+  }
+  .composition-detail {
+    color:rgba(216,207,191,0.58); font-size:11px; line-height:1.5;
+  }
+
+  /* ===== 规格编辑弹窗 ===== */
+  #customization-modal {
+    position:fixed; inset:0; z-index:100; display:none;
+    align-items:center; justify-content:center; padding:22px;
+    background:rgba(0,0,0,0.72); backdrop-filter:blur(4px);
+  }
+  #customization-modal.open { display:flex; }
+  .customization-sheet {
+    width:min(540px,100%); max-height:min(760px,calc(100vh - 44px)); overflow:auto;
+    background:#fff; color:#202020; border-radius:24px;
+    box-shadow:0 24px 80px rgba(0,0,0,0.44);
+    font-family:'PingFang SC','Microsoft YaHei',sans-serif;
+  }
+  .customization-header {
+    position:sticky; top:0; z-index:2; display:flex; align-items:flex-start;
+    justify-content:space-between; gap:18px; padding:24px 26px 18px;
+    background:#fff; border-bottom:1px solid #eee;
+  }
+  .customization-title { font-size:24px; font-weight:700; line-height:1.3; }
+  .customization-subtitle { margin-top:5px; color:#8b8b8b; font-size:11px; }
+  .modal-close {
+    width:36px; height:36px; flex:0 0 auto; padding:0; cursor:pointer;
+    border:0; background:transparent; color:#505050; font-size:28px; line-height:1;
+  }
+  .customization-content { padding:8px 26px 18px; }
+  .spec-group { padding:20px 0 6px; }
+  .spec-group h2 { margin-bottom:14px; font-size:17px; font-weight:700; }
+  .spec-options { display:flex; flex-wrap:wrap; gap:10px; }
+  .spec-option {
+    min-height:44px; padding:9px 16px; cursor:pointer;
+    border:1px solid transparent; border-radius:7px;
+    background:#f6f6f6; color:#363636; font-size:14px;
+  }
+  .spec-option.selected {
+    border-color:#f08a24; background:#fffaf5; color:#e87812; font-weight:700;
+  }
+  .customization-summary-wrap {
+    padding:15px 26px; background:#fafafa; border-top:1px solid #eee;
+    color:#555; font-size:12px; line-height:1.65;
+  }
+  .customization-summary-label { color:#9a9a9a; }
+  #customization-summary { color:#313131; }
+  .customization-actions {
+    position:sticky; bottom:0; display:flex; justify-content:flex-end; gap:10px;
+    padding:16px 26px max(18px,env(safe-area-inset-bottom));
+    background:#fff; border-top:1px solid #eee;
+  }
+  .customization-actions button {
+    min-height:44px; padding:9px 24px; cursor:pointer; border-radius:7px;
+    font-family:'PingFang SC','Microsoft YaHei',sans-serif; font-size:14px;
+  }
+  .customization-cancel { border:1px solid #dedede; background:#fff; color:#555; }
+  .customization-confirm { border:1px solid #f08a24; background:#f08a24; color:#fff; }
 
   /* 确认按钮 */
   #btnConfirm {
@@ -446,6 +535,13 @@
   #btnConfirm:hover {
     background: rgba(200,170,120,0.18);
     border-color: rgba(200,170,120,0.7);
+  }
+
+  @media (min-width:501px) and (max-height:950px) {
+    #recommendation-preview { gap:13px; padding-top:22px; }
+    #flavor-section { margin-top:4px; }
+    #flavor-chart-wrap { width:250px; height:250px; margin:4px 0; }
+    #recommendation-preview .view-actions { margin-top:10px; }
   }
 
   /* ===== 牛皮纸小票 ===== */
@@ -605,6 +701,17 @@
     #help-button { top:8px; right:8px; }
     #username-input { width:92px; }
     #report-face-image { width:160px; height:160px; }
+    #customization-modal { align-items:flex-end; padding:0; }
+    .customization-sheet {
+      width:100%; max-height:88vh; border-radius:22px 22px 0 0;
+    }
+    .customization-header { padding:20px 20px 16px; }
+    .customization-title { font-size:21px; }
+    .customization-content { padding:6px 20px 16px; }
+    .customization-summary-wrap { padding:14px 20px; }
+    .customization-actions { padding:14px 20px max(16px,env(safe-area-inset-bottom)); }
+    .customization-actions button { flex:1; }
+    .composition-body { gap:16px; }
   }
 </style>
 </head>
@@ -718,14 +825,78 @@
       </div>
     </div>
   </div>
-  <div id="flavor-reference" class="photo-reveal">
-    <img id="flavor-photo" src="" alt="饮品参考图">
-    <div id="flavor-photo-note">图片仅供参考</div>
+  <button id="btnCustomize" onclick="openCustomization()">调整规格</button>
+  <div id="spec-preview-summary">口感：保留推荐 · 温度：加冰 · 甜度：保留推荐</div>
+  <div id="drink-composition" role="img" aria-label="饮品构成示意">
+    <div class="composition-head">
+      <span id="composition-caption">饮品构成示意</span>
+      <span id="composition-preview-mark">UI PREVIEW</span>
+    </div>
+    <div class="composition-body">
+      <div class="composition-cup" aria-hidden="true">
+        <div id="composition-liquid"></div>
+        <span class="composition-ice i1"></span>
+        <span class="composition-ice i2"></span>
+        <span class="composition-ice i3"></span>
+      </div>
+      <div id="composition-details">
+        <div id="composition-drink-name">—</div>
+        <div class="composition-detail" id="composition-mouthfeel">保留推荐口感</div>
+        <div class="composition-detail" id="composition-temperature">加冰</div>
+        <div class="composition-detail" id="composition-sweetness">保留推荐甜度</div>
+      </div>
+    </div>
   </div>
   <div class="view-actions">
-    <button id="btnConfirm" onclick="confirmFlavor()">确认风味</button>
+    <button id="btnConfirm" onclick="confirmFlavor()">确认方案</button>
   </div>
 </section>
+
+<div id="customization-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="customization-title">
+  <div class="customization-sheet">
+    <header class="customization-header">
+      <div>
+        <h1 class="customization-title" id="customization-title">调整规格</h1>
+        <div class="customization-subtitle" id="customization-drink-name">UI PREVIEW</div>
+      </div>
+      <button class="modal-close" onclick="closeCustomization()" aria-label="关闭规格编辑">×</button>
+    </header>
+    <div class="customization-content">
+      <section class="spec-group" data-spec-group="口感">
+        <h2>口感</h2>
+        <div class="spec-options">
+          <button class="spec-option selected" data-spec-value="保留推荐">保留推荐</button>
+          <button class="spec-option" data-spec-value="清爽">清爽</button>
+          <button class="spec-option" data-spec-value="醇厚">醇厚</button>
+        </div>
+      </section>
+      <section class="spec-group" data-spec-group="温度">
+        <h2>温度</h2>
+        <div class="spec-options">
+          <button class="spec-option selected" data-spec-value="加冰">加冰</button>
+          <button class="spec-option" data-spec-value="少冰">少冰</button>
+          <button class="spec-option" data-spec-value="常温">常温</button>
+        </div>
+      </section>
+      <section class="spec-group" data-spec-group="甜度">
+        <h2>甜度</h2>
+        <div class="spec-options">
+          <button class="spec-option selected" data-spec-value="保留推荐">保留推荐</button>
+          <button class="spec-option" data-spec-value="低甜">低甜</button>
+          <button class="spec-option" data-spec-value="标准甜">标准甜</button>
+        </div>
+      </section>
+    </div>
+    <div class="customization-summary-wrap">
+      <span class="customization-summary-label">已选规格：</span>
+      <span id="customization-summary">口感：保留推荐，温度：加冰，甜度：保留推荐</span>
+    </div>
+    <div class="customization-actions">
+      <button class="customization-cancel" onclick="closeCustomization()">取消</button>
+      <button class="customization-confirm" onclick="confirmCustomization()">确认调整</button>
+    </div>
+  </div>
+</div>
 
 <section id="final-report" class="app-view" aria-labelledby="report-title">
   <header class="report-header">
@@ -848,7 +1019,10 @@ const FLAVOR_COLORS = {
 };
 
 let flavorValues = {甜:50, 鲜:50, 酸:50, 咸:50, 涩:50, 苦:50};
-let draggingIdx = -1;
+let recommendedFlavorValues = {甜:50, 鲜:50, 酸:50, 咸:50, 涩:50, 苦:50};
+const DEFAULT_CUSTOMIZATION = {口感:"保留推荐", 温度:"加冰", 甜度:"保留推荐"};
+let confirmedCustomization = {...DEFAULT_CUSTOMIZATION};
+let pendingCustomization = {...DEFAULT_CUSTOMIZATION};
 
 function getHexPoint(cx, cy, r, idx, value) {
   const angle = -Math.PI/2 + idx * (Math.PI/3);
@@ -920,104 +1094,106 @@ function renderFlavorChart(animate) {
   html += `<circle cx="${cx}" cy="${cy}" r="5" fill="#8b3a1a" stroke="#3a2210" stroke-width="1"/>`;
 
   svg.innerHTML = html;
-
-  // 点击六维图可调整最近轴的值
-  svg.addEventListener('mousedown', onSvgClick);
-}
-
-function onDotMouseDown(e) {
-  e.preventDefault(); e.stopPropagation();
-  draggingIdx = parseInt(e.target.dataset.idx);
-  document.addEventListener('mousemove', onMouseMove);
-  document.addEventListener('mouseup', onMouseUp);
-}
-
-function onMouseMove(e) {
-  if (draggingIdx < 0) return;
-  updateFlavorFromMouse(e.clientX, e.clientY);
-}
-
-function onMouseUp() {
-  draggingIdx = -1;
-  document.removeEventListener('mousemove', onMouseMove);
-  document.removeEventListener('mouseup', onMouseUp);
-}
-
-function onDotTouchStart(e) {
-  e.preventDefault(); e.stopPropagation();
-  draggingIdx = parseInt(e.target.dataset.idx);
-  document.addEventListener('touchmove', onTouchMove, {passive:false});
-  document.addEventListener('touchend', onTouchEnd);
-}
-
-function onTouchMove(e) {
-  e.preventDefault();
-  if (draggingIdx < 0) return;
-  const t = e.touches[0];
-  updateFlavorFromMouse(t.clientX, t.clientY);
-}
-
-function onTouchEnd() {
-  draggingIdx = -1;
-  document.removeEventListener('touchmove', onTouchMove);
-  document.removeEventListener('touchend', onTouchEnd);
-}
-
-function onSvgClick(e) {
-  if (e.target.classList.contains('flavor-dot')) return; // 让 dot handler 处理
-  const svg = document.getElementById('flavor-svg');
-  const rect = svg.getBoundingClientRect();
-  const scaleX = 300 / rect.width;
-  const scaleY = 300 / rect.height;
-  const mx = (e.clientX - rect.left) * scaleX;
-  const my = (e.clientY - rect.top) * scaleY;
-  const cx = 150, cy = 150, R = 118;
-
-  // 找到最近的轴
-  let bestIdx = 0, bestDist = Infinity;
-  for (let i=0; i<6; i++) {
-    const angle = -Math.PI/2 + i*(Math.PI/3);
-    const ux = Math.cos(angle), uy = Math.sin(angle);
-    // 点到轴线的距离
-    const dx = mx - cx, dy = my - cy;
-    const proj = dx*ux + dy*uy;
-    const px = cx + proj*ux, py = cy + proj*uy;
-    const dist = Math.sqrt((mx-px)**2 + (my-py)**2);
-    if (dist < bestDist) { bestDist = dist; bestIdx = i; }
-  }
-  // 设置该轴的值
-  const angle = -Math.PI/2 + bestIdx*(Math.PI/3);
-  const dx = mx - cx, dy = my - cy;
-  let proj = dx*Math.cos(angle) + dy*Math.sin(angle);
-  let val = Math.round((proj / R) * 100);
-  val = Math.max(0, Math.min(100, val));
-
-  flavorValues[FLAVOR_KEYS[bestIdx]] = val;
-  renderFlavorChart(false);
-}
-
-function updateFlavorFromMouse(clientX, clientY) {
-  const svg = document.getElementById('flavor-svg');
-  const rect = svg.getBoundingClientRect();
-  const scaleX = 300 / rect.width;
-  const scaleY = 300 / rect.height;
-  const cx = 150, cy = 150, R = 118;
-  const mx = (clientX - rect.left) * scaleX - cx;
-  const my = (clientY - rect.top) * scaleY - cy;
-
-  const angle = -Math.PI/2 + draggingIdx * (Math.PI/3);
-  const dot = mx*Math.cos(angle) + my*Math.sin(angle);
-  let val = Math.round((dot / R) * 100);
-  val = Math.max(0, Math.min(100, val));
-
-  const key = FLAVOR_KEYS[draggingIdx];
-  flavorValues[key] = val;
-  renderFlavorChart(false);
 }
 
 function setFlavorValues(vals, animate) {
   FLAVOR_KEYS.forEach(k => { flavorValues[k] = vals[k] || 50; });
   renderFlavorChart(animate);
+}
+
+function clampFlavor(value) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function customizationSummary(specs) {
+  return `口感：${specs.口感}，温度：${specs.温度}，甜度：${specs.甜度}`;
+}
+
+function syncCustomizationControls() {
+  document.querySelectorAll('.spec-group').forEach(function(group) {
+    const key = group.dataset.specGroup;
+    group.querySelectorAll('.spec-option').forEach(function(button) {
+      button.classList.toggle('selected', button.dataset.specValue === pendingCustomization[key]);
+    });
+  });
+  const summary = document.getElementById('customization-summary');
+  if (summary) summary.textContent = customizationSummary(pendingCustomization);
+}
+
+function updateComposition() {
+  const drinkName = document.getElementById('composition-drink-name');
+  const modalDrinkName = document.getElementById('customization-drink-name');
+  const summary = document.getElementById('spec-preview-summary');
+  const mouthfeel = document.getElementById('composition-mouthfeel');
+  const temperature = document.getElementById('composition-temperature');
+  const sweetness = document.getElementById('composition-sweetness');
+  const liquid = document.getElementById('composition-liquid');
+  const name = currentDrink ? currentDrink.name : '当前饮品';
+  const colors = {
+    "清醒":"#789d9a", "兴奋":"#d6875f", "难过":"#8f80a6",
+    "疲惫":"#a68d61", "焦虑":"#74927d", "犹豫":"#9b7655"
+  };
+
+  if (drinkName) drinkName.textContent = name;
+  if (modalDrinkName) modalDrinkName.textContent = `${name} · UI PREVIEW`;
+  if (summary) summary.textContent = customizationSummary(confirmedCustomization).replaceAll('，',' · ');
+  if (mouthfeel) mouthfeel.textContent = `${confirmedCustomization.口感}口感`;
+  if (temperature) temperature.textContent = confirmedCustomization.温度;
+  if (sweetness) sweetness.textContent = `${confirmedCustomization.甜度}甜度`;
+  if (liquid) {
+    liquid.style.background = colors[currentEmotion] || colors["清醒"];
+    liquid.style.height = confirmedCustomization.口感 === '醇厚' ? '82%' :
+      confirmedCustomization.口感 === '清爽' ? '66%' : '74%';
+  }
+  document.querySelectorAll('.composition-ice').forEach(function(ice, index) {
+    const visibleCount = confirmedCustomization.温度 === '常温' ? 0 :
+      confirmedCustomization.温度 === '少冰' ? 1 : 3;
+    ice.style.display = index < visibleCount ? 'block' : 'none';
+  });
+}
+
+function applyCustomizationPreview() {
+  const next = {...recommendedFlavorValues};
+  if (confirmedCustomization.甜度 === '低甜') next.甜 = Math.min(next.甜, 25);
+  if (confirmedCustomization.甜度 === '标准甜') next.甜 = Math.max(next.甜, 58);
+  if (confirmedCustomization.口感 === '清爽') {
+    next.甜 -= 8; next.酸 += 10; next.苦 -= 5;
+  }
+  if (confirmedCustomization.口感 === '醇厚') {
+    next.甜 += 6; next.鲜 += 8; next.苦 += 6;
+  }
+  FLAVOR_KEYS.forEach(function(key) { next[key] = clampFlavor(next[key]); });
+  setFlavorValues(next, false);
+  updateComposition();
+}
+
+function resetCustomization() {
+  confirmedCustomization = {...DEFAULT_CUSTOMIZATION};
+  pendingCustomization = {...DEFAULT_CUSTOMIZATION};
+  syncCustomizationControls();
+  applyCustomizationPreview();
+}
+
+function openCustomization() {
+  pendingCustomization = {...confirmedCustomization};
+  syncCustomizationControls();
+  const modal = document.getElementById('customization-modal');
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCustomization() {
+  const modal = document.getElementById('customization-modal');
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden','true');
+  document.body.style.overflow = '';
+}
+
+function confirmCustomization() {
+  confirmedCustomization = {...pendingCustomization};
+  applyCustomizationPreview();
+  closeCustomization();
 }
 
 const EMOTION_COLORS = {
@@ -1221,28 +1397,7 @@ function prepareRecommendationPreview(controlJson) {
   const flavorSection = document.getElementById('flavor-section');
   const previewHost = document.getElementById('preview-flavor-host');
   if (flavorSection && previewHost) previewHost.appendChild(flavorSection);
-  const photoReference = document.getElementById('flavor-reference');
-  const photoImg = document.getElementById('flavor-photo');
-  if (photoReference && photoImg) {
-    const randIdx = Math.floor(Math.random() * 6) + 1;
-    photoReference.classList.remove('show');
-    photoImg.src = '/static/photo/' + randIdx + '.png';
-    const revealPhoto = function() {
-      requestAnimationFrame(function() {
-        requestAnimationFrame(function() {
-          photoReference.classList.add('show');
-        });
-      });
-    };
-    photoImg.onload = function() {
-      photoImg.onload = null;
-      revealPhoto();
-    };
-    if (photoImg.complete) {
-      photoImg.onload = null;
-      revealPhoto();
-    }
-  }
+  updateComposition();
   resetRecommendationInsight();
   document.getElementById('receipt-wrapper').classList.remove('visible');
   document.getElementById('save-result-button').classList.remove('visible');
@@ -1364,7 +1519,8 @@ function onEmotionChange(emotion, controlJson) {
   if (hasFormalRecommendation(controlJson)) {
     const d = drinkFromControl(controlJson, emotion);
     currentDrink = d;
-    setFlavorValues(d.flavor, false);
+    recommendedFlavorValues = {...d.flavor};
+    resetCustomization();
     prepareRecommendationPreview(controlJson);
   } else {
     currentDrink = null;
@@ -1505,8 +1661,7 @@ function resetFlavorPanels(){
   var previewHost=document.getElementById('preview-flavor-host');
   if(flavorSection&&previewHost)previewHost.appendChild(flavorSection);
   if(flavorSection)flavorSection.classList.remove('visible');
-  var photoReference=document.getElementById('flavor-reference');
-  if(photoReference)photoReference.classList.remove('show');
+  closeCustomization();
   document.getElementById('receipt-wrapper').classList.remove('visible');
   resetRecommendationInsight();
 }
@@ -1517,9 +1672,24 @@ document.addEventListener("keydown",function(e){if(e.target.tagName==="INPUT"||e
 // ============ 初始化 ============
 document.addEventListener("DOMContentLoaded", function(){
   I();
+  document.querySelectorAll('.spec-option').forEach(function(button) {
+    button.addEventListener('click', function() {
+      const group = button.closest('.spec-group');
+      pendingCustomization[group.dataset.specGroup] = button.dataset.specValue;
+      syncCustomizationControls();
+    });
+  });
+  const modal = document.getElementById('customization-modal');
+  modal.addEventListener('click', function(event) {
+    if (event.target === modal) closeCustomization();
+  });
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && modal.classList.contains('open')) closeCustomization();
+  });
   // 初始化风味数据但不显示六维图，等用户选择情绪后才出现
-  setFlavorValues(DRINK_DB["清醒"].flavor, false);
   currentDrink = DRINK_DB["清醒"];
+  recommendedFlavorValues = {...DRINK_DB["清醒"].flavor};
+  resetCustomization();
   enterConversationMode();
 });
 </script>

@@ -93,18 +93,29 @@ class FrontendFlowTests(unittest.TestCase):
         self.assertIsNotNone(preview)
         self.assertIn("renderFlavorChart(true)", preview.group(0))
 
-    def test_random_reference_photo_has_disclaimer(self):
-        self.assertIn('id="flavor-photo"', self.html)
-        self.assertIn('id="flavor-photo-note">图片仅供参考', self.html)
-        self.assertIn("Math.floor(Math.random() * 6) + 1", self.html)
-        self.assertIn("'/static/photo/' + randIdx + '.png'", self.html)
+    def test_composition_visual_replaces_random_reference_photo(self):
+        self.assertIn('id="drink-composition"', self.html)
+        self.assertIn('id="composition-caption">饮品构成示意', self.html)
+        self.assertNotIn('id="flavor-photo"', self.html)
+        self.assertNotIn("Math.floor(Math.random() * 6) + 1", self.html)
+        self.assertNotIn("'/static/photo/' + randIdx + '.png'", self.html)
 
-    def test_all_six_reference_photos_exist(self):
-        photo_dir = INDEX.parent / "photo"
-        self.assertEqual(
-            [path.name for path in sorted(photo_dir.glob("*.png"))],
-            [f"{index}.png" for index in range(1, 7)],
-        )
+    def test_flavor_chart_is_read_only(self):
+        self.assertNotIn("onDotMouseDown", self.html)
+        self.assertNotIn("onDotTouchStart", self.html)
+        self.assertNotIn("onSvgClick", self.html)
+        self.assertNotIn("updateFlavorFromMouse", self.html)
+
+    def test_preview_opens_grouped_specification_editor(self):
+        self.assertIn('id="btnCustomize"', self.html)
+        self.assertIn('onclick="openCustomization()">调整规格', self.html)
+        self.assertIn('id="customization-modal"', self.html)
+        self.assertIn('id="customization-summary"', self.html)
+        self.assertIn('data-spec-group="口感"', self.html)
+        self.assertIn('data-spec-group="温度"', self.html)
+        self.assertIn('data-spec-group="甜度"', self.html)
+        self.assertIn('onclick="closeCustomization()">取消', self.html)
+        self.assertIn('onclick="confirmCustomization()">确认调整', self.html)
 
 
 if __name__ == "__main__":
