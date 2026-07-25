@@ -47,13 +47,13 @@
     "taxonomy": "nrc_emolex_8",
     "scores": {
       "anger": 0.00,
-      "anticipation": 0.10,
+      "anticipation": 0.25,
       "disgust": 0.00,
-      "fear": 0.55,
+      "fear": 0.75,
       "joy": 0.00,
-      "sadness": 0.25,
+      "sadness": 0.00,
       "surprise": 0.00,
-      "trust": 0.10
+      "trust": 0.00
     },
     "primary_emotion": "fear",
     "confidence": 0.82,
@@ -77,6 +77,7 @@
 - `primary_emotion` 必须是八个固定英文键之一，并对应最高分；并列时由当前原话证据更直接的一项优先。
 - `evidence.quote` 必须能在本轮用户原话或当前会话历史中找到，不允许引用长期 profile。
 - `evidence.emotions` 中的值只能是八个固定英文键。
+- 每一个分数大于零的情绪都必须至少出现在一项 `evidence.emotions` 中。
 - 证据不足时 `confidence` 必须降低，`clarification_needed` 设为 `true`。
 
 ## 5. 与现有字段兼容
