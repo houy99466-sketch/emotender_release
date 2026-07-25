@@ -878,6 +878,546 @@
   body[data-theme="light-beverage"] #save-result-button {
     background:var(--surface); color:var(--teal); border-color:#acd2cc;
   }
+
+  /* ===== Editorial beverage journal theme ===== */
+  body[data-theme="light-beverage"] {
+    --canvas:#f3f6f2;
+    --surface:#fbfcfa;
+    --surface-muted:#e8efec;
+    --text:#123a36;
+    --text-strong:#0c302d;
+    --text-muted:#617772;
+    --line:#cad8d3;
+    --line-strong:#9eb7b0;
+    --accent:#e36549;
+    --accent-deep:#b94833;
+    --teal:#177c75;
+    --paper:#f8faf7;
+    --shadow-soft:0 18px 48px rgba(24,65,59,0.07);
+    display:flex;
+    align-items:stretch;
+    gap:0;
+    min-height:100dvh;
+    padding:0 0 146px;
+    background-color:var(--canvas);
+    background-image:
+      linear-gradient(rgba(18,58,54,0.018) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(18,58,54,0.012) 1px,transparent 1px);
+    background-size:32px 32px;
+    color:var(--text);
+    font-family:'PingFang SC','Microsoft YaHei','Noto Sans CJK SC',sans-serif;
+  }
+
+  #editorial-header {
+    position:relative;
+    width:min(1120px,calc(100% - 64px));
+    min-height:142px;
+    margin:0 auto 34px;
+    padding:34px 0 22px;
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:28px;
+    border-bottom:1px solid var(--line-strong);
+  }
+  .editorial-brand { display:flex; flex-direction:column; gap:5px; }
+  .editorial-brand strong {
+    color:var(--text-strong);
+    font-family:'Songti SC','STSong','Noto Serif CJK SC',SimSun,serif;
+    font-size:38px;
+    font-weight:700;
+    line-height:1.12;
+    letter-spacing:0;
+  }
+  .editorial-brand span,
+  .editorial-index {
+    color:var(--teal);
+    font-family:'Courier New',monospace;
+    font-size:11px;
+    line-height:1.4;
+    letter-spacing:0.12em;
+  }
+  .editorial-index { color:var(--accent); text-align:right; }
+
+  body[data-theme="light-beverage"] #account-panel {
+    position:absolute;
+    top:34px;
+    left:auto;
+    right:max(92px,calc((100vw - 1120px)/2 + 58px));
+    z-index:50;
+    gap:6px;
+  }
+  body[data-theme="light-beverage"] #username-input,
+  body[data-theme="light-beverage"] #account-panel button,
+  body[data-theme="light-beverage"] #help-button {
+    min-height:44px;
+    height:44px;
+    border:1px solid var(--line);
+    border-radius:0;
+    background:rgba(248,250,247,0.96);
+    box-shadow:none;
+    color:var(--text);
+    font-family:'PingFang SC','Microsoft YaHei',sans-serif;
+    transition:background-color 180ms ease,border-color 180ms ease,color 180ms ease;
+  }
+  body[data-theme="light-beverage"] #username-input {
+    width:132px;
+    padding:0 12px;
+    font-size:13px;
+  }
+  body[data-theme="light-beverage"] #account-panel button {
+    min-width:52px;
+    padding:0 12px;
+    font-size:12px;
+  }
+  body[data-theme="light-beverage"] #help-button {
+    position:absolute;
+    top:34px;
+    right:max(32px,calc((100vw - 1120px)/2));
+    width:44px;
+    padding:0 !important;
+    border-radius:50%;
+    color:var(--text-strong);
+    font-family:'Courier New',monospace;
+    font-size:20px !important;
+  }
+  body[data-theme="light-beverage"] #account-panel button:hover,
+  body[data-theme="light-beverage"] #help-button:hover {
+    background:var(--surface-muted);
+    border-color:var(--line-strong);
+  }
+  body[data-theme="light-beverage"] #help-popover {
+    position:absolute;
+    top:86px;
+    right:max(32px,calc((100vw - 1120px)/2));
+    width:min(360px,calc(100vw - 40px));
+    padding:20px 22px;
+    border:1px solid var(--line-strong);
+    border-radius:0;
+    background:rgba(251,252,250,0.98);
+    color:var(--text);
+    box-shadow:var(--shadow-soft);
+    font-family:'Songti SC','STSong','Noto Serif CJK SC',SimSun,serif;
+    font-size:14px;
+    line-height:1.85;
+  }
+
+  body[data-theme="light-beverage"] .app-view {
+    position:relative;
+    width:min(760px,calc(100% - 40px));
+    margin:0 auto;
+  }
+  body[data-theme="light-beverage"] #conversation-view {
+    width:min(760px,calc(100% - 40px));
+    gap:22px;
+    padding:0;
+  }
+  body[data-theme="light-beverage"] #conversation-view::before {
+    content:'01  /  CONVERSATION';
+    align-self:stretch;
+    padding-bottom:13px;
+    border-bottom:1px solid var(--line);
+    color:var(--accent);
+    font-family:'Courier New',monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+  }
+
+  body[data-theme="light-beverage"] #crt-screen {
+    width:320px !important;
+    height:320px !important;
+    border:0;
+    border-radius:0;
+    background-color:transparent !important;
+    box-shadow:none;
+  }
+  body[data-theme="light-beverage"] #crt-screen::after { opacity:0.08; border-radius:0; }
+  body[data-theme="light-beverage"] #crt-screen::before { inset:14px; border-radius:0; }
+  body[data-theme="light-beverage"] #face-state-label {
+    bottom:8px;
+    color:var(--neon-color);
+    font-size:10px;
+    opacity:0.62;
+  }
+
+  body[data-theme="light-beverage"] #conversation-panel {
+    width:100%;
+    max-width:none;
+    min-height:154px;
+    max-height:360px;
+    padding:24px 0 30px;
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    overflow-y:auto;
+  }
+  body[data-theme="light-beverage"] #conversation-list { gap:22px; }
+  body[data-theme="light-beverage"] .chat-message { max-width:84%; gap:7px; }
+  body[data-theme="light-beverage"] .chat-role {
+    color:var(--teal);
+    font-family:'Courier New',monospace;
+    font-size:10px;
+    letter-spacing:0.12em;
+  }
+  body[data-theme="light-beverage"] .chat-text,
+  body[data-theme="light-beverage"] .chat-message.user .chat-text {
+    padding:14px 17px;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    color:var(--text-strong);
+    font-family:'Songti SC','STSong','Noto Serif CJK SC',SimSun,serif;
+    font-size:17px;
+    line-height:1.85;
+  }
+  body[data-theme="light-beverage"] .chat-message.user .chat-text {
+    background:var(--surface-muted);
+    border-right:2px solid var(--teal);
+  }
+  body[data-theme="light-beverage"] .chat-message.robot .chat-text {
+    padding-left:20px;
+    border-left:2px solid var(--accent);
+  }
+  body[data-theme="light-beverage"] #conversation-empty {
+    padding:24px;
+    color:var(--text-muted);
+    font-family:'Songti SC','STSong','Noto Serif CJK SC',SimSun,serif;
+    font-size:15px;
+    line-height:1.9;
+  }
+
+  body[data-theme="light-beverage"] #recommendation-entry,
+  body[data-theme="light-beverage"] #btnCustomize,
+  body[data-theme="light-beverage"] #btnConfirm {
+    min-height:46px;
+    padding:10px 24px;
+    border-radius:0;
+    background:var(--accent);
+    border-color:var(--accent);
+    box-shadow:none;
+    color:#fff;
+    font-family:'PingFang SC','Microsoft YaHei',sans-serif;
+    font-size:14px;
+    letter-spacing:0;
+  }
+  body[data-theme="light-beverage"] #recommendation-entry:hover,
+  body[data-theme="light-beverage"] #btnCustomize:hover,
+  body[data-theme="light-beverage"] #btnConfirm:hover {
+    background:var(--accent-deep);
+    border-color:var(--accent-deep);
+  }
+
+  body[data-theme="light-beverage"] #recommendation-preview {
+    width:min(760px,calc(100% - 40px));
+    gap:22px;
+    padding:0 0 38px;
+    align-items:stretch;
+  }
+  body[data-theme="light-beverage"] .preview-kicker,
+  body[data-theme="light-beverage"] .report-kicker,
+  body[data-theme="light-beverage"] .report-section-label,
+  body[data-theme="light-beverage"] .result-kicker {
+    color:var(--teal);
+    font-family:'Courier New',monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+  }
+  body[data-theme="light-beverage"] .preview-kicker {
+    padding-bottom:13px;
+    border-bottom:1px solid var(--line);
+  }
+  body[data-theme="light-beverage"] #preview-drink-name,
+  body[data-theme="light-beverage"] .report-title {
+    color:var(--text-strong);
+    font-family:'Songti SC','STSong','Noto Serif CJK SC',SimSun,serif;
+    font-weight:700;
+    letter-spacing:0;
+  }
+  body[data-theme="light-beverage"] #preview-drink-name {
+    font-size:48px;
+    line-height:1.15;
+  }
+  body[data-theme="light-beverage"] #preview-flavor-host,
+  body[data-theme="light-beverage"] #report-flavor-host { width:100%; }
+  body[data-theme="light-beverage"] #flavor-section {
+    width:100%;
+    gap:20px;
+    margin-top:0;
+  }
+  body[data-theme="light-beverage"] #flavor-chart-wrap {
+    width:min(420px,100%);
+    height:auto;
+    aspect-ratio:1;
+    margin:0;
+    border:1px solid var(--line);
+    border-radius:0;
+    background:rgba(251,252,250,0.72);
+    box-shadow:none;
+  }
+  body[data-theme="light-beverage"] #btnCustomize { align-self:center; }
+  body[data-theme="light-beverage"] #spec-preview-summary {
+    align-self:center;
+    max-width:520px;
+    color:var(--text-muted);
+    font-family:'Courier New','PingFang SC',monospace;
+    font-size:11px;
+    line-height:1.8;
+  }
+
+  body[data-theme="light-beverage"] #drink-composition,
+  body[data-theme="light-beverage"] #ambient-plan-option {
+    width:100%;
+    max-width:none;
+  }
+  body[data-theme="light-beverage"] #drink-composition {
+    padding:22px 0;
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    background:transparent;
+    box-shadow:none;
+  }
+  body[data-theme="light-beverage"] #composition-caption,
+  body[data-theme="light-beverage"] #composition-drink-name { color:var(--text-strong); }
+  body[data-theme="light-beverage"] #composition-preview-mark { color:var(--accent); }
+  body[data-theme="light-beverage"] .composition-cup { border-color:var(--line-strong); background:var(--paper); }
+  body[data-theme="light-beverage"] #ambient-plan-option {
+    min-height:72px;
+    padding:14px 0;
+    border-bottom:1px solid var(--line);
+  }
+  body[data-theme="light-beverage"] #ambient-plan-option strong { color:var(--text-strong); font-size:14px; }
+  body[data-theme="light-beverage"] #ambient-plan-option small { color:var(--text-muted); font-size:11px; }
+  body[data-theme="light-beverage"] #ambient-plan-toggle { width:48px; height:28px; border-radius:14px; }
+  body[data-theme="light-beverage"] #ambient-plan-toggle::after { width:20px; height:20px; }
+  body[data-theme="light-beverage"] #ambient-plan-toggle:checked::after { transform:translateX(20px); }
+
+  body[data-theme="light-beverage"] .view-actions { justify-content:flex-start; gap:10px; }
+  body[data-theme="light-beverage"] .view-actions button,
+  body[data-theme="light-beverage"] #save-result-button {
+    min-height:44px;
+    padding:9px 20px;
+    border-radius:0;
+    background:var(--surface);
+    border:1px solid var(--line-strong);
+    box-shadow:none;
+    color:var(--text-strong);
+    font-family:'PingFang SC','Microsoft YaHei',sans-serif;
+    font-size:13px;
+  }
+  body[data-theme="light-beverage"] #btnConfirm { color:#fff; background:var(--accent); border-color:var(--accent); }
+
+  body[data-theme="light-beverage"] #final-report {
+    width:min(760px,calc(100% - 40px));
+    gap:0;
+    padding:0 0 48px;
+    align-items:stretch;
+    background:transparent;
+  }
+  body[data-theme="light-beverage"] .report-header {
+    padding:0 0 28px;
+    text-align:left;
+    border-bottom:1px solid var(--line-strong);
+  }
+  body[data-theme="light-beverage"] .report-title { font-size:44px; line-height:1.16; }
+  body[data-theme="light-beverage"] .report-subtitle {
+    margin-top:8px;
+    color:var(--teal);
+    font-family:'Courier New',monospace;
+    font-size:10px;
+    letter-spacing:0.14em;
+  }
+  body[data-theme="light-beverage"] #report-face-block {
+    gap:12px;
+    padding:28px 0 34px;
+    border-bottom:1px solid var(--line);
+  }
+  body[data-theme="light-beverage"] #report-face-image {
+    width:220px;
+    height:220px;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    box-shadow:none;
+  }
+  body[data-theme="light-beverage"] #report-face-emotion {
+    color:var(--teal);
+    font-family:'Courier New',monospace;
+    font-size:11px;
+    letter-spacing:0.12em;
+  }
+  body[data-theme="light-beverage"] .report-block {
+    width:100%;
+    padding:30px 0 36px;
+    border-top:0;
+    border-bottom:1px solid var(--line);
+  }
+  body[data-theme="light-beverage"] .report-section-label { margin-bottom:24px; color:var(--accent); }
+  body[data-theme="light-beverage"] #emotion-section { max-width:none; align-items:stretch; }
+  body[data-theme="light-beverage"] #emotion-chart-wrap { max-width:640px; margin:0 auto; }
+  body[data-theme="light-beverage"] #recommendation-reason-section {
+    max-width:none;
+    padding:0 0 0 22px;
+    border-left:2px solid var(--accent);
+    background:transparent;
+  }
+  body[data-theme="light-beverage"] #recommendation-reason {
+    color:var(--text-strong);
+    font-family:'Songti SC','STSong','Noto Serif CJK SC',SimSun,serif;
+    font-size:18px;
+    line-height:2;
+  }
+  body[data-theme="light-beverage"] .ambient-device {
+    grid-template-columns:140px 1fr;
+    padding:16px 0;
+    border-color:var(--line);
+  }
+  body[data-theme="light-beverage"] .ambient-device-name { color:var(--teal); }
+  body[data-theme="light-beverage"] .ambient-device-value { color:var(--text-strong); }
+  body[data-theme="light-beverage"] #receipt-wrapper { max-width:520px; margin:0 auto; }
+  body[data-theme="light-beverage"] #receipt {
+    border:1px solid #d8cab4;
+    border-radius:0;
+    background-color:#f3eadc;
+    box-shadow:0 20px 50px rgba(74,58,38,0.12);
+  }
+
+  body[data-theme="light-beverage"] #customization-modal {
+    background:rgba(18,48,45,0.52);
+    backdrop-filter:blur(8px);
+  }
+  body[data-theme="light-beverage"] .customization-sheet {
+    border:1px solid var(--line-strong);
+    border-radius:0;
+    background:var(--paper);
+    box-shadow:0 28px 80px rgba(18,48,45,0.24);
+  }
+  body[data-theme="light-beverage"] .customization-header,
+  body[data-theme="light-beverage"] .customization-actions { background:var(--paper); border-color:var(--line); }
+  body[data-theme="light-beverage"] .customization-title {
+    color:var(--text-strong);
+    font-family:'Songti SC','STSong','Noto Serif CJK SC',SimSun,serif;
+    font-size:28px;
+  }
+  body[data-theme="light-beverage"] .spec-option { border-radius:0; background:#edf1ee; }
+  body[data-theme="light-beverage"] .spec-option.selected {
+    border-color:var(--accent);
+    background:#fff4ef;
+    color:var(--accent-deep);
+  }
+  body[data-theme="light-beverage"] .customization-summary-wrap { background:#edf1ee; border-color:var(--line); }
+  body[data-theme="light-beverage"] .customization-actions button { border-radius:0; }
+  body[data-theme="light-beverage"] .customization-confirm { border-color:var(--accent); background:var(--accent); }
+
+  body[data-theme="light-beverage"] #interaction-dock {
+    padding:12px 20px max(14px,env(safe-area-inset-bottom));
+    gap:10px;
+    border-top:1px solid var(--line-strong);
+    background:rgba(243,246,242,0.96);
+    box-shadow:0 -12px 32px rgba(24,65,59,0.06);
+    backdrop-filter:blur(12px);
+  }
+  body[data-theme="light-beverage"] #manual-input {
+    width:min(760px,calc(100vw - 40px));
+    min-height:48px;
+    height:48px;
+    padding:0 16px;
+    border:1px solid var(--line-strong);
+    border-radius:0;
+    background:var(--surface);
+    color:var(--text-strong);
+    font-family:'Songti SC','STSong','Noto Serif CJK SC',SimSun,serif;
+    font-size:16px;
+    text-align:left;
+  }
+  body[data-theme="light-beverage"] #control-bar button,
+  body[data-theme="light-beverage"] #collapsed-control-bar button {
+    min-height:44px;
+    padding:8px 16px;
+    border:1px solid var(--line-strong);
+    border-radius:0;
+    background:var(--surface);
+    color:var(--text);
+    font-family:'PingFang SC','Microsoft YaHei',sans-serif;
+    font-size:12px;
+    letter-spacing:0;
+    text-transform:none;
+  }
+  body[data-theme="light-beverage"] #btnSend { background:var(--accent); border-color:var(--accent); color:#fff; }
+  body[data-theme="light-beverage"] #btnStart { color:var(--teal); border-color:var(--line-strong); }
+  body[data-theme="light-beverage"] #status-line { color:var(--teal); }
+
+  body[data-theme="light-beverage"] button:focus-visible,
+  body[data-theme="light-beverage"] input:focus-visible {
+    outline:3px solid rgba(23,124,117,0.28);
+    outline-offset:2px;
+  }
+  body[data-theme="light-beverage"] button:active { opacity:0.76; }
+
+  @media (max-width:767px) {
+    body[data-theme="light-beverage"] { padding-bottom:210px; }
+    #editorial-header {
+      width:calc(100% - 40px);
+      min-height:166px;
+      margin-bottom:24px;
+      padding:24px 0 18px;
+      align-items:flex-start;
+    }
+    .editorial-brand strong { font-size:31px; }
+    .editorial-brand span { max-width:180px; font-size:9px; line-height:1.6; }
+    .editorial-index { display:none; }
+    body[data-theme="light-beverage"] #account-panel {
+      position:absolute;
+      top:99px;
+      left:20px;
+      right:auto;
+      max-width:calc(100% - 40px);
+    }
+    body[data-theme="light-beverage"] #username-input { width:min(118px,30vw); }
+    body[data-theme="light-beverage"] #account-panel button { min-width:48px; padding:0 9px; }
+    body[data-theme="light-beverage"] #help-button { top:24px; right:20px; }
+    body[data-theme="light-beverage"] #help-popover { top:78px; right:20px; }
+    body[data-theme="light-beverage"] .app-view,
+    body[data-theme="light-beverage"] #conversation-view,
+    body[data-theme="light-beverage"] #recommendation-preview,
+    body[data-theme="light-beverage"] #final-report { width:calc(100% - 40px); }
+    body[data-theme="light-beverage"] #crt-screen { width:272px !important; height:272px !important; }
+    body[data-theme="light-beverage"] #conversation-panel { max-height:360px; padding:20px 0 24px; }
+    body[data-theme="light-beverage"] .chat-message { max-width:94%; }
+    body[data-theme="light-beverage"] .chat-text,
+    body[data-theme="light-beverage"] .chat-message.user .chat-text { font-size:16px; }
+    body[data-theme="light-beverage"] #preview-drink-name { font-size:38px; }
+    body[data-theme="light-beverage"] #flavor-chart-wrap { width:min(320px,100%); }
+    body[data-theme="light-beverage"] .composition-body { align-items:flex-start; }
+    body[data-theme="light-beverage"] .report-title { font-size:36px; }
+    body[data-theme="light-beverage"] #report-face-image { width:180px; height:180px; }
+    body[data-theme="light-beverage"] #emotion-chart-wrap { min-height:250px; }
+    body[data-theme="light-beverage"] #recommendation-reason { font-size:17px; }
+    body[data-theme="light-beverage"] .ambient-device { grid-template-columns:1fr; gap:7px; }
+    body[data-theme="light-beverage"] #receipt { padding:24px 20px 22px; }
+    body[data-theme="light-beverage"] #customization-modal { align-items:flex-end; }
+    body[data-theme="light-beverage"] .customization-sheet { border-left:0; border-right:0; border-bottom:0; border-radius:0; }
+    body[data-theme="light-beverage"] #interaction-dock { align-items:stretch; }
+    body[data-theme="light-beverage"] #manual-input { width:100%; }
+    body[data-theme="light-beverage"] #control-bar { display:grid; grid-template-columns:1fr 1fr 1fr; width:100%; }
+    body[data-theme="light-beverage"] #control-bar button { width:100%; padding:8px 7px; }
+    body[data-theme="light-beverage"] #status-line { grid-column:1 / -1; grid-row:2; }
+  }
+
+  @media (min-width:768px) and (max-width:1100px) {
+    #editorial-header { width:calc(100% - 64px); }
+    body[data-theme="light-beverage"] #account-panel { right:92px; }
+    body[data-theme="light-beverage"] #help-button,
+    body[data-theme="light-beverage"] #help-popover { right:32px; }
+  }
+
+  @media (prefers-reduced-motion:reduce) {
+    *,*::before,*::after {
+      scroll-behavior:auto !important;
+      animation-duration:0.01ms !important;
+      animation-iteration-count:1 !important;
+      transition-duration:0.01ms !important;
+    }
+  }
 </style>
 </head>
 <body data-theme="light-beverage">
@@ -891,6 +1431,14 @@
 <div id="help-popover">
   你可以直接和 EmoTender 对话。系统会根据你的表达分析情绪，并生成适合此刻状态的饮品建议。登录用户名后，系统会建立你的个人偏好数据库，用于记住口味、情绪变化和过往饮品体验，让之后的推荐更贴近你。不登录也可以使用，但不会保存长期记忆。
 </div>
+
+<header id="editorial-header" aria-label="EmoTender 品牌信息">
+  <div class="editorial-brand">
+    <strong>此刻一杯</strong>
+    <span>EMOTEND · PERSONAL BEVERAGE</span>
+  </div>
+  <div class="editorial-index" aria-hidden="true">JOURNAL 01 / EMOTIONAL POUR</div>
+</header>
 
 <main id="conversation-view" class="app-view active">
 <!-- ===== CRT 表情屏幕 ===== -->
