@@ -59,7 +59,8 @@ class FrontendFlowTests(unittest.TestCase):
             "01 / EMOTION MIX",
             "02 / WHY THIS POUR",
             "03 / FLAVOR PROFILE",
-            "04 / YOUR RECEIPT",
+            "04 / SPACE SETTING",
+            "05 / YOUR RECEIPT",
         ):
             self.assertIn(label, markup)
 
@@ -145,6 +146,38 @@ class FrontendFlowTests(unittest.TestCase):
         self.assertIn('data-spec-group="甜度"', self.html)
         self.assertIn('onclick="closeCustomization()">取消', self.html)
         self.assertIn('onclick="confirmCustomization()">确认调整', self.html)
+
+    def test_ambient_opt_in_sits_before_confirmation(self):
+        preview = self.html[
+            self.html.find('<section id="recommendation-preview"'):
+            self.html.find('<div id="customization-modal"')
+        ]
+        self.assertIn('id="ambient-plan-toggle"', preview)
+        self.assertLess(
+            preview.find('id="ambient-plan-toggle"'),
+            preview.find('id="btnConfirm"'),
+        )
+        self.assertIn("仅生成建议，不会实际控制设备", preview)
+
+    def test_final_report_has_optional_ambient_section(self):
+        self.assertIn('id="ambient-plan-section"', self.html)
+        self.assertIn('id="ambient-air-conditioner"', self.html)
+        self.assertIn('id="ambient-light"', self.html)
+        self.assertIn('id="ambient-air-purifier"', self.html)
+        self.assertIn("C('/api/ambient/plan'", self.html)
+
+    def test_emotion_pie_supports_nrc_labels(self):
+        for label in (
+            "愤怒",
+            "期待",
+            "厌恶",
+            "恐惧",
+            "喜悦",
+            "悲伤",
+            "惊讶",
+            "信任",
+        ):
+            self.assertIn(f'"{label}"', self.html)
 
 
 if __name__ == "__main__":

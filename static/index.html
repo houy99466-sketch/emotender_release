@@ -481,6 +481,38 @@
     color:rgba(216,207,191,0.58); font-size:11px; line-height:1.5;
   }
 
+  #ambient-plan-option {
+    width:min(360px,calc(100vw - 48px)); display:flex; align-items:center;
+    justify-content:space-between; gap:20px; padding:15px 2px;
+    border-bottom:1px solid rgba(200,170,120,0.18); cursor:pointer;
+  }
+  #ambient-plan-option span { display:flex; flex-direction:column; gap:4px; }
+  #ambient-plan-option strong { color:rgba(230,214,188,0.82); font-size:12px; font-weight:500; }
+  #ambient-plan-option small { color:rgba(216,207,191,0.52); font-size:10px; line-height:1.5; }
+  #ambient-plan-toggle {
+    appearance:none; -webkit-appearance:none; width:44px; height:24px; flex:0 0 auto;
+    margin:0; border:1px solid rgba(200,170,120,0.34); border-radius:12px;
+    background:rgba(200,170,120,0.08); cursor:pointer; position:relative;
+    transition:background 0.2s ease,border-color 0.2s ease;
+  }
+  #ambient-plan-toggle::after {
+    content:''; position:absolute; top:3px; left:3px; width:16px; height:16px;
+    border-radius:50%; background:rgba(220,205,181,0.72); transition:transform 0.2s ease;
+  }
+  #ambient-plan-toggle:checked { background:#2d8f88; border-color:#2d8f88; }
+  #ambient-plan-toggle:checked::after { transform:translateX(20px); background:#fff; }
+
+  .ambient-device-grid { display:grid; grid-template-columns:1fr; }
+  .ambient-device {
+    display:grid; grid-template-columns:120px 1fr; gap:14px; align-items:start;
+    padding:14px 0; border-bottom:1px solid rgba(200,170,120,0.16);
+  }
+  .ambient-device:last-child { border-bottom:0; }
+  .ambient-device-name { color:rgba(220,198,164,0.78); font-size:11px; }
+  .ambient-device-value { color:rgba(238,230,215,0.9); font-size:13px; line-height:1.5; }
+  .ambient-device-reason { margin-top:4px; color:rgba(216,207,191,0.52); font-size:10px; line-height:1.6; }
+  #ambient-plan-disclaimer { margin-top:12px; color:rgba(216,207,191,0.46); font-size:9px; }
+
   /* ===== 规格编辑弹窗 ===== */
   #customization-modal {
     position:fixed; inset:0; z-index:100; display:none;
@@ -797,6 +829,14 @@
   body[data-theme="light-beverage"] #composition-preview-mark { color:var(--accent); }
   body[data-theme="light-beverage"] .composition-detail { color:var(--text-muted); }
   body[data-theme="light-beverage"] .composition-cup { border-color:#9eb4af; background:#f7faf9; }
+  body[data-theme="light-beverage"] #ambient-plan-option { border-color:var(--line); }
+  body[data-theme="light-beverage"] #ambient-plan-option strong,
+  body[data-theme="light-beverage"] .ambient-device-value { color:var(--text); }
+  body[data-theme="light-beverage"] #ambient-plan-option small,
+  body[data-theme="light-beverage"] .ambient-device-reason,
+  body[data-theme="light-beverage"] #ambient-plan-disclaimer { color:var(--text-muted); }
+  body[data-theme="light-beverage"] .ambient-device { border-color:var(--line); }
+  body[data-theme="light-beverage"] .ambient-device-name { color:var(--teal); }
   body[data-theme="light-beverage"] #interaction-dock {
     background:rgba(255,255,255,0.94); border-color:var(--line);
     box-shadow:0 -8px 28px rgba(35,58,53,0.07);
@@ -972,6 +1012,13 @@
       </div>
     </div>
   </div>
+  <label id="ambient-plan-option">
+    <span>
+      <strong>同步生成空间氛围方案</strong>
+      <small>仅生成建议，不会实际控制设备</small>
+    </span>
+    <input id="ambient-plan-toggle" type="checkbox" aria-label="同步生成空间氛围方案">
+  </label>
   <div class="view-actions">
     <button id="btnConfirm" onclick="confirmFlavor()">确认方案</button>
   </div>
@@ -1055,8 +1102,18 @@
     <div id="report-flavor-host"></div>
   </div>
 
+  <div class="report-block" id="ambient-plan-section" hidden>
+    <div class="report-section-label">04 / SPACE SETTING</div>
+    <div class="ambient-device-grid">
+      <section class="ambient-device" id="ambient-air-conditioner"></section>
+      <section class="ambient-device" id="ambient-light"></section>
+      <section class="ambient-device" id="ambient-air-purifier"></section>
+    </div>
+    <div id="ambient-plan-disclaimer"></div>
+  </div>
+
   <div class="report-block receipt-report-block">
-    <div class="report-section-label">04 / YOUR RECEIPT</div>
+    <div class="report-section-label">05 / YOUR RECEIPT</div>
     <div id="receipt-wrapper">
       <div id="receipt">
         <div class="drink-name" id="receipt-drink-name">—</div>
@@ -1320,7 +1377,15 @@ const EMOTION_COLORS = {
   "难过":"#c8bbe0",
   "疲惫":"#f2da90",
   "焦虑":"#e8a8a0",
-  "犹豫":"#a8d8a0"
+  "犹豫":"#a8d8a0",
+  "愤怒":"#d65a4a",
+  "期待":"#d69b3c",
+  "厌恶":"#6f8f5f",
+  "恐惧":"#7766a8",
+  "喜悦":"#e6b84f",
+  "悲伤":"#5f88b5",
+  "惊讶":"#df7f53",
+  "信任":"#4f9b88"
 };
 
 function svgNode(name, attrs) {
@@ -1540,6 +1605,65 @@ function returnToRecommendationPreview() {
   enterRecommendationPreview(currentControlJson);
 }
 
+async function resolveAmbientPlan() {
+  const toggle = document.getElementById('ambient-plan-toggle');
+  if (!toggle || !toggle.checked || !currentControlJson || !currentControlJson.emotion_assessment) {
+    return {enabled:false};
+  }
+  const response = await C('/api/ambient/plan', {
+    emotion_assessment: currentControlJson.emotion_assessment
+  });
+  return response.ambient_plan;
+}
+
+function fillAmbientDevice(id, name, value, reason) {
+  const host = document.getElementById(id);
+  if (!host) return;
+  host.replaceChildren();
+  const label = document.createElement('div');
+  label.className = 'ambient-device-name';
+  label.textContent = name;
+  const content = document.createElement('div');
+  const setting = document.createElement('div');
+  setting.className = 'ambient-device-value';
+  setting.textContent = value;
+  const explanation = document.createElement('div');
+  explanation.className = 'ambient-device-reason';
+  explanation.textContent = reason || '';
+  content.appendChild(setting);
+  content.appendChild(explanation);
+  host.appendChild(label);
+  host.appendChild(content);
+}
+
+function renderAmbientPlan(plan) {
+  const section = document.getElementById('ambient-plan-section');
+  if (!section) return;
+  const enabled = !!(plan && plan.enabled);
+  section.hidden = !enabled;
+  if (!enabled) return;
+  const modeNames = {auto:'自动', silent:'静音', boost:'增强'};
+  fillAmbientDevice(
+    'ambient-air-conditioner',
+    '空调',
+    `${plan.air_conditioner.temperature_c}°C`,
+    plan.air_conditioner.reason
+  );
+  fillAmbientDevice(
+    'ambient-light',
+    '灯光',
+    `${plan.light.brightness_percent}% · ${plan.light.color_temperature_k}K`,
+    plan.light.reason
+  );
+  fillAmbientDevice(
+    'ambient-air-purifier',
+    '空气净化器',
+    modeNames[plan.air_purifier.mode] || plan.air_purifier.mode,
+    plan.air_purifier.reason
+  );
+  document.getElementById('ambient-plan-disclaimer').textContent = plan.disclaimer || '';
+}
+
 function enterFinalReport(faceSnapshot) {
   const faceImage = document.getElementById('report-face-image');
   const faceEmotion = document.getElementById('report-face-emotion');
@@ -1560,6 +1684,15 @@ function enterFinalReport(faceSnapshot) {
 // ============ 小票渲染与最终报告 ============
 async function confirmFlavor() {
   const d = currentDrink || DRINK_DB["清醒"];
+
+  let ambientPlan = {enabled:false};
+  try {
+    ambientPlan = await resolveAmbientPlan();
+  } catch (error) {
+    R("空间氛围方案未生成，本次饮品报告仍可正常查看。");
+  }
+  if (currentControlJson) currentControlJson.ambient_plan = ambientPlan;
+  renderAmbientPlan(ambientPlan);
 
   document.getElementById('receipt-drink-name').textContent = d.name;
   document.getElementById('receipt-drink-en').textContent = d.en || '';
@@ -1639,6 +1772,9 @@ function onEmotionChange(emotion, controlJson) {
     currentDrink = d;
     recommendedFlavorValues = {...d.flavor};
     resetCustomization();
+    const ambientToggle = document.getElementById('ambient-plan-toggle');
+    if (ambientToggle) ambientToggle.checked = false;
+    renderAmbientPlan({enabled:false});
     prepareRecommendationPreview(controlJson);
   } else {
     currentDrink = null;
@@ -1781,6 +1917,9 @@ function resetFlavorPanels(){
   if(flavorSection)flavorSection.classList.remove('visible');
   closeCustomization();
   document.getElementById('receipt-wrapper').classList.remove('visible');
+  var ambientToggle=document.getElementById('ambient-plan-toggle');
+  if(ambientToggle)ambientToggle.checked=false;
+  renderAmbientPlan({enabled:false});
   resetRecommendationInsight();
 }
 

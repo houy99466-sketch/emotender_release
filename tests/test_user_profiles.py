@@ -33,11 +33,37 @@ sys.modules.setdefault("funasr", fake_funasr)
 backend = importlib.import_module("emotender_backend")
 
 
+def emotion_assessment_for(text, primary="trust"):
+    scores = {emotion: 0.0 for emotion in backend.NRC_EMOTIONS}
+    scores[primary] = 1.0
+    return {
+        "taxonomy": "nrc_emolex_8",
+        "scores": scores,
+        "primary_emotion": primary,
+        "confidence": 0.8,
+        "evidence": [
+            {
+                "quote": text,
+                "emotions": [primary],
+                "interpretation": "测试输入中的明确情绪证据",
+            }
+        ],
+        "clarification_needed": False,
+    }
+
+
+def set_result_user_text(data, text, primary="trust"):
+    data["user_text"] = text
+    data["emotion_assessment"] = emotion_assessment_for(text, primary)
+    return data
+
+
 def base_result(turn_type="recommendation"):
     return {
         "schema_version": "1.0",
         "turn_type": turn_type,
         "user_text": "今天想喝点清爽的。",
+        "emotion_assessment": emotion_assessment_for("今天想喝点清爽的。"),
         "emotion_label": "清醒",
         "emotion_blend": [{"emotion": "清醒", "weight": 1.0, "source": "用户明确说想喝清爽一点的。"}],
         "complex_emotion": "用户表达稳定，需求明确。",
@@ -133,6 +159,7 @@ class UserProfileTests(unittest.TestCase):
 
     def test_recommendation_result_includes_drink_metadata_for_receipt(self):
         llm_result = base_result("recommendation")
+        set_result_user_text(llm_result, "推荐一杯清爽的。")
 
         with patch.object(backend, "analyze_text", return_value=llm_result):
             response = backend.process_user_text("推荐一杯清爽的。")
@@ -147,6 +174,7 @@ class UserProfileTests(unittest.TestCase):
 
     def test_bar_chat_result_has_no_drink_metadata(self):
         llm_result = base_result("bar_chat")
+        set_result_user_text(llm_result, "我今天心情不错。", "joy")
         llm_result["drink_name"] = backend.NO_FORMAL_DRINK_NAME
         llm_result["recipe_modules"] = []
         llm_result["flavor_profile"] = backend.NO_FORMAL_DRINK_NAME

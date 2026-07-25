@@ -24,6 +24,15 @@ from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
 from pydantic import BaseModel
 
+from emotender_emotion import (
+    NRC_EMOTIONS,
+    build_ambient_plan,
+    build_fallback_emotion_assessment,
+    build_target_flavor_vector,
+    derive_legacy_fields,
+    validate_emotion_assessment,
+)
+
 try:
     from funasr import AutoModel
 except ModuleNotFoundError:
@@ -45,6 +54,10 @@ class UserLoginRequest(BaseModel):
 
 class UserLogoutRequest(BaseModel):
     username: Optional[str] = None
+
+
+class AmbientPlanRequest(BaseModel):
+    emotion_assessment: dict
 
 BASE_DIR = Path(__file__).resolve().parent
 AUDIO_PATH = BASE_DIR / "recording.wav"
@@ -556,6 +569,7 @@ def update_conversation_state(data: dict) -> None:
         "action_sequence": data["action_sequence"],
         "bartender_line": data["bartender_line"],
         "feedback_prompt": data["feedback_prompt"],
+        "emotion_assessment": data["emotion_assessment"],
     }
 
     if data["turn_type"] == "recommendation":
@@ -627,7 +641,7 @@ def analyze_text(user_text: str, turn_type: str, profile_context: Optional[dict]
     emotion_trend = ""
     if len(emotion_history) >= 2:
         trend_labels = emotion_history[-3:] if len(emotion_history) >= 3 else emotion_history
-        emotion_trend = f"\n用户情绪变化趋势（最近{len(trend_labels)}轮）：{' → '.join(trend_labels)}。请根据趋势判断用户情绪走向，据此调整你的回应。"
+        emotion_trend = f"\n用户情绪变化趋势（最近{len(trend_labels)}轮）：{' → '.join(trend_labels)}。该趋势只能用于调整回应语气，不能作为本轮 NRC 评分证据。"
 
     prompt = f"""
 你是 EmoTender 情绪酒保的 AI 中控分析模块。
@@ -661,9 +675,21 @@ def analyze_text(user_text: str, turn_type: str, profile_context: Optional[dict]
 {json.dumps(prompt_profile_context, ensure_ascii=False, indent=2)}
 
 本轮情绪隔离规则：
-- emotion_label、emotion_blend、emotion_blend.source 和 complex_emotion 只能依据用户本轮原话与当前会话历史判断。
-- 不得根据用户长期 profile、历史会话摘要、上次来店时的情绪或过去发生的事件判断本轮情绪。
+- emotion_assessment、emotion_label、emotion_blend、emotion_blend.source 和 complex_emotion 只能依据用户本轮原话与当前会话历史判断。
+- 不得根据用户长期 profile、历史会话摘要、上次使用时的情绪或过去发生的事件判断本轮情绪。
 - 长期 profile 只能用于口味偏好、避忌、交流风格和历史饮品参考。
+
+NRC 八类情绪评估规则：
+- 唯一允许的情绪键为：{json.dumps(NRC_EMOTIONS, ensure_ascii=False)}。
+- emotion_assessment.taxonomy 必须是 "nrc_emolex_8"。
+- emotion_assessment.scores 必须包含全部八个键，每项范围 0.0 到 1.0，总和必须接近 1.0。
+- 必须先从当前会话提取原话证据，再为八类情绪评分。
+- primary_emotion 必须对应最高分。
+- evidence 每项必须包含 quote、emotions 和 interpretation；quote 必须逐字来自本轮原话或当前会话历史。
+- 每个分数大于零的情绪都必须至少出现在一项 evidence.emotions 中。
+- 用户明确自述优先；必须正确处理“不是”“没有”“并不”等否定表达，以及“但是”“不过”“同时”等转折或混合表达。
+- confidence 范围为 0.0 到 1.0；证据不足时降低 confidence，并将 clarification_needed 设为 true。
+- NRC 分数是情绪构成分数，不是医学诊断或心理学概率。
 
 这是 EmoTender 的 prompt 库，包含情绪维度、混合规则、配方模块、表情状态和动作序列：
 {json.dumps(prompt_library, ensure_ascii=False, indent=2)}
@@ -676,7 +702,7 @@ def analyze_text(user_text: str, turn_type: str, profile_context: Optional[dict]
 {blend_menu}
 
 必须输出这些字段：
-schema_version, turn_type, user_text, emotion_label, emotion_blend, complex_emotion,
+schema_version, turn_type, user_text, emotion_assessment, emotion_label, emotion_blend, complex_emotion,
 need_summary, drink_name, recipe_modules, flavor_profile, color_profile,
 face_state, bartender_line, action_sequence, feedback_prompt, recommendation_reason。
 
@@ -684,6 +710,7 @@ face_state, bartender_line, action_sequence, feedback_prompt, recommendation_rea
 - schema_version 必须是字符串，例如 "1.0"
 - turn_type 必须是字符串，例如 "initial_order"
 - user_text 必须是字符串
+- emotion_assessment 必须是对象，包含 taxonomy、scores、primary_emotion、confidence、evidence、clarification_needed
 - emotion_label 必须是字符串
 - complex_emotion 必须是字符串
 - need_summary 必须是字符串
@@ -737,7 +764,15 @@ face_state, bartender_line, action_sequence, feedback_prompt, recommendation_rea
                 timeout=30,
             )
             llm_content = response.choices[0].message.content
-            return extract_json(llm_content)
+            parsed = extract_json(llm_content)
+            validate_emotion_assessment(
+                parsed["emotion_assessment"],
+                [
+                    user_text,
+                    *(str(item.get("user_text", "")) for item in recent_history),
+                ],
+            )
+            return parsed
         except Exception as exc:
             last_error = exc
             if attempt < max_retries:
@@ -765,11 +800,27 @@ def normalize_result(data: dict) -> dict:
     return data
 
 
+def current_emotion_evidence_texts(user_text: str) -> list[str]:
+    return [
+        user_text,
+        *(str(item.get("user_text", "")) for item in get_recent_history()),
+    ]
+
+
+def apply_emotion_compatibility(data: dict) -> dict:
+    data.update(derive_legacy_fields(data["emotion_assessment"]))
+    data["target_flavor_vector"] = build_target_flavor_vector(
+        data["emotion_assessment"]["scores"]
+    )
+    return data
+
+
 def validate_result(data: dict) -> None:
     required_fields = [
         "schema_version",
         "turn_type",
         "user_text",
+        "emotion_assessment",
         "emotion_label",
         "complex_emotion",
         "need_summary",
@@ -883,11 +934,13 @@ def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
     闲聊/安全模式 -> 点亮【疲惫】gentle 表情，不推荐饮品。
     推荐模式     -> 点亮【清醒】focused 表情，推荐标志性"冷启动"。
     """
+    emotion_assessment = build_fallback_emotion_assessment(user_text)
     if turn_type in CHAT_ONLY_TURN_TYPES:
-        return {
+        result = {
             "schema_version": "1.0",
             "turn_type": turn_type,
             "user_text": user_text,
+            "emotion_assessment": emotion_assessment,
             "emotion_label": "疲惫",
             "emotion_blend": [
                 {"emotion": "疲惫", "weight": 1.0, "source": "系统无法完成本轮情绪分析。"}
@@ -904,11 +957,13 @@ def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
             "feedback_prompt": "你愿意的话，可以再说一点。",
             "recommendation_reason": NO_FORMAL_DRINK_NAME,
         }
+        return apply_emotion_compatibility(result)
 
-    return {
+    result = {
         "schema_version": "1.0",
         "turn_type": "recommendation",
         "user_text": user_text,
+        "emotion_assessment": emotion_assessment,
         "emotion_label": "清醒",
         "emotion_blend": [
             {"emotion": "清醒", "weight": 1.0, "source": "系统进入推荐 fallback。"}
@@ -928,6 +983,7 @@ def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
         "feedback_prompt": "喝完感觉清醒一点了吗？",
         "recommendation_reason": "这次分析没有完整返回，我先用一杯清爽低甜的冷启动接住这一轮。它不能替你解决正在面对的事情，但能让推荐流程保持完整。",
     }
+    return apply_emotion_compatibility(result)
 
 
 def build_robot_reply_text(control_json: dict) -> str:
@@ -957,6 +1013,11 @@ def process_user_text(user_text: str, username: Optional[str] = None) -> dict:
     try:
         result = analyze_text(user_text, turn_type_hint, profile_context)
         result = normalize_result(result)
+        validate_emotion_assessment(
+            result["emotion_assessment"],
+            current_emotion_evidence_texts(user_text),
+        )
+        result = apply_emotion_compatibility(result)
         if turn_type_hint == "safety":
             result["turn_type"] = "safety"
         elif result.get("turn_type") not in ALLOWED_TURN_TYPES:
@@ -964,6 +1025,8 @@ def process_user_text(user_text: str, username: Optional[str] = None) -> dict:
         result["user_text"] = user_text
         validate_result(result)
         result = enrich_result_with_drink_metadata(result)
+        if result["turn_type"] == "recommendation":
+            result["ambient_plan"] = {"enabled": False}
     except Exception as exc:
         used_fallback = True
         llm_error = str(exc)
@@ -971,6 +1034,8 @@ def process_user_text(user_text: str, username: Optional[str] = None) -> dict:
         result = fallback_result(user_text, turn_type_hint)
         validate_result(result)
         result = enrich_result_with_drink_metadata(result)
+        if result["turn_type"] == "recommendation":
+            result["ambient_plan"] = {"enabled": False}
 
     update_conversation_state(result)
 
@@ -1038,10 +1103,34 @@ def run_pipeline() -> dict:
     except RuntimeError as exc:
         if "silence_detected" in str(exc):
             logger.info("检测到静默录音，返回提示")
+            silence_assessment = {
+                "taxonomy": "nrc_emolex_8",
+                "scores": {
+                    "anger": 0.0,
+                    "anticipation": 0.0,
+                    "disgust": 0.0,
+                    "fear": 0.0,
+                    "joy": 0.0,
+                    "sadness": 0.0,
+                    "surprise": 0.0,
+                    "trust": 1.0,
+                },
+                "primary_emotion": "trust",
+                "confidence": 0.0,
+                "evidence": [
+                    {
+                        "quote": "本轮没有检测到有效语音。",
+                        "emotions": ["trust"],
+                        "interpretation": "没有足够的用户输入用于情绪判断",
+                    }
+                ],
+                "clarification_needed": True,
+            }
             silence_result = {
                 "schema_version": "1.0",
                 "turn_type": "bar_chat",
                 "user_text": "",
+                "emotion_assessment": silence_assessment,
                 "emotion_label": "清醒",
                 "emotion_blend": [{"emotion": "清醒", "weight": 1.0, "source": "本轮没有检测到有效语音。"}],
                 "complex_emotion": "未检测到有效语音。",
@@ -1055,6 +1144,9 @@ def run_pipeline() -> dict:
                 "action_sequence": "gesture_thinking",
                 "feedback_prompt": "",
                 "recommendation_reason": NO_FORMAL_DRINK_NAME,
+                "target_flavor_vector": build_target_flavor_vector(
+                    silence_assessment["scores"]
+                ),
                 "drink_metadata": None,
             }
             update_conversation_state(silence_result)
@@ -1094,6 +1186,26 @@ def analyze_text_api(payload: TextAnalyzeRequest):
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post("/api/ambient/plan")
+def ambient_plan_api(payload: AmbientPlanRequest):
+    try:
+        evidence = payload.emotion_assessment.get("evidence", [])
+        validate_emotion_assessment(
+            payload.emotion_assessment,
+            [
+                item.get("quote", "")
+                for item in evidence
+                if isinstance(item, dict)
+            ],
+        )
+        return {
+            "ok": True,
+            "ambient_plan": build_ambient_plan(payload.emotion_assessment),
+        }
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @app.post("/api/user/login")

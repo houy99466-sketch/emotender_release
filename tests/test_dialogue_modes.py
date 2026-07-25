@@ -32,11 +32,37 @@ sys.modules.setdefault("funasr", fake_funasr)
 backend = importlib.import_module("emotender_backend")
 
 
-def base_result(turn_type="recommendation"):
+def emotion_assessment_for(text, primary="sadness"):
+    scores = {emotion: 0.0 for emotion in backend.NRC_EMOTIONS}
+    scores[primary] = 1.0
     return {
+        "taxonomy": "nrc_emolex_8",
+        "scores": scores,
+        "primary_emotion": primary,
+        "confidence": 0.8,
+        "evidence": [
+            {
+                "quote": text,
+                "emotions": [primary],
+                "interpretation": "测试输入中的明确情绪证据",
+            }
+        ],
+        "clarification_needed": False,
+    }
+
+
+def set_result_user_text(data, text, primary="sadness"):
+    data["user_text"] = text
+    data["emotion_assessment"] = emotion_assessment_for(text, primary)
+    return data
+
+
+def base_result(turn_type="recommendation"):
+    data = {
         "schema_version": "1.0",
         "turn_type": turn_type,
         "user_text": "今天真的挺累的。",
+        "emotion_assessment": emotion_assessment_for("今天真的挺累的。"),
         "emotion_label": "疲惫",
         "emotion_blend": [{"emotion": "疲惫", "weight": 1.0, "source": "用户说今天真的挺累。"}],
         "complex_emotion": "用户处在低能量状态。",
@@ -51,6 +77,7 @@ def base_result(turn_type="recommendation"):
         "feedback_prompt": "喝完告诉我感受。",
         "recommendation_reason": "你今天真的挺累，这杯冷启动会用清爽低甜的口感陪你把节奏慢慢拉回来。",
     }
+    return data
 
 
 class DialogueModeTests(unittest.TestCase):
@@ -108,6 +135,7 @@ class DialogueModeTests(unittest.TestCase):
 
     def test_unknown_recommendation_drink_falls_back_with_receipt_metadata(self):
         llm_result = base_result("recommendation")
+        set_result_user_text(llm_result, "推荐一杯清爽一点的。")
         llm_result["drink_name"] = "不存在的饮品"
 
         with patch.object(backend, "analyze_text", return_value=llm_result):
@@ -158,7 +186,7 @@ class DialogueModeTests(unittest.TestCase):
 
     def test_process_user_text_returns_control_json_and_updates_memory(self):
         llm_result = base_result("recommendation")
-        llm_result["user_text"] = "我今天有点累，给我推荐一杯。"
+        set_result_user_text(llm_result, "我今天有点累，给我推荐一杯。")
 
         with patch.object(backend, "analyze_text", return_value=llm_result):
             response = backend.process_user_text("我今天有点累，给我推荐一杯。")
@@ -186,7 +214,7 @@ class DialogueModeTests(unittest.TestCase):
         backend.update_conversation_state(chat_turn)
 
         llm_result = base_result("recommendation")
-        llm_result["user_text"] = "好"
+        set_result_user_text(llm_result, "好", "trust")
 
         with patch.object(backend, "analyze_text", return_value=llm_result) as mocked:
             response = backend.process_user_text("好")
@@ -197,7 +225,7 @@ class DialogueModeTests(unittest.TestCase):
 
     def test_llm_turn_type_can_override_keyword_router_hint(self):
         llm_result = base_result("recommendation")
-        llm_result["user_text"] = "可以，你看着安排。"
+        set_result_user_text(llm_result, "可以，你看着安排。", "trust")
 
         with patch.object(backend, "route_turn_type", return_value="bar_chat"):
             with patch.object(backend, "analyze_text", return_value=llm_result) as mocked:
@@ -207,6 +235,54 @@ class DialogueModeTests(unittest.TestCase):
         self.assertEqual(response["turn_type"], "recommendation")
         self.assertEqual(response["control_json"]["turn_type"], "recommendation")
         self.assertEqual(response["control_json"]["drink_name"], "冷启动")
+
+    def test_validation_requires_nrc_assessment(self):
+        data = base_result("recommendation")
+        del data["emotion_assessment"]
+
+        with self.assertRaisesRegex(ValueError, "Missing field: emotion_assessment"):
+            backend.validate_result(data)
+
+    def test_process_user_text_derives_legacy_fields_from_nrc(self):
+        text = "明天就要答辩了，我脑子停不下来，推荐一杯。"
+        data = base_result("recommendation")
+        set_result_user_text(data, text, "fear")
+        data["emotion_label"] = "错误旧标签"
+        data["face_state"] = "happy"
+
+        with patch.object(backend, "analyze_text", return_value=data):
+            response = backend.process_user_text(text)
+
+        control = response["control_json"]
+        self.assertEqual(control["emotion_label"], "焦虑")
+        self.assertEqual(control["face_state"], "focused")
+        self.assertIn("target_flavor_vector", control)
+
+    def test_ambient_plan_api_returns_three_devices(self):
+        assessment = emotion_assessment_for("我有点担心明天的答辩。", "fear")
+
+        response = backend.ambient_plan_api(
+            backend.AmbientPlanRequest(emotion_assessment=assessment)
+        )
+
+        plan = response["ambient_plan"]
+        self.assertTrue(plan["enabled"])
+        self.assertIn("air_conditioner", plan)
+        self.assertIn("light", plan)
+        self.assertIn("air_purifier", plan)
+        self.assertGreaterEqual(plan["air_conditioner"]["temperature_c"], 16)
+        self.assertLessEqual(plan["air_conditioner"]["temperature_c"], 28)
+
+    def test_ambient_plan_api_rejects_invalid_scores(self):
+        assessment = emotion_assessment_for("我有点担心明天的答辩。", "fear")
+        del assessment["scores"]["trust"]
+
+        with self.assertRaises(backend.HTTPException) as context:
+            backend.ambient_plan_api(
+                backend.AmbientPlanRequest(emotion_assessment=assessment)
+            )
+
+        self.assertEqual(context.exception.status_code, 400)
 
 
 if __name__ == "__main__":

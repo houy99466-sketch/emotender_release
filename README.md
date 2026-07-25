@@ -22,6 +22,8 @@ EmoTender 是一个“情绪酒保”比赛 Demo。当前版本的核心链路�
 - 闲聊模式每轮都会返回 JSON，用于驱动表情、动作和回复。
 - 正式推荐模式依次显示个性化推荐理由、当前情绪占比饼图、六维风味图和牛皮纸小票。
 - 每个情绪占比都包含本次会话中的来源说明；历史 profile 情绪不参与本轮情绪判断。
+- 情绪判定统一使用 NRC 八类：愤怒、期待、厌恶、恐惧、喜悦、悲伤、惊讶、信任。
+- 正式推荐确认页可选择同步生成空调、灯光和空气净化器方案；该方案只做预览，不控制真实设备。
 - 正式推荐结果可以导出为从表情到牛皮纸小票的 PNG 长图。
 - 后端保留关键词触发推荐，并新增“上一轮询问是否正式推荐 + 用户本轮同意”的转推荐逻辑。
 - 登录用户名后会建立本地 profile，Logout 时把本次会话压缩保存到用户长期档案。
@@ -29,7 +31,7 @@ EmoTender 是一个“情绪酒保”比赛 Demo。当前版本的核心链路�
 ## 文件结构
 
 ```text
-emotender_release/
+EmoTend-xiaomi-ui-preview/
   android/
     EmoTenderTabletApp/
       app/src/main/
@@ -39,6 +41,7 @@ emotender_release/
   .gitignore
   CHANGELOG.md
   README.md
+  emotender_emotion.py
   emotender_backend.py
   requirements.txt
   requirements-asr.txt
@@ -55,6 +58,7 @@ emotender_release/
       html2canvas.LICENSE
   tests/
     test_dialogue_modes.py
+    test_nrc_emotion.py
     test_optional_asr_dependency.py
     test_user_profiles.py
   docs/
@@ -93,7 +97,7 @@ LLM_MODEL=gpt-5.5
 进入项目目录：
 
 ```powershell
-Set-Location 'E:\vmwareshare\emotender_release'
+Set-Location 'E:\codex produce\EmoTend-xiaomi-ui-preview'
 ```
 
 首次运行时创建虚拟环境：
@@ -114,13 +118,13 @@ notepad .env
 启动后端：
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn emotender_backend:app --host 0.0.0.0 --port 8000
+.\.venv\Scripts\python.exe -m uvicorn emotender_backend:app --host 127.0.0.1 --port 8011
 ```
 
 启动后不要关闭这个 PowerShell 窗口。浏览器访问：
 
 ```text
-http://127.0.0.1:8000/
+http://127.0.0.1:8011/
 ```
 
 ## 平板 APK 使用
@@ -231,6 +235,23 @@ Invoke-RestMethod `
 {
   "turn_type": "recommendation",
   "control_json": {
+    "emotion_assessment": {
+      "taxonomy": "nrc_emolex_8",
+      "scores": {
+        "anger": 0.0,
+        "anticipation": 0.25,
+        "disgust": 0.0,
+        "fear": 0.75,
+        "joy": 0.0,
+        "sadness": 0.0,
+        "surprise": 0.0,
+        "trust": 0.0
+      },
+      "primary_emotion": "fear",
+      "confidence": 0.82,
+      "evidence": [],
+      "clarification_needed": false
+    },
     "drink_name": "...",
     "drink_metadata": {
       "name": "...",
@@ -240,6 +261,19 @@ Invoke-RestMethod `
   }
 }
 ```
+
+### `POST /api/ambient/plan`
+
+根据后端已经生成的 `emotion_assessment` 返回空间氛围方案。前端只有在用户开启“同步生成空间氛围方案”后才调用该接口。
+
+返回范围：
+
+- 空调：`16–28°C`。
+- 灯光亮度：`20–100%`。
+- 灯光色温：`2700–6500K`。
+- 空气净化器：`auto`、`silent`、`boost`。
+
+该接口不登录米家账号、不读取设备状态，也不发送真实设备控制指令。
 
 ### `POST /api/user/login`
 
@@ -274,6 +308,7 @@ http://127.0.0.1:8000/api/user/profile?username=demo
 用户只是聊天、倾诉或打招呼时使用。后端仍会输出完整 `control_json`：
 
 - `emotion_label`
+- `emotion_assessment`
 - `emotion_blend`
 - `complex_emotion`
 - `face_state`
@@ -314,6 +349,7 @@ http://127.0.0.1:8000/api/user/profile?username=demo
 - 根据 `drink_name` 自动补充 `drink_metadata`。
 - 输出与当前会话具体经历相关的 `recommendation_reason`。
 - 前端显示情绪饼图、六维图和牛皮纸小票，并允许保存完整长图。
+- 用户开启空间方案后，最终报告会增加空调、灯光和空气净化器建议，并随长图一起保存。
 
 长期 profile 只允许影响口味偏好、避忌、交流风格和历史饮品参考。`emotion_patterns` 和历史会话摘要不会送入本轮情绪判断 Prompt。
 
