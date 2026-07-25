@@ -78,14 +78,15 @@ class FrontendFlowTests(unittest.TestCase):
             "dock.classList.toggle('report-mode', mode === 'report')", self.html
         )
 
-    def test_flavor_chart_uses_latest_gear_and_bloom_visual(self):
+    def test_flavor_chart_uses_light_grid_and_bloom_visual(self):
         chart = re.search(
             r"function renderFlavorChart\(animate\).*?\n}", self.html, re.DOTALL
         )
         self.assertIsNotNone(chart)
         body = chart.group(0)
         self.assertIn("flavor-bloom", body)
-        self.assertIn("外圈齿轮环", body)
+        self.assertIn("轻量刻度环", body)
+        self.assertNotIn("外圈齿轮环", body)
         self.assertNotIn("flavor-dot", body)
         preview = re.search(
             r"function enterRecommendationPreview\(.*?\n}", self.html, re.DOTALL
@@ -105,6 +106,34 @@ class FrontendFlowTests(unittest.TestCase):
         self.assertNotIn("onDotTouchStart", self.html)
         self.assertNotIn("onSvgClick", self.html)
         self.assertNotIn("updateFlavorFromMouse", self.html)
+
+    def test_flavor_chart_uses_broad_beverage_axes(self):
+        self.assertIn(
+            'const FLAVOR_KEYS = ["甜度","茶感","奶香","果香","清爽度","口感层次"]',
+            self.html,
+        )
+        self.assertIn("next.甜度", self.html)
+        self.assertIn("next.清爽度", self.html)
+        self.assertIn("next.奶香", self.html)
+        self.assertIn("next.口感层次", self.html)
+        self.assertNotIn('const FLAVOR_KEYS = ["甜","鲜","酸","咸","涩","苦"]', self.html)
+
+    def test_interface_uses_light_beverage_theme(self):
+        self.assertIn('<body data-theme="light-beverage">', self.html)
+        self.assertIn("--canvas: #f4f7f6", self.html)
+        self.assertIn("--surface: #ffffff", self.html)
+        self.assertIn("--accent: #e96f51", self.html)
+
+    def test_animated_face_uses_light_stage_in_live_and_report_views(self):
+        self.assertIn(
+            '<rect x="0" y="0" width="400" height="400" fill="#f9fbfa"/>',
+            self.html,
+        )
+        self.assertNotIn(
+            '<rect x="0" y="0" width="400" height="400" fill="#000000"/>',
+            self.html,
+        )
+        self.assertIn("ctx.fillStyle='#f9fbfa'", self.html)
 
     def test_preview_opens_grouped_specification_editor(self):
         self.assertIn('id="btnCustomize"', self.html)

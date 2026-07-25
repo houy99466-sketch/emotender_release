@@ -9,6 +9,20 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --canvas: #f4f7f6;
+    --surface: #ffffff;
+    --surface-muted: #edf3f1;
+    --text: #202625;
+    --text-muted: #66716e;
+    --line: #d9e2df;
+    --accent: #e96f51;
+    --accent-deep: #b94f39;
+    --teal: #2d8f88;
+    --mint: #cfe8de;
+    --shadow: 0 18px 50px rgba(35, 58, 53, 0.10);
+  }
+
   /* ===== 全局背景 ===== */
   body {
     display: flex; flex-direction: column; align-items: center;
@@ -713,9 +727,120 @@
     .customization-actions button { flex:1; }
     .composition-body { gap:16px; }
   }
+
+  /* ===== 浅色饮品实验室主题 ===== */
+  body[data-theme="light-beverage"] {
+    background:var(--canvas); color:var(--text);
+  }
+  body[data-theme="light-beverage"] #account-panel input,
+  body[data-theme="light-beverage"] #account-panel button,
+  body[data-theme="light-beverage"] #help-button {
+    background:rgba(255,255,255,0.92); color:var(--text-muted);
+    border-color:var(--line); box-shadow:0 5px 18px rgba(35,58,53,0.05);
+  }
+  body[data-theme="light-beverage"] #help-button { color:var(--teal); }
+  body[data-theme="light-beverage"] #help-popover {
+    background:var(--surface); border-color:var(--line); color:var(--text-muted);
+    box-shadow:var(--shadow);
+  }
+  body[data-theme="light-beverage"] #crt-screen {
+    background-color:#f9fbfa !important; border:1px solid var(--line);
+    box-shadow:var(--shadow); border-radius:8px;
+  }
+  body[data-theme="light-beverage"] #crt-screen::after { opacity:0.18; }
+  body[data-theme="light-beverage"] #crt-screen[data-emotion="清醒"] { --neon-color:#2d8f88; }
+  body[data-theme="light-beverage"] #crt-screen[data-emotion="兴奋"] { --neon-color:#d86545; }
+  body[data-theme="light-beverage"] #crt-screen[data-emotion="难过"] { --neon-color:#7f6aa8; }
+  body[data-theme="light-beverage"] #crt-screen[data-emotion="疲惫"] { --neon-color:#b7832f; }
+  body[data-theme="light-beverage"] #crt-screen[data-emotion="焦虑"] { --neon-color:#ce5c57; }
+  body[data-theme="light-beverage"] #crt-screen[data-emotion="犹豫"] { --neon-color:#668f61; }
+  body[data-theme="light-beverage"] #conversation-panel { border-color:var(--line); }
+  body[data-theme="light-beverage"] .chat-role { color:var(--teal); }
+  body[data-theme="light-beverage"] .chat-text {
+    color:var(--text); background:var(--surface); border-color:var(--line);
+    box-shadow:0 8px 24px rgba(35,58,53,0.05); border-radius:6px;
+  }
+  body[data-theme="light-beverage"] .chat-message.user .chat-text {
+    background:#e9f4f2; border-color:#c9e1dd;
+  }
+  body[data-theme="light-beverage"] #conversation-empty,
+  body[data-theme="light-beverage"] #status-line,
+  body[data-theme="light-beverage"] #reply-area { color:var(--text-muted); }
+  body[data-theme="light-beverage"] #recommendation-entry,
+  body[data-theme="light-beverage"] #btnCustomize,
+  body[data-theme="light-beverage"] #btnConfirm {
+    background:var(--accent); border-color:var(--accent); color:#fff;
+    box-shadow:0 8px 22px rgba(233,111,81,0.20);
+  }
+  body[data-theme="light-beverage"] #recommendation-entry:hover,
+  body[data-theme="light-beverage"] #btnCustomize:hover,
+  body[data-theme="light-beverage"] #btnConfirm:hover {
+    background:var(--accent-deep); border-color:var(--accent-deep);
+  }
+  body[data-theme="light-beverage"] .preview-kicker,
+  body[data-theme="light-beverage"] .report-kicker,
+  body[data-theme="light-beverage"] .report-section-label,
+  body[data-theme="light-beverage"] .result-kicker { color:var(--teal); }
+  body[data-theme="light-beverage"] #preview-drink-name,
+  body[data-theme="light-beverage"] .report-title { color:var(--text); }
+  body[data-theme="light-beverage"] #spec-preview-summary { color:var(--text-muted); }
+  body[data-theme="light-beverage"] #flavor-chart-wrap {
+    background:var(--surface); border:1px solid var(--line); border-radius:8px;
+    box-shadow:var(--shadow);
+  }
+  body[data-theme="light-beverage"] #drink-composition {
+    background:var(--surface); border-color:var(--line); box-shadow:0 10px 30px rgba(35,58,53,0.06);
+  }
+  body[data-theme="light-beverage"] .composition-head { border-color:var(--line); }
+  body[data-theme="light-beverage"] #composition-caption,
+  body[data-theme="light-beverage"] #composition-drink-name { color:var(--text); }
+  body[data-theme="light-beverage"] #composition-preview-mark { color:var(--accent); }
+  body[data-theme="light-beverage"] .composition-detail { color:var(--text-muted); }
+  body[data-theme="light-beverage"] .composition-cup { border-color:#9eb4af; background:#f7faf9; }
+  body[data-theme="light-beverage"] #interaction-dock {
+    background:rgba(255,255,255,0.94); border-color:var(--line);
+    box-shadow:0 -8px 28px rgba(35,58,53,0.07);
+  }
+  body[data-theme="light-beverage"] #manual-input {
+    background:var(--surface); color:var(--text); border-color:var(--line);
+  }
+  body[data-theme="light-beverage"] #control-bar button,
+  body[data-theme="light-beverage"] #collapsed-control-bar button {
+    background:var(--surface); color:var(--text-muted); border-color:var(--line);
+  }
+  body[data-theme="light-beverage"] #btnSend {
+    background:var(--teal); color:#fff; border-color:var(--teal);
+  }
+  body[data-theme="light-beverage"] #btnStart { color:var(--teal); border-color:#a8d2cc; }
+  body[data-theme="light-beverage"] #final-report {
+    background:var(--canvas); background-image:none; color:var(--text);
+  }
+  body[data-theme="light-beverage"] .report-subtitle,
+  body[data-theme="light-beverage"] #report-face-emotion { color:var(--text-muted); }
+  body[data-theme="light-beverage"] #report-face-image {
+    background:#f9fbfa; border-color:var(--line); border-radius:8px;
+  }
+  body[data-theme="light-beverage"] .report-block { border-color:var(--line); }
+  body[data-theme="light-beverage"] #recommendation-reason-section {
+    background:#fff3ef; border-color:var(--accent);
+  }
+  body[data-theme="light-beverage"] #recommendation-reason { color:var(--text); }
+  body[data-theme="light-beverage"] .emotion-sector { stroke:var(--canvas); }
+  body[data-theme="light-beverage"] .emotion-label { fill:var(--text); }
+  body[data-theme="light-beverage"] .emotion-source { fill:var(--text-muted); }
+  body[data-theme="light-beverage"] #receipt {
+    background:#f7f1e7; color:#453d34; box-shadow:0 18px 44px rgba(67,54,39,0.14);
+  }
+  body[data-theme="light-beverage"] #final-report.exporting #receipt {
+    background:#f7f1e7 !important;
+  }
+  body[data-theme="light-beverage"] .view-actions button,
+  body[data-theme="light-beverage"] #save-result-button {
+    background:var(--surface); color:var(--teal); border-color:#acd2cc;
+  }
 </style>
 </head>
-<body>
+<body data-theme="light-beverage">
 
 <div id="account-panel">
   <input id="username-input" placeholder="username" autocomplete="off">
@@ -742,7 +867,7 @@
         </feMerge>
       </filter>
     </defs>
-    <rect x="0" y="0" width="400" height="400" fill="#000000"/>
+    <rect x="0" y="0" width="400" height="400" fill="#f9fbfa"/>
 
     <!-- 1. 清醒·浅青蓝 -->
     <g id="group-qx" class="pixel-face-group" filter="url(#soft-glow)">
@@ -974,32 +1099,32 @@
 const DRINK_DB = {
   "清醒": {
     name: "冷启动", en: "Cold Start",
-    flavor: {甜:20, 鲜:40, 酸:65, 咸:5, 涩:25, 苦:45},
+    flavor: {甜度:20, 茶感:35, 奶香:5, 果香:70, 清爽度:90, 口感层次:65},
     story: "以前有个总坐角落的客人，每次来都点这杯。他说：\"老柯，喝别的像在逃避，喝这杯像在跟自己谈判。\"后来他走了，每年跨年还给我发消息：\"今晚没你，但窗外的海还是蓝的。\""
   },
   "兴奋": {
     name: "气泡重启", en: "Spark Restart",
-    flavor: {甜:50, 鲜:25, 酸:55, 咸:5, 涩:15, 苦:15},
+    flavor: {甜度:55, 茶感:25, 奶香:0, 果香:80, 清爽度:85, 口感层次:70},
     story: "这杯是我为一个刚离职的老客人调的。他那天进来，笑得像卸了盔甲。他说：\"老柯，我三个月没笑这么大声了。\"我给他倒了这杯，气泡滋滋响，像在替他鼓掌。"
   },
   "难过": {
     name: "软着陆", en: "Soft Landing",
-    flavor: {甜:70, 鲜:30, 酸:10, 咸:10, 涩:10, 苦:5},
+    flavor: {甜度:70, 茶感:20, 奶香:75, 果香:25, 清爽度:35, 口感层次:65},
     story: "有一年冬天，店里暖气坏了，一个姑娘坐了一整晚。我给她这杯，她捧在手里暖了半小时才喝。临走她说：\"这杯不是酒，是围巾。\"后来，\"围巾\"就留下来了。"
   },
   "疲惫": {
     name: "灰度模式", en: "Grayscale Mode",
-    flavor: {甜:30, 鲜:20, 酸:15, 咸:10, 涩:40, 苦:50},
+    flavor: {甜度:30, 茶感:60, 奶香:20, 果香:15, 清爽度:40, 口感层次:70},
     story: "有个写代码的客人，天天来修bug，眼神永远焦灼。他说：\"白天世界是彩色的，每个颜色都在催我干活。\"我给他这杯，他盯着看了很久，忽然舒了口气：\"原来不选颜色，才是最大的自由。\""
   },
   "焦虑": {
     name: "断点续传", en: "Breakpoint Resume",
-    flavor: {甜:25, 鲜:35, 酸:40, 咸:15, 涩:20, 苦:35},
+    flavor: {甜度:25, 茶感:45, 奶香:10, 果香:55, 清爽度:75, 口感层次:75},
     story: "有个写小说的客人，卡文卡了整整两个月，每晚来就盯着这杯发呆。有一天他忽然一口闷了，眼睛亮了：\"我知道主角下一章怎么走了。\"后来他书里写：\"生活给我们的从来不是答案，是一个断点后的回车键。\""
   },
   "犹豫": {
     name: "延时摄影", en: "Time-lapse",
-    flavor: {甜:40, 鲜:30, 酸:35, 咸:15, 涩:30, 苦:25},
+    flavor: {甜度:40, 茶感:50, 奶香:20, 果香:60, 清爽度:65, 口感层次:80},
     story: "有个做纪录片的姑娘，拍一朵昙花开放，蹲了七个通宵。第七晚她撑不住睡着了，醒来发现花已经开败了——但监视器里录下了全过程。她冲进店里说：\"老柯，我守了七天，它偏偏在我闭眼的时候开。\"我给她这杯。她说：\"懂了，有些事不是等来的，是你忘了等，它自己就来了。\""
   }
 };
@@ -1012,14 +1137,14 @@ let pendingUserText = "";
 let interfaceMode = "conversation";
 
 // ============ 六维风味图 ============
-const FLAVOR_KEYS = ["甜","鲜","酸","咸","涩","苦"];
+const FLAVOR_KEYS = ["甜度","茶感","奶香","果香","清爽度","口感层次"];
 const FLAVOR_COLORS = {
-  "甜":"#f0a0a0", "鲜":"#c0d8a0", "酸":"#e8d870",
-  "咸":"#b8d0e8", "涩":"#c8a888", "苦":"#a8c888"
+  "甜度":"#e96f51", "茶感":"#6d8f68", "奶香":"#d6a56d",
+  "果香":"#e49a4c", "清爽度":"#2d8f88", "口感层次":"#7f6aa8"
 };
 
-let flavorValues = {甜:50, 鲜:50, 酸:50, 咸:50, 涩:50, 苦:50};
-let recommendedFlavorValues = {甜:50, 鲜:50, 酸:50, 咸:50, 涩:50, 苦:50};
+let flavorValues = {甜度:50, 茶感:50, 奶香:50, 果香:50, 清爽度:50, 口感层次:50};
+let recommendedFlavorValues = {甜度:50, 茶感:50, 奶香:50, 果香:50, 清爽度:50, 口感层次:50};
 const DEFAULT_CUSTOMIZATION = {口感:"保留推荐", 温度:"加冰", 甜度:"保留推荐"};
 let confirmedCustomization = {...DEFAULT_CUSTOMIZATION};
 let pendingCustomization = {...DEFAULT_CUSTOMIZATION};
@@ -1041,22 +1166,15 @@ function renderFlavorChart(animate) {
 
   let html = '';
 
-  // 外圈齿轮环
+  // 轻量刻度环
+  html += `<circle cx="${cx}" cy="${cy}" r="${R + 12}" fill="#fbfdfc" stroke="#d9e2df" stroke-width="1.5"/>`;
   for (let i=0; i<6; i++) {
     const angle = -Math.PI/2 + i * (Math.PI/3);
-    const rOuter = R + 18;
-    const rInner = R + 8;
-    const startAngle = angle - Math.PI/6;
-    const endAngle = angle + Math.PI/6;
-    const x1o = cx + rOuter * Math.cos(startAngle);
-    const y1o = cy + rOuter * Math.sin(startAngle);
-    const x2o = cx + rOuter * Math.cos(endAngle);
-    const y2o = cy + rOuter * Math.sin(endAngle);
-    const x1i = cx + rInner * Math.cos(startAngle);
-    const y1i = cy + rInner * Math.sin(startAngle);
-    const x2i = cx + rInner * Math.cos(endAngle);
-    const y2i = cy + rInner * Math.sin(endAngle);
-    html += `<path d="M${x1o},${y1o} A${rOuter},${rOuter} 0 0,1 ${x2o},${y2o} L${x2i},${y2i} A${rInner},${rInner} 0 0,0 ${x1i},${y1i} Z" fill="rgba(60,30,10,0.6)" stroke="#3a2210" stroke-width="1.5"/>`;
+    const x1 = cx + (R + 7) * Math.cos(angle);
+    const y1 = cy + (R + 7) * Math.sin(angle);
+    const x2 = cx + (R + 17) * Math.cos(angle);
+    const y2 = cy + (R + 17) * Math.sin(angle);
+    html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#9eb6b1" stroke-width="2"/>`;
   }
 
   // 四层同心六边形
@@ -1067,12 +1185,12 @@ function renderFlavorChart(animate) {
       const p = getHexCorner(cx, cy, r, i);
       pts += `${p.x},${p.y} `;
     }
-    html += `<polygon points="${pts}" fill="none" stroke="rgba(80,50,20,0.2)" stroke-width="0.8"/>`;
+    html += `<polygon points="${pts}" fill="none" stroke="rgba(74,105,99,0.18)" stroke-width="0.8"/>`;
   }
 
   for (let i=0; i<6; i++) {
     const p = getHexCorner(cx, cy, R, i);
-    html += `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="rgba(80,50,20,0.25)" stroke-width="0.8"/>`;
+    html += `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="rgba(74,105,99,0.18)" stroke-width="0.8"/>`;
   }
 
   let dataPts = '';
@@ -1080,7 +1198,7 @@ function renderFlavorChart(animate) {
     const p = getHexPoint(cx, cy, R, i, flavorValues[FLAVOR_KEYS[i]]);
     dataPts += `${p.x},${p.y} `;
   }
-  html += `<polygon class="${animate ? 'flavor-bloom' : ''}" points="${dataPts}" fill="rgba(220,90,40,0.35)" stroke="#8b3a1a" stroke-width="2"/>`;
+  html += `<polygon class="${animate ? 'flavor-bloom' : ''}" points="${dataPts}" fill="rgba(233,111,81,0.22)" stroke="#2d8f88" stroke-width="2.5"/>`;
 
   for (let i=0; i<6; i++) {
     const angle = -Math.PI/2 + i * (Math.PI/3);
@@ -1088,10 +1206,10 @@ function renderFlavorChart(animate) {
     const lx = cx + labelR * Math.cos(angle);
     const ly = cy + labelR * Math.sin(angle);
     html += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle"
-      font-family="'Ma Shan Zheng','PingFang SC',cursive" font-size="24" fill="#5a3a10" font-weight="bold">${FLAVOR_KEYS[i]}</text>`;
+      font-family="'PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#36413e" font-weight="600">${FLAVOR_KEYS[i]}</text>`;
   }
 
-  html += `<circle cx="${cx}" cy="${cy}" r="5" fill="#8b3a1a" stroke="#3a2210" stroke-width="1"/>`;
+  html += `<circle cx="${cx}" cy="${cy}" r="4.5" fill="#e96f51" stroke="#ffffff" stroke-width="1.5"/>`;
 
   svg.innerHTML = html;
 }
@@ -1154,13 +1272,13 @@ function updateComposition() {
 
 function applyCustomizationPreview() {
   const next = {...recommendedFlavorValues};
-  if (confirmedCustomization.甜度 === '低甜') next.甜 = Math.min(next.甜, 25);
-  if (confirmedCustomization.甜度 === '标准甜') next.甜 = Math.max(next.甜, 58);
+  if (confirmedCustomization.甜度 === '低甜') next.甜度 = Math.min(next.甜度, 25);
+  if (confirmedCustomization.甜度 === '标准甜') next.甜度 = Math.max(next.甜度, 58);
   if (confirmedCustomization.口感 === '清爽') {
-    next.甜 -= 8; next.酸 += 10; next.苦 -= 5;
+    next.甜度 -= 8; next.清爽度 += 15; next.奶香 -= 10;
   }
   if (confirmedCustomization.口感 === '醇厚') {
-    next.甜 += 6; next.鲜 += 8; next.苦 += 6;
+    next.甜度 += 6; next.奶香 += 12; next.口感层次 += 10;
   }
   FLAVOR_KEYS.forEach(function(key) { next[key] = clampFlavor(next[key]); });
   setFlavorValues(next, false);
@@ -1615,7 +1733,7 @@ async function createFaceSnapshotDataUrl(){
   try{
     var image=await new Promise(function(resolve,reject){var img=new Image();img.onload=function(){resolve(img)};img.onerror=reject;img.src=url});
     var canvas=document.createElement('canvas');canvas.width=400;canvas.height=400;
-    var ctx=canvas.getContext('2d');ctx.fillStyle='#000';ctx.fillRect(0,0,400,400);ctx.drawImage(image,0,0,400,400);
+    var ctx=canvas.getContext('2d');ctx.fillStyle='#f9fbfa';ctx.fillRect(0,0,400,400);ctx.drawImage(image,0,0,400,400);
     return canvas.toDataURL('image/png');
   }finally{URL.revokeObjectURL(url)}
 }
@@ -1627,7 +1745,7 @@ async function saveResultImage(){
   try{
     if(document.fonts&&document.fonts.ready)await document.fonts.ready;
     var canvas=await html2canvas(target,{
-      backgroundColor:'#0a0a0a',
+      backgroundColor:'#f4f7f6',
       scale:Math.min(2,window.devicePixelRatio||1),
       useCORS:true,
       logging:false,
