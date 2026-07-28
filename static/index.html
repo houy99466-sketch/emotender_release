@@ -1050,33 +1050,122 @@
     border-bottom:1px solid var(--line);
     overflow-y:auto;
   }
-  body[data-theme="light-beverage"] #conversation-list { gap:22px; }
-  body[data-theme="light-beverage"] .chat-message { max-width:84%; gap:7px; }
+  body[data-theme="light-beverage"] #conversation-list { gap:24px; padding:8px 26px 4px; }
+  body[data-theme="light-beverage"] .chat-message {
+    --pixel-unit:4px;
+    --bubble-fill:#fff8e8;
+    --bubble-stroke:#526b7d;
+    position:relative;
+    z-index:0;
+    max-width:78%;
+    gap:6px;
+    padding-bottom:18px;
+  }
+  body[data-theme="light-beverage"] .chat-message.user {
+    align-self:flex-start;
+    text-align:left;
+  }
+  body[data-theme="light-beverage"] .chat-message.robot {
+    --bubble-fill:#f8f4e4;
+    --bubble-stroke:#35633e;
+    align-self:flex-end;
+    text-align:left;
+  }
   body[data-theme="light-beverage"] .chat-role {
-    color:var(--teal);
+    color:var(--bubble-stroke);
     font-family:'Courier New',monospace;
-    font-size:10px;
-    letter-spacing:0.12em;
+    font-size:9px;
+    font-weight:700;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+  }
+  body[data-theme="light-beverage"] .chat-message.robot .chat-role {
+    align-self:flex-end;
   }
   body[data-theme="light-beverage"] .chat-text,
   body[data-theme="light-beverage"] .chat-message.user .chat-text {
-    padding:14px 17px;
+    position:relative;
+    z-index:1;
+    isolation:isolate;
+    min-width:152px;
+    padding:22px 26px 24px;
     border:0;
     border-radius:0;
-    background:transparent;
+    background:var(--bubble-stroke);
     box-shadow:none;
-    color:var(--text-strong);
-    font-family:'Songti SC','STSong','Noto Serif CJK SC',SimSun,serif;
-    font-size:17px;
-    line-height:1.85;
+    color:#111714;
+    clip-path:polygon(
+      12px 0,calc(100% - 12px) 0,
+      calc(100% - 12px) 4px,calc(100% - 4px) 4px,
+      calc(100% - 4px) 12px,100% 12px,
+      100% calc(100% - 12px),calc(100% - 4px) calc(100% - 12px),
+      calc(100% - 4px) calc(100% - 4px),calc(100% - 12px) calc(100% - 4px),
+      calc(100% - 12px) 100%,12px 100%,
+      12px calc(100% - 4px),4px calc(100% - 4px),
+      4px calc(100% - 12px),0 calc(100% - 12px),
+      0 12px,4px 12px,4px 4px,12px 4px
+    );
+    font-family:'Microsoft YaHei UI','Microsoft YaHei','PingFang SC','Noto Sans CJK SC',sans-serif;
+    font-size:18px;
+    font-weight:700;
+    line-height:1.65;
+    letter-spacing:0;
+    text-align:left;
+    text-shadow:0.35px 0 currentColor;
   }
-  body[data-theme="light-beverage"] .chat-message.user .chat-text {
-    background:var(--surface-muted);
-    border-right:2px solid var(--teal);
+  body[data-theme="light-beverage"] .chat-text::before {
+    content:'';
+    position:absolute;
+    inset:4px;
+    z-index:-1;
+    background:var(--bubble-fill);
+    clip-path:polygon(
+      8px 0,calc(100% - 8px) 0,
+      calc(100% - 8px) 4px,100% 4px,
+      100% calc(100% - 4px),calc(100% - 8px) calc(100% - 4px),
+      calc(100% - 8px) 100%,8px 100%,
+      8px calc(100% - 4px),0 calc(100% - 4px),
+      0 4px,8px 4px
+    );
   }
-  body[data-theme="light-beverage"] .chat-message.robot .chat-text {
-    padding-left:20px;
-    border-left:2px solid var(--accent);
+  body[data-theme="light-beverage"] .chat-message::before,
+  body[data-theme="light-beverage"] .chat-message::after {
+    content:'';
+    position:absolute;
+    left:20px;
+    bottom:0;
+    z-index:0;
+    width:24px;
+    height:24px;
+    background:var(--bubble-stroke);
+    clip-path:polygon(
+      0 0,24px 0,24px 4px,20px 4px,
+      20px 8px,16px 8px,16px 12px,12px 12px,
+      12px 16px,8px 16px,8px 20px,4px 20px,
+      4px 24px,0 24px
+    );
+  }
+  body[data-theme="light-beverage"] .chat-message::after {
+    left:24px;
+    bottom:4px;
+    width:16px;
+    height:16px;
+    background:var(--bubble-fill);
+    clip-path:polygon(
+      0 0,16px 0,16px 4px,12px 4px,
+      12px 8px,8px 8px,8px 12px,4px 12px,
+      4px 16px,0 16px
+    );
+  }
+  body[data-theme="light-beverage"] .chat-message.robot::before {
+    left:auto;
+    right:20px;
+    transform:scaleX(-1);
+  }
+  body[data-theme="light-beverage"] .chat-message.robot::after {
+    left:auto;
+    right:24px;
+    transform:scaleX(-1);
   }
   body[data-theme="light-beverage"] #conversation-empty {
     padding:24px;
@@ -1419,6 +1508,7 @@
     }
   }
 </style>
+<link rel="stylesheet" href="/static/pixel-scene.css">
 </head>
 <body data-theme="light-beverage">
 
@@ -1442,7 +1532,7 @@
 
 <main id="conversation-view" class="app-view active">
 <!-- ===== CRT 表情屏幕 ===== -->
-<div id="crt-screen" data-emotion="清醒" style="position:relative;width:400px;height:400px;background-color:#000000!important;overflow:hidden;">
+<div id="crt-screen" class="pixel-face-source" data-emotion="清醒" style="position:relative;width:400px;height:400px;background-color:#000000!important;overflow:hidden;">
   <svg viewBox="0 0 400 400" style="width:100%;height:100%;">
     <defs>
       <filter id="soft-glow" x="-50%" y="-50%" width="200%" height="200%">
@@ -1520,15 +1610,55 @@
   <div id="face-state-label">清醒</div>
 </div>
 
-<section id="conversation-panel" aria-label="本轮对话">
-  <div id="conversation-list">
-    <div id="conversation-empty">说点什么。老柯会记住本轮对话，再决定此刻适合你的风味。</div>
+<section id="pixel-scene" data-position-mode="off" aria-label="茗茗与顾客在奶茶店中的对话场景">
+  <img class="scene-art" src="/static/pixel-scene/scene.png" alt="顾客与茗茗隔着奶茶店吧台交谈">
+
+  <section id="scene-conversation-window" aria-label="最近三轮对话"></section>
+
+  <div id="position-tools" aria-label="气泡锚点调整工具">
+    <output id="position-readout">拖动顾客或茗茗最新的气泡</output>
+    <button class="pixel-control" id="position-copy-button" type="button">复制锚点</button>
+    <button class="pixel-control" id="position-reset-button" type="button">重置位置</button>
   </div>
+
+  <div id="scene-controls" aria-label="对话操作">
+    <button class="pixel-control" id="position-mode-button" type="button" aria-pressed="false">调整位置</button>
+    <button class="pixel-control" id="btnStart" type="button" onclick="startRecording()">开始说话</button>
+    <button class="pixel-control" id="btnSend" type="button" onclick="sendText()">发送</button>
+    <span id="status-line" aria-live="polite"></span>
+    <button class="pixel-control" id="btnReset" type="button" onclick="resetSystem()">重置</button>
+  </div>
+
+  <div id="interaction-dock" data-export-ignore>
+    <input id="manual-input" placeholder="输入文字，或点击开始说话" autocomplete="off">
+    <div id="control-bar" aria-hidden="true"></div>
+    <div id="collapsed-control-bar" aria-hidden="true"></div>
+  </div>
+
+  <button id="recommendation-entry" type="button" onclick="openRecommendationPreview()">确认方案</button>
+
+  <button id="history-button" type="button" aria-expanded="false" aria-controls="history-drawer">
+    <span class="history-icon" aria-hidden="true"></span>
+    <span>历史</span>
+  </button>
+
+  <div id="drawer-backdrop" aria-hidden="true"></div>
+  <aside id="history-drawer" aria-hidden="true" aria-label="历史对话">
+    <header class="drawer-head">
+      <h2>历史对话</h2>
+      <button id="drawer-close" type="button" aria-label="关闭历史对话"></button>
+    </header>
+    <section id="conversation-panel" aria-label="本轮完整对话">
+      <div id="conversation-list">
+        <div id="conversation-empty">说点什么。茗茗会记住本轮对话，再决定此刻适合你的风味。</div>
+      </div>
+    </section>
+  </aside>
 </section>
-<button id="recommendation-entry" onclick="openRecommendationPreview()">查看推荐方案</button>
 </main>
 
 <section id="recommendation-preview" class="app-view" aria-labelledby="preview-drink-name">
+  <button class="pixel-control preview-back-action" type="button" onclick="returnToConversation()">返回聊天</button>
   <div class="preview-kicker">本轮定制方案</div>
   <h1 id="preview-drink-name">—</h1>
   <div id="preview-flavor-host">
@@ -1684,21 +1814,8 @@
 
 <div id="reply-area" aria-live="polite"></div>
 
-<div id="interaction-dock" data-export-ignore>
-  <input id="manual-input" placeholder="输入文字，或点击开始说话" autocomplete="off">
-  <div id="control-bar">
-    <button id="btnStart" onclick="startRecording()">开始说话</button>
-    <button id="btnSend" onclick="sendText()">发送</button>
-    <span id="status-line"></span>
-    <button id="btnReset" onclick="resetSystem()">重置</button>
-  </div>
-  <div id="collapsed-control-bar">
-    <button onclick="returnToConversation()">返回聊天</button>
-    <button onclick="resetSystem()">重新开始</button>
-  </div>
-</div>
-
 <script src="/static/vendor/html2canvas.min.js"></script>
+<script src="/static/pixel-scene.js"></script>
 <script>
 // ============ 饮品数据库 ============
 const DRINK_DB = {
@@ -1740,6 +1857,8 @@ let currentControlJson = null;
 let currentRobotReply = "";
 let pendingUserText = "";
 let interfaceMode = "conversation";
+let conversationMessages = [];
+let conversationMessageSequence = 0;
 
 // ============ 六维风味图 ============
 const FLAVOR_KEYS = ["甜度","茶感","奶香","果香","清爽度","口感层次"];
@@ -2119,6 +2238,9 @@ function returnToConversation() {
 function showRecommendationEntry(visible) {
   const entry = document.getElementById('recommendation-entry');
   if (entry) entry.classList.toggle('visible', !!visible);
+  if (window.EmoTenderPixelScene) {
+    window.EmoTenderPixelScene.setRecommendationVisible(visible);
+  }
 }
 
 function prepareRecommendationPreview(controlJson) {
@@ -2266,37 +2388,36 @@ async function confirmFlavor() {
 let s="standby";
 function F(t){s=t;var e=document.getElementById("face-state-label");if(e)e.textContent=(t||'').toUpperCase()}
 function U(t){var e=document.getElementById("status-line");if(e)e.textContent=t||''}
-function appendChatMessage(role,text){
+function syncPixelConversation(){
+  if(window.EmoTenderPixelScene){
+    window.EmoTenderPixelScene.setMessages(conversationMessages);
+  }
+}
+function appendChatMessage(role,text,key){
   var clean=(text||'').trim();if(!clean)return;
-  var list=document.getElementById('conversation-list');if(!list)return;
-  var empty=document.getElementById('conversation-empty');if(empty)empty.remove();
-  var item=document.createElement('article');item.className='chat-message '+role;
-  var label=document.createElement('div');label.className='chat-role';label.textContent=role==='user'?'你':'老柯';
-  var body=document.createElement('div');body.className='chat-text';body.textContent=clean;
-  item.appendChild(label);item.appendChild(body);list.appendChild(item);
-  var panel=document.getElementById('conversation-panel');if(panel)panel.scrollTop=panel.scrollHeight;
+  var messageKey=key||('live-'+(++conversationMessageSequence)+'-'+role);
+  conversationMessages.push({key:messageKey,role:role,text:clean});
+  syncPixelConversation();
 }
 function R(t){appendChatMessage('robot',t);var e=document.getElementById("reply-area");if(e)e.textContent=t||''}
 
 function renderConversationHistory(state,fallbackUser,fallbackReply){
-  var list=document.getElementById('conversation-list');if(!list)return;
   var history=state&&Array.isArray(state.history)?state.history:[];
-  list.replaceChildren();
+  conversationMessages=[];
   if(!history.length){
-    if(fallbackUser)appendChatMessage('user',fallbackUser);
-    if(fallbackReply)appendChatMessage('robot',fallbackReply);
-    if(!fallbackUser&&!fallbackReply){
-      var empty=document.createElement('div');empty.id='conversation-empty';
-      empty.textContent='说点什么。老柯会记住本轮对话，再决定此刻适合你的风味。';list.appendChild(empty);
-    }
+    if(fallbackUser)conversationMessages.push({key:'fallback-user',role:'user',text:fallbackUser});
+    if(fallbackReply)conversationMessages.push({key:'fallback-robot',role:'robot',text:fallbackReply});
+    syncPixelConversation();
     return;
   }
   history.forEach(function(turn,index){
-    appendChatMessage('user',turn.user_text||'');
+    var userText=(turn.user_text||'').trim();
+    if(userText)conversationMessages.push({key:'turn-'+index+'-user',role:'user',text:userText});
     var isLast=index===history.length-1;
     var reply=isLast&&fallbackReply?fallbackReply:[turn.bartender_line,turn.turn_type==='bar_chat'?turn.feedback_prompt:''].filter(Boolean).join(' ');
-    appendChatMessage('robot',reply);
+    if(reply)conversationMessages.push({key:'turn-'+index+'-robot',role:'robot',text:reply});
   });
+  syncPixelConversation();
 }
 
 window.updateTenderState=function(d){
@@ -2376,8 +2497,8 @@ async function analyzeUserText(text){
 }
 function handleAnalyzeResponse(d){
   currentRobotReply=d.robot_reply_text||"";
-  if(d.control_json)window.updateTenderState(d.control_json);
   renderConversationHistory(d.conversation_state,pendingUserText,currentRobotReply);
+  if(d.control_json)window.updateTenderState(d.control_json);
   pendingUserText="";
   U(d.turn_type==="bar_chat"?"IDLE":"● OK");
 }
@@ -2455,6 +2576,7 @@ async function resetSystem(){try{await C("/api/reset");I();resetConversation();r
 function I(){var c=document.getElementById("crt-screen");if(c)c.setAttribute("data-emotion","清醒");F("清醒");U("IDLE");var u=localStorage.getItem("emotender_username")||"";var i=document.getElementById("username-input");if(i)i.value=u}
 function resetConversation(){
   currentControlJson=null;currentRobotReply="";pendingUserText="";
+  conversationMessages=[];conversationMessageSequence=0;
   showRecommendationEntry(false);
   renderConversationHistory(null,"","");
 }

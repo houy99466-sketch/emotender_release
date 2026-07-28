@@ -4,6 +4,10 @@ from pathlib import Path
 
 
 INDEX = Path(__file__).resolve().parents[1] / "static" / "index.html"
+PIXEL_SCENE_CSS = INDEX.parent / "pixel-scene.css"
+PIXEL_SCENE_JS = INDEX.parent / "pixel-scene.js"
+PIXEL_SCENE_IMAGE = INDEX.parent / "pixel-scene" / "scene.png"
+PIXEL_SCENE_FONT = INDEX.parent / "pixel-scene" / "fusion-pixel-zh-hans.woff2"
 
 
 class FrontendFlowTests(unittest.TestCase):
@@ -20,6 +24,72 @@ class FrontendFlowTests(unittest.TestCase):
         self.assertIn('id="crt-screen"', markup)
         self.assertIn('id="conversation-list"', markup)
 
+    def test_conversation_view_uses_approved_pixel_scene_assets(self):
+        self.assertTrue(PIXEL_SCENE_CSS.is_file())
+        self.assertTrue(PIXEL_SCENE_JS.is_file())
+        self.assertTrue(PIXEL_SCENE_IMAGE.is_file())
+        self.assertTrue(PIXEL_SCENE_FONT.is_file())
+        self.assertIn('href="/static/pixel-scene.css"', self.html)
+        self.assertIn('src="/static/pixel-scene.js"', self.html)
+        self.assertIn('id="pixel-scene"', self.html)
+        self.assertIn('src="/static/pixel-scene/scene.png"', self.html)
+
+    def test_scene_contains_live_bubbles_history_and_role_anchor_controls(self):
+        conversation = re.search(
+            r'<main id="conversation-view".*?</main>', self.html, re.DOTALL
+        )
+        self.assertIsNotNone(conversation)
+        markup = conversation.group(0)
+        self.assertIn('id="scene-conversation-window"', markup)
+        self.assertIn('id="history-button"', markup)
+        self.assertIn('id="history-drawer"', markup)
+        self.assertIn('id="position-mode-button"', markup)
+        self.assertIn('id="position-copy-button"', markup)
+        self.assertIn('id="position-reset-button"', markup)
+
+    def test_scene_control_row_preserves_existing_actions_and_bottom_input(self):
+        scene_start = self.html.find('<section id="pixel-scene"')
+        scene_end = self.html.find('</main>', scene_start)
+        scene_markup = self.html[scene_start:scene_end]
+        controls = re.search(
+            r'<div id="scene-controls".*?</div>', scene_markup, re.DOTALL
+        )
+        self.assertIsNotNone(controls)
+        controls_markup = controls.group(0)
+        ordered_ids = (
+            'position-mode-button',
+            'btnStart',
+            'btnSend',
+            'btnReset',
+        )
+        positions = [controls_markup.find(f'id="{item}"') for item in ordered_ids]
+        self.assertTrue(all(position >= 0 for position in positions))
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn('id="manual-input"', scene_markup)
+        self.assertLess(scene_markup.find('id="scene-controls"'), scene_markup.find('id="manual-input"'))
+        self.assertIn('id="status-line"', scene_markup)
+
+    def test_recommendation_entry_is_inside_scene_and_keeps_existing_handler(self):
+        scene_start = self.html.find('<section id="pixel-scene"')
+        scene_end = self.html.find('</main>', scene_start)
+        scene_markup = self.html[scene_start:scene_end]
+        self.assertIn('id="recommendation-entry"', scene_markup)
+        self.assertIn('onclick="openRecommendationPreview()">确认方案', scene_markup)
+
+    def test_pixel_scene_controller_exposes_message_and_anchor_operations(self):
+        self.assertTrue(PIXEL_SCENE_JS.is_file())
+        source = PIXEL_SCENE_JS.read_text(encoding="utf-8")
+        self.assertIn("window.EmoTenderPixelScene", source)
+        for operation in (
+            "setMessages",
+            "clear",
+            "setRecommendationVisible",
+            "copyAnchors",
+            "resetAnchors",
+        ):
+            self.assertIn(operation, source)
+        self.assertIn("MAX_VISIBLE_PER_ROLE = 3", source)
+
     def test_recommendation_waits_in_chat_before_opening_preview(self):
         emotion_change = re.search(
             r"function onEmotionChange\(.*?\n}", self.html, re.DOTALL
@@ -29,9 +99,20 @@ class FrontendFlowTests(unittest.TestCase):
         self.assertNotIn("enterRecommendationPreview(controlJson)", emotion_change.group(0))
         self.assertIn("prepareRecommendationPreview(controlJson)", emotion_change.group(0))
 
+    def test_recommendation_reply_renders_before_confirmation_appears(self):
+        handler = re.search(
+            r"function handleAnalyzeResponse\(.*?\n}", self.html, re.DOTALL
+        )
+        self.assertIsNotNone(handler)
+        body = handler.group(0)
+        self.assertLess(
+            body.find("renderConversationHistory"),
+            body.find("window.updateTenderState"),
+        )
+
     def test_chat_and_report_have_explicit_back_navigation(self):
         self.assertIn('id="recommendation-entry"', self.html)
-        self.assertIn('onclick="openRecommendationPreview()">查看推荐方案', self.html)
+        self.assertIn('onclick="openRecommendationPreview()">确认方案', self.html)
         self.assertIn('onclick="returnToConversation()">返回聊天', self.html)
         self.assertIn('onclick="returnToRecommendationPreview()">返回确认', self.html)
 
