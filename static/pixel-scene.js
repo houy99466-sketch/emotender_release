@@ -22,6 +22,197 @@
   let layoutFrame = 0;
   let dragState = null;
 
+  // ===== Scene State Machine =====
+  const SCENE_STATES = {
+    EMPTY: "empty",
+    ENTERING: "entering",
+    CHATTING: "chatting",
+    SERVING: "serving",
+    RECOMMENDATION_READY: "recommendation_ready"
+  };
+
+  const SCENE_IMAGES = {
+    empty: "/static/pixel-scene/scene-empty.png",
+    chatting: "/static/pixel-scene/scene-chat.png",
+    recommendation_ready: "/static/pixel-scene/scene-recommendation.png"
+  };
+
+  const SCENE_VIDEOS = {
+    entering: "/static/pixel-scene/customer-enter.mp4",
+    serving: "/static/pixel-scene/mingming-serve.mp4"
+  };
+
+  let currentSceneState = SCENE_STATES.EMPTY;
+  let sceneBgImage = null;
+  let sceneVideo = null;
+  let recommendationAlreadyServed = false;
+
+  function ensureSceneElements() {
+    if (!sceneBgImage || !sceneBgImage.isConnected) {
+      sceneBgImage = document.getElementById("scene-bg");
+    }
+    if (!sceneVideo || !sceneVideo.isConnected) {
+      sceneVideo = document.getElementById("scene-action-video");
+    }
+    return Boolean(sceneBgImage && sceneVideo);
+  }
+
+  function setSceneBackground(state) {
+    if (!ensureSceneElements()) return;
+    const url = SCENE_IMAGES[state];
+    if (!url) return;
+    // Track if this is the first load attempt to prevent infinite fallback loop
+    var alreadyTried = (sceneBgImage.dataset.fallbackTried === 'true');
+    sceneBgImage.dataset.state = state;
+    sceneBgImage.dataset.fallbackTried = 'false';
+    sceneBgImage.src = url;
+    sceneBgImage.onerror = function () {
+      if (sceneBgImage.dataset.fallbackTried === 'true') return;
+      sceneBgImage.dataset.fallbackTried = 'true';
+      sceneBgImage.src = "/static/pixel-scene/scene.png";
+    };
+  }
+
+  function switchSceneState(newState) {
+    if (!ensureSceneElements()) return;
+    currentSceneState = newState;
+    if (newState === SCENE_STATES.RECOMMENDATION_READY) {
+      recommendationAlreadyServed = true;
+    }
+    if (newState === SCENE_STATES.CHATTING) {
+      recommendationAlreadyServed = false;
+    }
+    setSceneBackground(newState);
+  }
+
+  function isVideoAvailable(url) {
+    // Assume video is available; onerror handler will catch failures
+    return true;
+  }
+
+  function playSceneVideo(videoKey, onComplete) {
+    if (!ensureSceneElements()) {
+      if (onComplete) onComplete();
+      return;
+    }
+    const url = SCENE_VIDEOS[videoKey];
+    if (!url) {
+      if (onComplete) onComplete();
+      return;
+    }
+
+    // Set up video
+    sceneVideo.src = url;
+    sceneVideo.currentTime = 0;
+    sceneVideo.classList.add("playing");
+
+    var handled = false;
+    function finish() {
+      if (handled) return;
+      handled = true;
+      sceneVideo.classList.remove("playing");
+      sceneVideo.pause();
+      sceneVideo.removeEventListener("ended", finish);
+      sceneVideo.removeEventListener("error", finish);
+      if (onComplete) onComplete();
+    }
+
+    sceneVideo.addEventListener("ended", finish);
+    sceneVideo.addEventListener("error", function () {
+      // Video failed to load - skip to completion
+      finish();
+    });
+
+    // Play with timeout fallback
+    var playPromise = sceneVideo.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(function () {
+        finish();
+      });
+    }
+
+    // Safety timeout: if video hasn't ended in 8 seconds, force finish
+    setTimeout(function () {
+      if (!handled) finish();
+    }, 15000);
+  }
+
+  function enterScene() {
+    if (currentSceneState === SCENE_STATES.ENTERING) {
+      // Already playing entrance animation
+      return;
+    }
+    if (currentSceneState === SCENE_STATES.CHATTING && !recommendationAlreadyServed) {
+      // Already in chatting with no pending recommendation
+      return;
+    }
+
+    switchSceneState(SCENE_STATES.ENTERING);
+    recommendationAlreadyServed = false;
+    playSceneVideo("entering", function () {
+      switchSceneState(SCENE_STATES.CHATTING);
+    });
+  }
+
+  function serveRecommendation() {
+    if (currentSceneState === SCENE_STATES.SERVING) return; // Already serving
+    if (currentSceneState === SCENE_STATES.RECOMMENDATION_READY) {
+      // Already served - just show button
+      if (recommendationEntry) {
+        recommendationEntry.classList.add("visible");
+      }
+      return;
+    }
+    if (recommendationAlreadyServed && currentSceneState === SCENE_STATES.CHATTING) {
+      // Already served this session, skip animation
+      switchSceneState(SCENE_STATES.RECOMMENDATION_READY);
+      if (recommendationEntry) {
+        recommendationEntry.classList.add("visible");
+      }
+      return;
+    }
+
+    // Hide recommendation button during animation
+    if (recommendationEntry) {
+      recommendationEntry.classList.remove("visible");
+    }
+
+    switchSceneState(SCENE_STATES.SERVING);
+    playSceneVideo("serving", function () {
+      switchSceneState(SCENE_STATES.RECOMMENDATION_READY);
+      if (recommendationEntry) {
+        recommendationEntry.classList.add("visible");
+      }
+    });
+  }
+
+  function resetScene() {
+    if (!ensureSceneElements()) return;
+    sceneVideo.classList.remove("playing");
+    sceneVideo.pause();
+    sceneVideo.removeAttribute("src");
+    recommendationAlreadyServed = false;
+    switchSceneState(SCENE_STATES.EMPTY);
+  }
+
+  function getSceneState() {
+    return currentSceneState;
+  }
+
+  // Override setRecommendationVisible to integrate with scene state machine
+  var _originalSetRecVisible = setRecommendationVisible;
+  setRecommendationVisible = function (visible) {
+    if (!ensureSceneElements()) return _originalSetRecVisible(visible);
+    if (visible) {
+      serveRecommendation();
+    } else {
+      if (recommendationEntry) {
+        recommendationEntry.classList.remove("visible");
+      }
+    }
+  };
+
+
   function cloneAnchors(source) {
     return {
       user: { x: source.user.x, y: source.user.y },
@@ -305,6 +496,7 @@
 
   function clear() {
     setMessages([]);
+    resetScene();
   }
 
   function setRecommendationVisible(visible) {
@@ -467,7 +659,13 @@
     copyAnchors: copyAnchors,
     resetAnchors: resetAnchors,
     getAnchors: getAnchors,
-    scheduleLayout: scheduleLayout
+    scheduleLayout: scheduleLayout,
+    enterScene: enterScene,
+    serveRecommendation: serveRecommendation,
+    resetScene: resetScene,
+    getSceneState: getSceneState,
+    switchSceneState: switchSceneState,
+    SCENE_STATES: SCENE_STATES
   };
 
   document.addEventListener("DOMContentLoaded", function () {

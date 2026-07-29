@@ -46,12 +46,31 @@ body[data-theme="light-beverage"] #crt-screen.pixel-face-source {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   pointer-events: none;
+  z-index: 0;
+}
+
+/* Action video overlay - covers scene during animations */
+#scene-action-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+#scene-action-video.playing {
+  opacity: 1;
 }
 
 #scene-conversation-window {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 3;
   pointer-events: none;
 }
 
@@ -328,7 +347,7 @@ body[data-theme="light-beverage"] #pixel-scene #scene-controls .pixel-control[ar
   position: absolute;
   left: 12px;
   bottom: 126px;
-  z-index: 5;
+  z-index: 6;
   display: none;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;

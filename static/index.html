@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EmoTender · 情绪酒保</title>
+<title>此刻一杯 · 情绪茶饮</title>
 <link rel="icon" href="data:,">
 <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
 <style>
@@ -1611,7 +1611,8 @@
 </div>
 
 <section id="pixel-scene" data-position-mode="off" aria-label="茗茗与顾客在奶茶店中的对话场景">
-  <img class="scene-art" src="/static/pixel-scene/scene.png" alt="顾客与茗茗隔着奶茶店吧台交谈">
+  <img class="scene-art" id="scene-bg" src="/static/pixel-scene/scene.png" alt="顾客与茗茗隔着奶茶店吧台交谈" data-state="chatting">
+  <video id="scene-action-video" muted playsinline preload="auto"></video>
 
   <section id="scene-conversation-window" aria-label="最近三轮对话"></section>
 
@@ -1800,7 +1801,7 @@
         <div class="story-label">▸ 背景故事</div>
         <div class="story-text" id="receipt-story"></div>
         <div class="receipt-footer">
-          <span class="hand-tilt-1">EmoTender</span> · <span class="hand-tilt-2">深夜情绪酒馆</span>
+          <span class="hand-tilt-1">EmoTender</span> · <span class="hand-tilt-2">深夜情绪茶馆</span>
         </div>
       </div>
     </div>
@@ -1820,34 +1821,34 @@
 // ============ 饮品数据库 ============
 const DRINK_DB = {
   "清醒": {
-    name: "冷启动", en: "Cold Start",
-    flavor: {甜度:20, 茶感:35, 奶香:5, 果香:70, 清爽度:90, 口感层次:65},
-    story: "以前有个总坐角落的客人，每次来都点这杯。他说：\"老柯，喝别的像在逃避，喝这杯像在跟自己谈判。\"后来他走了，每年跨年还给我发消息：\"今晚没你，但窗外的海还是蓝的。\""
+    name: "晨露茉莉", en: "Morning Dew Jasmine",
+    flavor: {甜度:15, 茶感:65, 奶香:5, 果香:40, 清爽度:85, 口感层次:55},
+    story: "有个考研的女生，每天六点准时来，坐在靠窗的位子，点一杯晨露茉莉。她从不说话，只是翻书。后来她考上了，给我寄了一张明信片：\"茗茗，那些天亮的早晨，谢谢你陪我。\""
   },
   "兴奋": {
-    name: "气泡重启", en: "Spark Restart",
-    flavor: {甜度:55, 茶感:25, 奶香:0, 果香:80, 清爽度:85, 口感层次:70},
-    story: "这杯是我为一个刚离职的老客人调的。他那天进来，笑得像卸了盔甲。他说：\"老柯，我三个月没笑这么大声了。\"我给他倒了这杯，气泡滋滋响，像在替他鼓掌。"
+    name: "莓果派对", en: "Berry Fiesta",
+    flavor: {甜度:60, 茶感:30, 奶香:10, 果香:85, 清爽度:75, 口感层次:70},
+    story: "有个刚升职的姑娘，发工资那天跑进来，说要请所有陌生人喝茶。她说：\"茗茗，我等了三年，今天终于能说了——我做到了。\"我给她这杯，她喝了一口，对着杯子拍了十几张照。"
   },
   "难过": {
-    name: "软着陆", en: "Soft Landing",
-    flavor: {甜度:70, 茶感:20, 奶香:75, 果香:25, 清爽度:35, 口感层次:65},
-    story: "有一年冬天，店里暖气坏了，一个姑娘坐了一整晚。我给她这杯，她捧在手里暖了半小时才喝。临走她说：\"这杯不是酒，是围巾。\"后来，\"围巾\"就留下来了。"
+    name: "暖绒厚乳", en: "Warm Velvet Milk",
+    flavor: {甜度:55, 茶感:35, 奶香:80, 果香:10, 清爽度:25, 口感层次:65},
+    story: "有一年冬天，店里来了个刚失恋的男孩，坐了一整晚不说话。我给他这杯，他捧在手里暖了好久。临走他说：\"这杯不是茶，是围巾。\"后来，\"围巾\"就留下来了。"
   },
   "疲惫": {
-    name: "灰度模式", en: "Grayscale Mode",
-    flavor: {甜度:30, 茶感:60, 奶香:20, 果香:15, 清爽度:40, 口感层次:70},
-    story: "有个写代码的客人，天天来修bug，眼神永远焦灼。他说：\"白天世界是彩色的，每个颜色都在催我干活。\"我给他这杯，他盯着看了很久，忽然舒了口气：\"原来不选颜色，才是最大的自由。\""
+    name: "椰风轻语", en: "Coconut Whisper",
+    flavor: {甜度:20, 茶感:5, 奶香:60, 果香:15, 清爽度:50, 口感层次:45},
+    story: "有个连续加班两周的姑娘，进来就说：\"茗茗，给我一杯什么都不问的。\"我给她这杯。她喝完靠在沙发上睡了一个小时。醒来她说：\"原来不回复消息，天也不会塌。\""
   },
   "焦虑": {
-    name: "断点续传", en: "Breakpoint Resume",
-    flavor: {甜度:25, 茶感:45, 奶香:10, 果香:55, 清爽度:75, 口感层次:75},
-    story: "有个写小说的客人，卡文卡了整整两个月，每晚来就盯着这杯发呆。有一天他忽然一口闷了，眼睛亮了：\"我知道主角下一章怎么走了。\"后来他书里写：\"生活给我们的从来不是答案，是一个断点后的回车键。\""
+    name: "普洱安坐", en: "Pu'er Settle",
+    flavor: {甜度:20, 茶感:75, 奶香:45, 果香:5, 清爽度:30, 口感层次:70},
+    story: "有个创业的年轻人，有段时间天天来，手机响个不停。有一天他忽然关了手机，盯着杯子说：\"茗茗，我每天回两百条消息，没有一条是回给我自己的。\"我给他这杯。他喝到第三口，肩膀终于放下来了。"
   },
   "犹豫": {
-    name: "延时摄影", en: "Time-lapse",
-    flavor: {甜度:40, 茶感:50, 奶香:20, 果香:60, 清爽度:65, 口感层次:80},
-    story: "有个做纪录片的姑娘，拍一朵昙花开放，蹲了七个通宵。第七晚她撑不住睡着了，醒来发现花已经开败了——但监视器里录下了全过程。她冲进店里说：\"老柯，我守了七天，它偏偏在我闭眼的时候开。\"我给她这杯。她说：\"懂了，有些事不是等来的，是你忘了等，它自己就来了。\""
+    name: "桂花弄", en: "Osmanthus Drift",
+    flavor: {甜度:35, 茶感:50, 奶香:15, 果香:30, 清爽度:65, 口感层次:55},
+    story: "有个做了十年公务员的客人，每天晚上翻手机里一个辞职信草稿，翻了半年。有一天他进来，没掏手机。我给他这杯。他喝到一半笑了：\"茗茗，我明天交信。\"后来他去了云南开民宿，给我寄过一箱他自己种的花。"
   }
 };
 
@@ -2195,7 +2196,12 @@ function hasFormalRecommendation(controlJson) {
 function drinkFromControl(controlJson, emotion) {
   const base = DRINK_DB[emotion] || DRINK_DB["清醒"];
   const meta = controlJson && controlJson.drink_metadata;
-  if (!meta) return null;
+  if (!meta) return {
+    name: controlJson.drink_name || base.name,
+    en: base.en || '',
+    flavor: base.flavor,
+    story: base.story || ''
+  };
 
   let story = meta.backstory || meta.serve_line || base.story || '';
   if (meta.recipe) story += '\n\n配方：' + meta.recipe;
@@ -2510,7 +2516,7 @@ function onAndroidSpeechStatus(status){
   if(status==="IDLE"){var c=document.getElementById("crt-screen");if(c)c.classList.remove("recording-active")}
   U(status||"IDLE");
 }
-function sendText(){var i=document.getElementById("manual-input");analyzeUserText(i?(i.value||""):"")}
+function sendText(){var i=document.getElementById("manual-input");var t=i?(i.value||""):"";if(i)i.value="";analyzeUserText(t)}
 function downloadCanvasPng(canvas, filename){
   canvas.toBlob(function(blob){
     if(!blob){U("保存失败");return}
@@ -2579,6 +2585,14 @@ function resetConversation(){
   conversationMessages=[];conversationMessageSequence=0;
   showRecommendationEntry(false);
   renderConversationHistory(null,"","");
+  if(window.EmoTenderPixelScene&&window.EmoTenderPixelScene.resetScene){
+    window.EmoTenderPixelScene.resetScene();
+    setTimeout(function(){
+      if(window.EmoTenderPixelScene&&window.EmoTenderPixelScene.enterScene){
+        window.EmoTenderPixelScene.enterScene();
+      }
+    },400);
+  }
 }
 function resetFlavorPanels(){
   var flavorSection=document.getElementById('flavor-section');
@@ -2593,7 +2607,7 @@ function resetFlavorPanels(){
   resetRecommendationInsight();
 }
 
-var M={1:{emotion_label:"清醒",face_state:"focused",bartender_line:"…嗯？我在。",emotion_blend:[{emotion:"清醒",weight:1}]},2:{emotion_label:"兴奋",face_state:"happy",bartender_line:"嘿嘿，今天状态超好！",emotion_blend:[{emotion:"兴奋",weight:1}]},3:{emotion_label:"难过",face_state:"gentle",bartender_line:"没关系的……慢慢来。",emotion_blend:[{emotion:"难过",weight:1}]},4:{emotion_label:"疲惫",face_state:"gentle",bartender_line:"呼……能量有点低。",emotion_blend:[{emotion:"疲惫",weight:1}]},5:{emotion_label:"焦虑",face_state:"focused",bartender_line:"深呼吸……我在这里陪你。",emotion_blend:[{emotion:"焦虑",weight:1}]},6:{emotion_label:"犹豫",face_state:"thinking",bartender_line:"唔…不着急，慢慢想~",emotion_blend:[{emotion:"犹豫",weight:1}]}};
+var M={1:{turn_type:"recommendation",drink_name:"晨露茉莉",drink_metadata:{name:"晨露茉莉",name_en:"Morning Dew Jasmine"},emotion_label:"清醒",face_state:"focused",bartender_line:"晨露茉莉，清冽回甘。喝完它，世界安静了，你也是。",emotion_blend:[{emotion:"清醒",weight:1,source:"演示模式"}]},2:{turn_type:"recommendation",drink_name:"莓果派对",drink_metadata:{name:"莓果派对",name_en:"Berry Fiesta"},emotion_label:"兴奋",face_state:"happy",bartender_line:"莓果派对来了！草莓和青提在跳舞，今天值得庆祝~",emotion_blend:[{emotion:"兴奋",weight:1,source:"演示模式"}]},3:{turn_type:"recommendation",drink_name:"暖绒厚乳",drink_metadata:{name:"暖绒厚乳",name_en:"Warm Velvet Milk"},emotion_label:"难过",face_state:"gentle",bartender_line:"暖绒厚乳，捧在手心。这杯不是茶，是围巾。",emotion_blend:[{emotion:"难过",weight:1,source:"演示模式"}]},4:{turn_type:"recommendation",drink_name:"椰风轻语",drink_metadata:{name:"椰风轻语",name_en:"Coconut Whisper"},emotion_label:"疲惫",face_state:"gentle",bartender_line:"椰风轻语，不加糖不问你。这杯就是'辛苦了'。",emotion_blend:[{emotion:"疲惫",weight:1,source:"演示模式"}]},5:{turn_type:"recommendation",drink_name:"普洱安坐",drink_metadata:{name:"普洱安坐",name_en:"Pu'er Settle"},emotion_label:"焦虑",face_state:"focused",bartender_line:"普洱已经泡好了，深呼吸。那些'万一'还没发生。",emotion_blend:[{emotion:"焦虑",weight:1,source:"演示模式"}]},6:{turn_type:"recommendation",drink_name:"桂花弄",drink_metadata:{name:"桂花弄",name_en:"Osmanthus Drift"},emotion_label:"犹豫",face_state:"thinking",bartender_line:"桂花弄在等你。不急着决定，答案会自己来的。",emotion_blend:[{emotion:"犹豫",weight:1,source:"演示模式"}]}};
 document.addEventListener("keydown",function(e){if(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA")return;var k=e.key;if(M[k]){e.preventDefault();var p=M[k];window._suppressDrinkMsg=true;window.updateTenderState(p);R(p.bartender_line||"");U("● MOCK")}});
 
 // ============ 初始化 ============
@@ -2618,6 +2632,12 @@ document.addEventListener("DOMContentLoaded", function(){
   recommendedFlavorValues = {...DRINK_DB["清醒"].flavor};
   resetCustomization();
   enterConversationMode();
+  // Trigger customer enter animation on first load
+  setTimeout(function(){
+    if(window.EmoTenderPixelScene&&window.EmoTenderPixelScene.enterScene){
+      window.EmoTenderPixelScene.enterScene();
+    }
+  },600);
 });
 </script>
 
