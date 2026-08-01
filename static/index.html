@@ -2749,13 +2749,24 @@ async function saveResultImage(){
   button.disabled=true;button.textContent="正在生成图片…";U("● EXPORT");
   try{
     if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+    // Pre-load texture background
+    var bgImg=new Image();bgImg.crossOrigin='anonymous';
+    bgImg.src='/static/pixel-scene/texture-bg.png';
+    await new Promise(function(resolve){bgImg.onload=resolve;bgImg.onerror=resolve;});
     var canvas=await html2canvas(target,{
       backgroundColor:'#f4f7f6',
       scale:Math.min(2,window.devicePixelRatio||1),
       useCORS:true,
       logging:false,
       onclone:function(doc){
-        var capture=doc.getElementById('final-report');if(capture)capture.classList.add('exporting');
+        var capture=doc.getElementById('final-report');
+        if(capture){
+          capture.classList.add('exporting');
+          capture.style.backgroundImage='url('+bgImg.src+')';
+          capture.style.backgroundSize='cover';
+          capture.style.backgroundRepeat='no-repeat';
+          capture.style.backgroundPosition='center center';
+        }
         var receipt=doc.getElementById('receipt-wrapper');if(receipt){receipt.style.maxHeight='none';receipt.style.overflow='visible'}
         doc.querySelectorAll('*').forEach(function(node){node.style.animation='none';node.style.transition='none'});
       }
