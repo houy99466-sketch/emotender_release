@@ -856,7 +856,7 @@ def update_conversation_state(data: dict) -> None:
     conversation_history.append(item)
     vad = data["emotion_assessment"].get("vad")
     if vad:
-        emotion_history.append({"valence": vad["valence"], "arousal": vad["arousal"]})
+        emotion_history.append({"valence": vad["valence"], "arousal": vad["arousal"], "label": data.get("emotion_label", "?")})
     if len(emotion_history) > MAX_EMOTION_HISTORY:
         emotion_history.pop(0)
 
