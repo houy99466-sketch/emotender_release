@@ -24,6 +24,13 @@ from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
 from pydantic import BaseModel
 
+from drink_matcher import (
+    match_drinks,
+    build_llm_drink_prompt,
+    weighted_emotion_flavor,
+    FLAVOR_DIMS,
+)
+
 from emotender_emotion import (
     NRC_EMOTIONS,
     build_uev,
@@ -976,6 +983,15 @@ def analyze_text(user_text: str, turn_type: str, profile_context: Optional[dict]
         trend_labels = [h["label"] if isinstance(h, dict) else str(h) for h in (emotion_history[-3:] if len(emotion_history) >= 3 else emotion_history)]
         emotion_trend = f"\n用户情绪变化趋势（最近{len(trend_labels)}轮）：{' → '.join(trend_labels)}。该趋势只能用于调整回应语气，不能作为本轮 NRC 评分证据。"
 
+
+    # === 智能饮品匹配 ===
+    default_scores = {"trust": 0.5, "anticipation": 0.3, "joy": 0.2}
+    matched_candidates = match_drinks(default_scores, "犹豫", top_n=5)
+    candidate_lines = "\n".join(
+        f"  - {c['name']}（{c['category']}）：{c['desc']}"
+        for c in matched_candidates
+    )
+
     prompt = f"""
 你是「此刻一杯」情绪茶饮的 AI 中控分析模块。
 你的角色是茗茗，28岁，开了6年茶饮店。
@@ -1027,12 +1043,20 @@ NRC 八类情绪评估规则：
 这是 EmoTender 的 prompt 库，包含情绪维度、混合规则、配方模块、表情状态和动作序列：
 {json.dumps(prompt_library, ensure_ascii=False, indent=2)}
 
-这是「此刻一杯」当前可用于正式推荐和牛皮纸小票的后端茶饮菜单：
+系统根据情绪风味向量匹配的候选饮品（按相似度排序）：
+{candidate_lines}
+
+你可以从以上候选中选择，也可以根据用户具体情绪从完整菜单中选择更合适的：
 单品：
 {single_menu}
 
 混合情绪特调：
 {blend_menu}
+
+选择饮品时的规则：
+- 优先从候选饮品中选择
+- 如果候选不合适，可以从完整菜单中选择
+- 必须选择真实存在的饮品名
 
 必须输出这些字段：
 schema_version, turn_type, user_text, emotion_assessment, emotion_label, emotion_blend, complex_emotion,
