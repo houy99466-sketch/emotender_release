@@ -548,6 +548,13 @@ ASR_BASE_URL = os.environ.get("ASR_BASE_URL", "https://api.xiaomimimo.com/v1")
 ASR_MODEL_NAME = os.environ.get("ASR_MODEL", "mimo-v2.5-asr")
 ASR_ENABLED = bool(ASR_API_KEY and not ASR_API_KEY.startswith("在这里"))
 
+# MiMo TTS 云端配置
+TTS_API_KEY = os.environ.get("TTS_API_KEY", os.environ.get("ASR_API_KEY", ""))
+TTS_BASE_URL = os.environ.get("TTS_BASE_URL", os.environ.get("ASR_BASE_URL", "https://api.xiaomimimo.com/v1"))
+TTS_MODEL = os.environ.get("TTS_MODEL", "mimo-v2.5-tts")
+TTS_VOICE = os.environ.get("TTS_VOICE", "冰糖")
+TTS_ENABLED = bool(TTS_API_KEY and not TTS_API_KEY.startswith("在这里"))
+
 client = OpenAI(
     api_key=os.environ["LLM_API_KEY"],
     base_url=os.environ["LLM_BASE_URL"],
@@ -1748,6 +1755,44 @@ def reset():
         "ok": True,
         "message": "Reset complete",
     }
+
+
+@app.post("/api/tts")
+def tts_endpoint(req: dict):
+    """TTS 语音合成端点 — 将文本转为 base64 音频"""
+    text = (req.get("text") or "").strip()
+    voice = req.get("voice") or TTS_VOICE
+    if not text:
+        return {"ok": False, "error": "empty text"}
+    if not TTS_ENABLED:
+        return {"ok": False, "error": "TTS not configured"}
+
+    try:
+        resp = httpx.post(
+            f"{TTS_BASE_URL}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {TTS_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": TTS_MODEL,
+                "messages": [{"role": "assistant", "content": text}],
+                "modalities": ["text", "audio"],
+                "audio": {"voice": voice, "format": "mp3"},
+            },
+            timeout=15,
+        )
+        data = resp.json()
+        choices = data.get("choices", [])
+        if not choices:
+            return {"ok": False, "error": "no choices", "detail": data}
+        audio = choices[0].get("message", {}).get("audio", {})
+        audio_b64 = audio.get("data", "")
+        if not audio_b64:
+            return {"ok": False, "error": "no audio data"}
+        return {"ok": True, "audio": audio_b64, "format": "mp3"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 
 @app.get("/api/text/stream")

@@ -1660,6 +1660,7 @@
     <button class="pixel-control" id="btnSend" type="button" onclick="sendText()">发送</button>
     <span id="status-line" aria-live="polite"></span>
     <button class="pixel-control" id="btnReset" type="button" onclick="resetSystem()">重置</button>
+    <button class="pixel-control" id="btnTTS" type="button" onclick="toggleTTS()" aria-pressed="false">TTS 关</button>
   </div>
 
   <div id="interaction-dock" data-export-ignore>
@@ -2494,7 +2495,26 @@ function appendChatMessage(role,text,key){
   conversationMessages.push({key:messageKey,role:role,text:clean});
   syncPixelConversation();
 }
-function R(t){appendChatMessage('robot',t);var e=document.getElementById("reply-area");if(e)e.textContent=t||''}
+function R(t){appendChatMessage('robot',t);var e=document.getElementById("reply-area");if(e)e.textContent=t||'';if(window._ttsEnabled)speakText(t)}
+
+var _ttsEnabled=false;
+function toggleTTS(){
+  _ttsEnabled=!_ttsEnabled;
+  window._ttsEnabled=_ttsEnabled;
+  var btn=document.getElementById("btnTTS");
+  if(btn){btn.textContent=_ttsEnabled?"TTS 开":"TTS 关";btn.setAttribute("aria-pressed",_ttsEnabled?"true":"false");}
+}
+async function speakText(text){
+  if(!text||!text.trim())return;
+  try{
+    var resp=await fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.trim()})});
+    var d=await resp.json();
+    if(d.ok&&d.audio){
+      var audio=new Audio("data:audio/mp3;base64,"+d.audio);
+      audio.play().catch(function(){});
+    }
+  }catch(e){console.warn("TTS failed:",e);}
+}
 
 function renderConversationHistory(state,fallbackUser,fallbackReply){
   var history=state&&Array.isArray(state.history)?state.history:[];
@@ -2536,6 +2556,8 @@ window.updateTenderState=function(d){
   else if(l==="犹豫"||t==="thinking")e="犹豫";
   c.setAttribute('data-emotion',e);if(d.face_state)F(d.face_state);
   onEmotionChange(e,d);
+  // TTS: 朗读酒保台词（含推荐场景）
+  if(d.bartender_line&&window._ttsEnabled)speakText(d.bartender_line);
 };
 
 function onEmotionChange(emotion, controlJson) {
