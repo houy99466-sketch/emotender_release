@@ -1752,6 +1752,7 @@
     </div>
     <div class="composition-body">
       <div class="composition-cup" aria-hidden="true">
+        <img id="drink-svg-image" src="" alt="饮品白模图" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;display:none;z-index:2;">
         <div id="composition-liquid"></div>
         <span class="composition-ice i1"></span>
         <span class="composition-ice i2"></span>
@@ -2059,16 +2060,33 @@ function updateComposition() {
   if (mouthfeel) mouthfeel.textContent = `${confirmedCustomization.口感}口感`;
   if (temperature) temperature.textContent = confirmedCustomization.温度;
   if (sweetness) sweetness.textContent = `${confirmedCustomization.甜度}甜度`;
-  if (liquid) {
-    liquid.style.background = colors[currentEmotion] || colors["清醒"];
-    liquid.style.height = confirmedCustomization.口感 === '醇厚' ? '82%' :
-      confirmedCustomization.口感 === '清爽' ? '66%' : '74%';
+  // Load SVG drink image
+  const svgImg = document.getElementById('drink-svg-image');
+  if (svgImg && name) {
+    const svgPath = '/static/pixel-scene/drinks/' + encodeURIComponent(name) + '.svg';
+    svgImg.src = svgPath;
+    svgImg.style.display = "block";
+    // Hide geometric shapes when image loads
+    svgImg.onload = function() {
+      if (liquid) liquid.style.display = 'none';
+      document.querySelectorAll('.composition-ice').forEach(function(ice) { ice.style.display = 'none'; });
+    };
+    svgImg.onerror = function() {
+      svgImg.style.display = "none";
+      // Show geometric shapes as fallback
+      if (liquid) {
+        liquid.style.display = 'block';
+        liquid.style.background = colors[currentEmotion] || colors["清醒"];
+        liquid.style.height = confirmedCustomization.口感 === '醇厚' ? '82%' :
+          confirmedCustomization.口感 === '清爽' ? '66%' : '74%';
+      }
+      document.querySelectorAll('.composition-ice').forEach(function(ice, index) {
+        const visibleCount = confirmedCustomization.温度 === '常温' ? 0 :
+          confirmedCustomization.温度 === '少冰' ? 1 : 3;
+        ice.style.display = index < visibleCount ? 'block' : 'none';
+      });
+    };
   }
-  document.querySelectorAll('.composition-ice').forEach(function(ice, index) {
-    const visibleCount = confirmedCustomization.温度 === '常温' ? 0 :
-      confirmedCustomization.温度 === '少冰' ? 1 : 3;
-    ice.style.display = index < visibleCount ? 'block' : 'none';
-  });
 }
 
 function applyCustomizationPreview() {
