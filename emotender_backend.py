@@ -85,6 +85,7 @@ PROFILE_LIST_KEYS = (
     "drink_history",
     "conversation_style",
     "avoidances",
+    "mood_regulation_style",
 )
 
 # ==================== Drink Menu (from teammate frontend/backend update) ====================
@@ -717,6 +718,7 @@ def default_user_profile(username: str) -> dict:
             "drink_history": [],
             "conversation_style": [],
             "avoidances": [],
+            "mood_regulation_style": [],
         },
         "session_summaries": [],
     }
@@ -796,6 +798,7 @@ def build_prompt_profile_context(profile_context: dict) -> dict:
         "drink_history": list(stable.get("drink_history", [])),
         "conversation_style": list(stable.get("conversation_style", [])),
         "avoidances": list(stable.get("avoidances", [])),
+        "mood_regulation_style": list(stable.get("mood_regulation_style", [])),
     }
 
 
@@ -809,6 +812,7 @@ def merge_session_summary_into_profile(profile: dict, summary: dict) -> dict:
     append_unique(stable["drink_history"], summary.get("drink_name", ""))
     append_unique(stable["conversation_style"], summary.get("conversation_style", []))
     append_unique(stable["avoidances"], summary.get("avoidances", []))
+    append_unique(stable["mood_regulation_style"], summary.get("mood_regulation_style", []))
 
     profile.setdefault("session_summaries", []).append(summary)
     profile["session_summaries"] = profile["session_summaries"][-20:]
@@ -1026,6 +1030,17 @@ face_state, bartender_line, action_sequence, feedback_prompt, recommendation_rea
 - 每轮最多问一个问题。
 - 不要使用这些词：亲、哦、呢、呀、哈、啦、咱、呗。
 - 不要做医学诊断、法律建议、股票建议。
+
+正向情绪放大规则：
+- 当 joy 为 primary_emotion 且权重超过 0.5 时，feedback_prompt 应主动引导用户放大此刻的好心情。
+- 可以建议：趁状态好试试从没试过的新搭配；把这杯分享给身边的人；记住这个味道，下次不开心时能想起来今天。
+- 不要只说"开心就好"，要有具体的、可执行的小建议。
+
+情绪调节建议规则：
+- 当用户本轮情绪明显负面（sadness、fear、anger 中任一权重超过 0.4）时，feedback_prompt 末尾可以轻度附带一个情绪调节建议。
+- 建议必须温和、具体、不说教。例如："喝完这杯，出去走走"、"今天早点休息"、"给一个信任的人打个电话"、"深呼吸三次"。
+- 每轮最多一个调节建议，放在 feedback_prompt 最后，用句号或逗号与前文连接。
+- 不要每次都给，根据对话上下文自然决定是否需要。如果用户已经在做调节行为（比如已经在散步），就不再建议。
 """
 
     # LLM 调用 + 自动重试（最多2次，指数退避）
