@@ -2565,7 +2565,7 @@ async function analyzeUserText(text){
     pendingUserText=clean;appendChatMessage('user',clean);
     U("● PROC");var c=document.getElementById("crt-screen");if(c)c.classList.remove("recording-active");
     var u=usernameValue()||"";
-    var url="/api/text/stream?user_text="+encodeURIComponent(clean)+(u?"&username="+encodeURIComponent(u):");
+    var url="/api/text/stream?user_text="+encodeURIComponent(clean)+(u?"&username="+encodeURIComponent(u):"");
     var es=new EventSource(url);
     var bartenderText="";
     var fullResult=null;
