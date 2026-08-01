@@ -973,7 +973,7 @@ def analyze_text(user_text: str, turn_type: str, profile_context: Optional[dict]
     # Build emotion trend
     emotion_trend = ""
     if len(emotion_history) >= 2:
-        trend_labels = emotion_history[-3:] if len(emotion_history) >= 3 else emotion_history
+        trend_labels = [h["label"] if isinstance(h, dict) else str(h) for h in (emotion_history[-3:] if len(emotion_history) >= 3 else emotion_history)]
         emotion_trend = f"\n用户情绪变化趋势（最近{len(trend_labels)}轮）：{' → '.join(trend_labels)}。该趋势只能用于调整回应语气，不能作为本轮 NRC 评分证据。"
 
     prompt = f"""
