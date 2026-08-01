@@ -36,10 +36,8 @@ from emotender_emotion import (
     TREND_DISPLAY,
 )
 
-try:
-    from funasr import AutoModel
-except ModuleNotFoundError:
-    AutoModel = None
+import httpx
+import base64
 
 load_dotenv()
 
@@ -543,15 +541,11 @@ def enrich_result_with_drink_metadata(data: dict) -> dict:
     return data
 
 
-ASR_MODEL = (
-    AutoModel(
-        model="paraformer-zh",
-        vad_model="fsmn-vad",
-        punc_model="ct-punc-c",
-    )
-    if AutoModel is not None
-    else None
-)
+# MiMo ASR 云端配置
+ASR_API_KEY = os.environ.get("ASR_API_KEY", "")
+ASR_BASE_URL = os.environ.get("ASR_BASE_URL", "https://api.xiaomimimo.com/v1")
+ASR_MODEL_NAME = os.environ.get("ASR_MODEL", "mimo-v2.5-asr")
+ASR_ENABLED = bool(ASR_API_KEY and not ASR_API_KEY.startswith("在这里"))
 
 client = OpenAI(
     api_key=os.environ["LLM_API_KEY"],
@@ -886,16 +880,58 @@ def update_conversation_state(data: dict) -> None:
 
 
 def transcribe_audio(wav_path: Path) -> str:
-    if ASR_MODEL is None:
+    if not ASR_ENABLED:
         raise RuntimeError("asr_unavailable")
 
-    logger.info(f"开始语音识别: {wav_path}")
-    result = ASR_MODEL.generate(input=str(wav_path))
-    text = result[0].get("text", "").strip()
+    logger.info(f"开始 MiMo ASR 语音识别: {wav_path}")
+    url = f"{ASR_BASE_URL.rstrip('/')}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {ASR_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    # 读取音频文件并 base64 编码
+    with open(wav_path, "rb") as f:
+        audio_bytes = f.read()
+    audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+
+    payload = {
+        "model": ASR_MODEL_NAME,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_audio",
+                        "input_audio": {
+                            "data": audio_b64,
+                            "format": "wav",
+                        },
+                    }
+                ],
+            }
+        ],
+        "asr_options": {"language": "zh"},
+        "stream": False,
+    }
+
+    resp = httpx.post(url, headers=headers, json=payload, timeout=30)
+
+    if resp.status_code != 200:
+        logger.error(f"MiMo ASR 请求失败: {resp.status_code} {resp.text}")
+        raise RuntimeError(f"asr_error_{resp.status_code}")
+
+    result = resp.json()
+    # MiMo ASR 返回格式: choices[0].message.content
+    text = ""
+    choices = result.get("choices", [])
+    if choices:
+        msg = choices[0].get("message", {})
+        text = msg.get("content", "").strip()
     if not text or len(text) < 2:
         logger.warning(f"静默或过短语音: '{text}'")
         raise RuntimeError("silence_detected")
-    logger.info(f"识别结果: {text}")
+    logger.info(f"MiMo ASR 识别结果: {text}")
     return text
 
 
@@ -1056,9 +1092,14 @@ face_state, bartender_line, action_sequence, feedback_prompt, recommendation_rea
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.2,
-                timeout=30,
+                max_completion_tokens=4096,
+                timeout=60,
             )
             llm_content = response.choices[0].message.content
+            raw_reasoning = getattr(response.choices[0].message, 'reasoning_content', None)
+            logger.info(f"LLM raw content (first 300): {repr(llm_content[:300] if llm_content else None)}")
+            logger.info(f"LLM raw reasoning (first 200): {repr(raw_reasoning[:200] if raw_reasoning else None)}")
+            logger.info(f"LLM finish_reason: {response.choices[0].finish_reason}")
             parsed = extract_json(llm_content)
             validate_emotion_assessment(
                 parsed["emotion_assessment"],
@@ -1102,7 +1143,26 @@ def current_emotion_evidence_texts(user_text: str) -> list[str]:
     ]
 
 
+# 中文情绪名 -> NRC 英文键映射
+_CN_TO_NRC = {
+    "愤怒": "anger", "期待": "anticipation", "厌恶": "disgust", "恐惧": "fear",
+    "喜悦": "joy", "悲伤": "sadness", "惊讶": "surprise", "信任": "trust",
+    "生气": "anger", "焦虑": "anger", "紧张": "fear", "害怕": "fear",
+    "开心": "joy", "高兴": "joy", "快乐": "joy", "难过": "sadness",
+    "伤心": "sadness", "吃惊": "surprise", "意外": "surprise",
+}
+
+def _normalize_emotion_blend(blend: list) -> list:
+    """将 emotion_blend 中的中文情绪名映射回英文 NRC 键"""
+    for item in blend:
+        emo = item.get("emotion", "")
+        if emo in _CN_TO_NRC:
+            item["emotion"] = _CN_TO_NRC[emo]
+    return blend
+
 def apply_emotion_compatibility(data: dict) -> dict:
+    if "emotion_blend" in data:
+        _normalize_emotion_blend(data["emotion_blend"])
     data.update(derive_legacy_fields(data["emotion_assessment"]))
     data["target_flavor_vector"] = build_target_flavor_vector(
         data["emotion_assessment"]["scores"]
@@ -1332,7 +1392,7 @@ def process_user_text(user_text: str, username: Optional[str] = None) -> dict:
     except Exception as exc:
         used_fallback = True
         llm_error = str(exc)
-        logger.warning(f"LLM/NLP 链路异常，使用熔断兜底: {exc}")
+        logger.warning(f"LLM/NLP 链路异常，使用熔断兜底: {exc}", exc_info=True)
         result = fallback_result(user_text, turn_type_hint)
         validate_result(result)
         result = enrich_result_with_drink_metadata(result)
@@ -1385,7 +1445,8 @@ def summarize_session_for_profile(username: str, profile: dict, state: dict) -> 
             {"role": "user", "content": prompt},
         ],
         temperature=0.1,
-        timeout=30,
+        max_completion_tokens=4096,
+        timeout=60,
     )
     summary = extract_json(response.choices[0].message.content)
     summary["username"] = username

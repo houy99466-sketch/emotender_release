@@ -320,6 +320,8 @@
   }
   #btnStart { color:#8cc8e0; border-color:rgba(140,200,224,0.3); }
   #btnStart:hover { background:rgba(140,200,224,0.1); border-color:rgba(140,200,224,0.55); }
+  #btnStart.recording { color:#ff6b6b; border-color:rgba(255,107,107,0.5); animation:pulse-recording 1.2s ease-in-out infinite; }
+  @keyframes pulse-recording { 0%,100%{opacity:1} 50%{opacity:0.6} }
   #btnSend  { color:#90d8b0; border-color:rgba(144,216,176,0.22); }
   #btnSend:hover  { background:rgba(144,216,176,0.1); border-color:rgba(144,216,176,0.42); }
   #btnReset { color:rgba(180,180,190,0.45); border-color:rgba(180,180,190,0.12); }
@@ -2534,24 +2536,40 @@ async function C(p,b){var o={method:"POST"};if(b){o.headers={"Content-Type":"app
 function toggleHelp(){var e=document.getElementById("help-popover");if(e)e.classList.toggle("open")}
 async function loginUser(){var u=usernameValue();if(!u){R("先输入一个用户名。");return}try{await C("/api/user/login",{username:u});localStorage.setItem("emotender_username",u);U("USER "+u);R("已登录。之后的对话会用于形成你的个人偏好数据库。")}catch(e){R("登录失败: "+(e.detail||e.message||"?"))}}
 async function logoutUser(){var u=usernameValue()||localStorage.getItem("emotender_username")||"";if(!u){R("当前没有登录用户。");return}try{var d=await C("/api/user/logout",{username:u});localStorage.removeItem("emotender_username");var i=document.getElementById("username-input");if(i)i.value="";U("IDLE");R(d.saved_summary?"已退出，并保存本次对话摘要。":"已退出，本次没有需要保存的对话。")}catch(e){R("退出失败: "+(e.detail||e.message||"?"))}}
+var isRecording=false;
 async function startRecording(){
   try{
+    if(isRecording){await stopRecording();return}
+    isRecording=true;
+    var btn=document.getElementById("btnStart");if(btn){btn.textContent="停止录音";btn.classList.add("recording")}
     U("● REC");var c=document.getElementById("crt-screen");if(c)c.classList.add("recording-active");
     if(window.EmoTenderAndroid&&window.EmoTenderAndroid.startSpeech){window.EmoTenderAndroid.startSpeech();return}
     await C("/api/voice/start")
   }
-  catch(e){U("IDLE");var c=document.getElementById("crt-screen");if(c)c.classList.remove("recording-active");R("录音启动失败: "+(e.detail||e.message||"?"))}}
+  catch(e){isRecording=false;var btn=document.getElementById("btnStart");if(btn){btn.textContent="开始说话";btn.classList.remove("recording")}
+    U("IDLE");var c=document.getElementById("crt-screen");if(c)c.classList.remove("recording-active");R("录音启动失败: "+(e.detail||e.message||"?"))}}
 async function stopRecording(){
-  try{U("● PROC");var c=document.getElementById("crt-screen");if(c)c.classList.remove("recording-active");
-    var d=await C("/api/voice/stop");handleAnalyzeResponse(d)}
-  catch(e){U("IDLE");R("分析失败: "+(e.detail||e.message||"?"))}}
+  try{isRecording=false;var btn=document.getElementById("btnStart");if(btn){btn.textContent="开始说话";btn.classList.remove("recording");btn.disabled=true}
+    U("● PROC");var c=document.getElementById("crt-screen");if(c)c.classList.remove("recording-active");
+    R("正在识别语音并分析情绪，请稍候...");
+    var timer=setTimeout(function(){R("模型思考中，请耐心等待...")},10000);
+    var d=await C("/api/voice/stop");
+    clearTimeout(timer);
+    if(btn)btn.disabled=false;
+    handleAnalyzeResponse(d)}
+  catch(e){isRecording=false;var btn=document.getElementById("btnStart");if(btn){btn.textContent="开始说话";btn.classList.remove("recording");btn.disabled=false}
+    U("IDLE");R("分析失败: "+(e.detail||e.message||"?"))}}
 async function analyzeUserText(text){
   var clean=(text||"").trim();if(!clean){R("先说一句话，或者手动输入一句话。");return}
   try{
     pendingUserText=clean;appendChatMessage('user',clean);
     U("● PROC");var c=document.getElementById("crt-screen");if(c)c.classList.remove("recording-active");
+    R("正在分析情绪，请稍候...");
+    var timer=setTimeout(function(){R("模型思考中，请耐心等待...")},10000);
     var body={user_text:clean};var u=usernameValue();if(u)body.username=u;
-    var d=await C("/api/text/analyze",body);handleAnalyzeResponse(d)
+    var d=await C("/api/text/analyze",body);
+    clearTimeout(timer);
+    handleAnalyzeResponse(d)
   }catch(e){U("IDLE");R("分析失败: "+(e.detail||e.message||"?"))}
 }
 function handleAnalyzeResponse(d){

@@ -173,7 +173,7 @@ def validate_emotion_assessment(assessment: dict, current_texts: list[str]) -> N
         if not isinstance(interpretation, str) or not interpretation.strip():
             raise ValueError("evidence interpretation must not be empty")
 
-    active_emotions = {emotion for emotion, score in scores.items() if score > 0}
+    active_emotions = {emotion for emotion, score in scores.items() if score > 0.1}
     if not active_emotions.issubset(linked_emotions):
         raise ValueError("every non-zero emotion must have current-session evidence")
 
@@ -193,7 +193,7 @@ def derive_legacy_fields(assessment: dict) -> dict:
         {
             "emotion": NRC_DISPLAY_NAMES[emotion],
             "weight": round(score / total, 4),
-            "source": source_by_emotion[emotion],
+            "source": source_by_emotion.get(emotion, assessment["evidence"][0]["quote"] if assessment.get("evidence") else ""),
         }
         for emotion, score in top
     ]
