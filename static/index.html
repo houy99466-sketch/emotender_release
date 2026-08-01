@@ -383,13 +383,13 @@
     border:1px solid rgba(200,170,120,0.15);
     border-radius:4px;
     font-family:'Courier New','PingFang SC',monospace;
-    font-size:11px; color:rgba(205,215,220,0.72);
+    font-size:11px; color:rgba(225,235,240,0.92);
     display:none;
   }
   #vad-trend.visible { display:block; }
   .vad-row { display:flex; justify-content:space-between; margin-bottom:3px; }
-  .vad-label { color:rgba(205,215,220,0.72); }
-  .vad-value { color:rgba(233,220,200,0.95); font-weight:bold; }
+  .vad-label { color:#1a1a1a; }
+  .vad-value { color:#111; font-weight:bold; }
   .trend-line { margin-top:6px; padding-top:6px; border-top:1px solid rgba(200,170,120,0.1); }
   .trend-escalating { color:#e96f51; }
   .trend-steady { color:rgba(205,215,220,0.6); }
@@ -400,13 +400,13 @@
     border:1px solid rgba(200,170,120,0.1);
     border-radius:4px;
     font-family:'Courier New','PingFang SC',monospace;
-    font-size:10px; color:rgba(205,215,220,0.6);
+    font-size:10px; color:rgba(225,235,240,0.82);
     display:none;
   }
   #uev-detail.visible { display:block; }
   .uev-row { display:flex; justify-content:space-between; margin-bottom:2px; }
-  .uev-label { color:rgba(205,215,220,0.5); }
-  .uev-value { color:rgba(233,220,200,0.8); font-weight:bold; }
+  .uev-label { color:#2a2a2a; }
+  .uev-value { color:#111; font-weight:bold; }
 
   #save-result-button {
     display:none; min-height:40px; margin-top:28px; padding:8px 22px;
@@ -428,6 +428,14 @@
     font-family:'Courier New','PingFang SC',monospace; font-size:12px;
   }
   #report-actions #save-result-button { margin-top:0; }
+  #find-heytea-btn {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-height:40px; padding:8px 22px; cursor:pointer; text-decoration:none;
+    border:1px solid rgba(80,180,120,0.45);
+    background:rgba(80,180,120,0.08); color:rgba(100,200,140,0.9);
+    font-family:'Courier New','PingFang SC',monospace; font-size:12px;
+  }
+  #find-heytea-btn:hover { background:rgba(80,180,120,0.18); }
 
   /* ===== 风味六维图（只读展示） ===== */
   #flavor-section {
@@ -941,7 +949,8 @@
   /* ===== 背景按视图切换 ===== */
   /* 封面页：恢复原来的深色背景 */
   body[data-theme="light-beverage"][data-view="conversation"] {
-    background: var(--canvas);
+    background: var(--canvas) url("/static/pixel-scene/texture-bg.png") no-repeat center center fixed;
+    background-size: cover;
   }
 
   /* 推荐页/报告页：左右各1/7保留背景图，中间5/7浅色 */
@@ -959,7 +968,8 @@
     transform: translateX(-50%);
     width: calc(100% / 7 * 5.6);
     height: 100%;
-    background: var(--canvas);
+    background: var(--canvas) url("/static/pixel-scene/texture-bg.png") no-repeat center center fixed;
+    background-size: cover;
     pointer-events: none;
     z-index: 0;
   }
@@ -1344,6 +1354,13 @@
     border-radius:0;
     background:var(--surface);
     border:1px solid var(--line-strong);
+  }
+  body[data-theme="light-beverage"] #find-heytea-btn {
+    min-height:44px; padding:9px 20px; border-radius:0;
+    background:var(--surface); border:1px solid #50b478;
+    color:#2d8f56;
+  }
+  body[data-theme="light-beverage"] #find-heytea-btn:hover { background:#e8f5ee; }
     box-shadow:none;
     color:var(--text-strong);
     font-family:'PingFang SC','Microsoft YaHei',sans-serif;
@@ -1880,6 +1897,7 @@
   <div id="report-actions" class="view-actions" data-export-ignore>
     <button onclick="returnToRecommendationPreview()">返回确认</button>
     <button id="save-result-button" onclick="saveResultImage()">保存为图片</button>
+    <a id="find-heytea-btn" href="https://www.amap.com/search?query=喜茶" target="_blank" rel="noopener noreferrer">查找附近喜茶</a>
   </div>
 </section>
 

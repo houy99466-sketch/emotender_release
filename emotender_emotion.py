@@ -11,6 +11,15 @@ NRC_EMOTIONS = (
     "trust",
 )
 
+# Chinese to English NRC mapping for validation
+_CN_TO_NRC_EVIDENCE = {
+    "愤怒": "anger", "期待": "anticipation", "厌恶": "disgust", "恐惧": "fear",
+    "喜悦": "joy", "悲伤": "sadness", "惊讶": "surprise", "信任": "trust",
+    "生气": "anger", "焦虑": "anger", "紧张": "fear", "害怕": "fear",
+    "开心": "joy", "高兴": "joy", "快乐": "joy", "难过": "sadness",
+    "伤心": "sadness", "吃惊": "surprise", "意外": "surprise",
+}
+
 NRC_DISPLAY_NAMES = {
     "anger": "愤怒",
     "anticipation": "期待",
@@ -164,11 +173,17 @@ def validate_emotion_assessment(assessment: dict, current_texts: list[str]) -> N
         emotions = item.get("emotions") if isinstance(item, dict) else None
         if not isinstance(quote, str) or not quote.strip() or quote not in session_text:
             raise ValueError("evidence quote must exist in current session")
-        if not isinstance(emotions, list) or not emotions or any(
-            emotion not in NRC_EMOTIONS for emotion in emotions
-        ):
+        if not isinstance(emotions, list) or not emotions:
             raise ValueError("evidence emotions must use NRC_EMOTIONS")
-        linked_emotions.update(emotions)
+        normalized = []
+        for emotion in emotions:
+            if emotion in NRC_EMOTIONS:
+                normalized.append(emotion)
+            elif emotion in _CN_TO_NRC_EVIDENCE:
+                normalized.append(_CN_TO_NRC_EVIDENCE[emotion])
+            else:
+                raise ValueError(f"evidence emotion not recognized: {emotion}")
+        linked_emotions.update(normalized)
         interpretation = item.get("interpretation")
         if not isinstance(interpretation, str) or not interpretation.strip():
             raise ValueError("evidence interpretation must not be empty")

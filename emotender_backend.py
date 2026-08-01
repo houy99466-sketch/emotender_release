@@ -982,7 +982,7 @@ def analyze_text(user_text: str, turn_type: str, profile_context: Optional[dict]
 你的信念是：茶是情绪的容器，不是答案。
 你的表达必须低沉、松弛、直球、不说废话。
 
-你必须只输出一个合法 JSON 对象。
+你必须只输出一个合法 JSON 对象。内部推理尽量简洁，不要展开分析。
 不要输出 Markdown。
 不要输出解释。
 不要输出代码块。
@@ -1105,7 +1105,7 @@ face_state, bartender_line, action_sequence, feedback_prompt, recommendation_rea
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.2,
-                max_completion_tokens=4096,
+                max_completion_tokens=8192,
                 timeout=90,
             )
             llm_content = response.choices[0].message.content
@@ -1460,7 +1460,7 @@ def summarize_session_for_profile(username: str, profile: dict, state: dict) -> 
             {"role": "user", "content": prompt},
         ],
         temperature=0.1,
-        max_completion_tokens=4096,
+        max_completion_tokens=8192,
         timeout=90,
     )
     summary = extract_json(response.choices[0].message.content)
