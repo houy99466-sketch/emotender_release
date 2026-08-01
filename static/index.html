@@ -2315,7 +2315,7 @@ function hasFormalRecommendation(controlJson) {
 
 function drinkFromControl(controlJson, emotion) {
   const drinkName = controlJson && controlJson.drink_name;
-  const base = (drinkName && DRINK_DB[drinkName]) || DRINK_DB[emotion] || DRINK_DB["清醒"];
+  const base = (drinkName && DRINK_DB[drinkName]) || DRINK_DB["绿妍"];
   const meta = controlJson && controlJson.drink_metadata;
   if (!meta) return {
     name: controlJson.drink_name || base.name,
@@ -2481,7 +2481,7 @@ function enterFinalReport(faceSnapshot) {
 
 // ============ 小票渲染与最终报告 ============
 async function confirmFlavor() {
-  const d = currentDrink || DRINK_DB["清醒"];
+  const d = currentDrink || DRINK_DB["绿妍"];
 
   let ambientPlan = {enabled:false};
   try {
@@ -2783,7 +2783,7 @@ function resetFlavorPanels(){
   resetRecommendationInsight();
 }
 
-var M={1:{turn_type:"recommendation",drink_name:"晨露茉莉",drink_metadata:{name:"晨露茉莉",name_en:"Morning Dew Jasmine"},emotion_label:"清醒",face_state:"focused",bartender_line:"晨露茉莉，清冽回甘。喝完它，世界安静了，你也是。",emotion_blend:[{emotion:"清醒",weight:1,source:"演示模式"}]},2:{turn_type:"recommendation",drink_name:"莓果派对",drink_metadata:{name:"莓果派对",name_en:"Berry Fiesta"},emotion_label:"兴奋",face_state:"happy",bartender_line:"莓果派对来了！草莓和青提在跳舞，今天值得庆祝~",emotion_blend:[{emotion:"兴奋",weight:1,source:"演示模式"}]},3:{turn_type:"recommendation",drink_name:"暖绒厚乳",drink_metadata:{name:"暖绒厚乳",name_en:"Warm Velvet Milk"},emotion_label:"难过",face_state:"gentle",bartender_line:"暖绒厚乳，捧在手心。这杯不是茶，是围巾。",emotion_blend:[{emotion:"难过",weight:1,source:"演示模式"}]},4:{turn_type:"recommendation",drink_name:"椰风轻语",drink_metadata:{name:"椰风轻语",name_en:"Coconut Whisper"},emotion_label:"疲惫",face_state:"gentle",bartender_line:"椰风轻语，不加糖不问你。这杯就是'辛苦了'。",emotion_blend:[{emotion:"疲惫",weight:1,source:"演示模式"}]},5:{turn_type:"recommendation",drink_name:"普洱安坐",drink_metadata:{name:"普洱安坐",name_en:"Pu'er Settle"},emotion_label:"焦虑",face_state:"focused",bartender_line:"普洱已经泡好了，深呼吸。那些'万一'还没发生。",emotion_blend:[{emotion:"焦虑",weight:1,source:"演示模式"}]},6:{turn_type:"recommendation",drink_name:"桂花弄",drink_metadata:{name:"桂花弄",name_en:"Osmanthus Drift"},emotion_label:"犹豫",face_state:"thinking",bartender_line:"桂花弄在等你。不急着决定，答案会自己来的。",emotion_blend:[{emotion:"犹豫",weight:1,source:"演示模式"}]}};
+var M={1:{turn_type:"recommendation",drink_name:"多肉葡萄",drink_metadata:{name:"多肉葡萄",name_en:"Multi Grape"},emotion_label:"兴奋",face_state:"happy",bartender_line:"多肉葡萄来了！巨峰葡萄清甜多汁，绿茶底回甘清爽。",emotion_blend:[{emotion:"兴奋",weight:1,source:"演示模式"}]},2:{turn_type:"recommendation",drink_name:"烤黑糖波波牛乳",drink_metadata:{name:"烤黑糖波波牛乳",name_en:"Brown Sugar Boba"},emotion_label:"难过",face_state:"gentle",bartender_line:"烤黑糖波波牛乳，焦香醇厚，捧在手心暖一暖。",emotion_blend:[{emotion:"难过",weight:1,source:"演示模式"}]},3:{turn_type:"recommendation",drink_name:"苦巧咸酪",drink_metadata:{name:"苦巧咸酪",name_en:"Dark Cocoa Cheese"},emotion_label:"焦虑",face_state:"focused",bartender_line:"苦巧咸酪，苦甜咸三层风味，先坐稳。",emotion_blend:[{emotion:"焦虑",weight:1,source:"演示模式"}]},4:{turn_type:"recommendation",drink_name:"碎银子普洱",drink_metadata:{name:"碎银子普洱",name_en:"Pu'er Nuggets"},emotion_label:"疲惫",face_state:"gentle",bartender_line:"碎银子普洱，温润顺滑，什么都不问。",emotion_blend:[{emotion:"疲惫",weight:1,source:"演示模式"}]},5:{turn_type:"recommendation",drink_name:"绿妍",drink_metadata:{name:"绿妍",name_en:"Jasmine Green"},emotion_label:"清醒",face_state:"focused",bartender_line:"绿妍，九窨茉莉绿茶，花香清雅。",emotion_blend:[{emotion:"清醒",weight:1,source:"演示模式"}]},6:{turn_type:"recommendation",drink_name:"三倍厚抹茶拿铁",drink_metadata:{name:"三倍厚抹茶拿铁",name_en:"Triple Matcha Latte"},emotion_label:"犹豫",face_state:"thinking",bartender_line:"三倍厚抹茶拿铁，微苦回甘，不急着决定。",emotion_blend:[{emotion:"犹豫",weight:1,source:"演示模式"}]}};
 document.addEventListener("keydown",function(e){if(e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA")return;var k=e.key;if(M[k]){e.preventDefault();var p=M[k];window._suppressDrinkMsg=true;window.updateTenderState(p);R(p.bartender_line||"");U("● MOCK")}});
 
 // ============ 初始化 ============
@@ -2804,8 +2804,8 @@ document.addEventListener("DOMContentLoaded", function(){
     if (event.key === 'Escape' && modal.classList.contains('open')) closeCustomization();
   });
   // 初始化风味数据但不显示六维图，等用户选择情绪后才出现
-  currentDrink = DRINK_DB["清醒"];
-  recommendedFlavorValues = {...DRINK_DB["清醒"].flavor};
+  currentDrink = DRINK_DB["绿妍"];
+  recommendedFlavorValues = {...DRINK_DB["绿妍"].flavor};
   resetCustomization();
   enterConversationMode();
   // Trigger customer enter animation on first load

@@ -148,7 +148,21 @@ def build_drink_metadata(drink_name: str) -> Optional[dict]:
     drink = get_drink_info(drink_name)
     if drink is None:
         return None
-    return {field: drink[field] for field in DRINK_METADATA_FIELDS if field in drink}
+    # 新 DRINK_DB 结构: name, category, flavor(tuple), desc
+    # 旧 DRINK_METADATA_FIELDS 结构: name, name_en, recipe_modules, flavor_profile, ...
+    # 适配两种结构
+    result = {}
+    for field in DRINK_METADATA_FIELDS:
+        if field in drink:
+            result[field] = drink[field]
+    # 新饮品没有的字段，用 desc 和 category 补充
+    if "name_en" not in result:
+        result["name_en"] = drink.get("name_en", drink.get("category", ""))
+    if "flavor_profile" not in result:
+        result["flavor_profile"] = drink.get("desc", "")
+    if "recipe_modules" not in result:
+        result["recipe_modules"] = []
+    return result
 
 
 def enrich_result_with_drink_metadata(data: dict) -> dict:
@@ -975,7 +989,7 @@ def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
         ],
         "complex_emotion": "大模型链路超载，触发酒馆全息自检保护协议。",
         "need_summary": "系统自检，需要一杯清爽低甜的特调冷启动。",
-        "drink_name": "晨露茉莉",
+        "drink_name": "绿妍",
         "recipe_modules": [
             "clear_balance",
             "bitter_focus",
@@ -983,7 +997,7 @@ def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
         "flavor_profile": "清爽、微苦、低甜、带轻微气泡感",
         "color_profile": "透明偏冷调，带一点淡青色",
         "face_state": "focused",
-        "bartender_line": "（安全协议启动）我的核心大脑似乎开了一会儿小差，不过别担心，我先为你推荐一杯标志性的'晨露茉莉'，让我们重新连接。",
+        "bartender_line": "（安全协议启动）我的核心大脑似乎开了一会儿小差，不过别担心，我先为你推荐一杯标志性的'绿妍'，让我们重新连接。",
         "action_sequence": "make_cold_start",
         "feedback_prompt": "喝完感觉清醒一点了吗？",
         "recommendation_reason": "这次分析没有完整返回，我先用一杯清爽低甜的冷启动接住这一轮。它不能替你解决正在面对的事情，但能让推荐流程保持完整。",
