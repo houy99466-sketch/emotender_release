@@ -611,7 +611,7 @@ def analyze_text(user_text: str, turn_type: str, profile_context: Optional[dict]
 
     # === 智能饮品匹配 ===
     default_scores = {"trust": 0.5, "anticipation": 0.3, "joy": 0.2}
-    matched_candidates = match_drinks(default_scores, "犹豫", top_n=5)
+    matched_candidates = match_drinks(default_scores, "犹豫", top_n=10)
     candidate_lines = "\n".join(
         f"  - {c['name']}（{c['category']}）：{c['desc']}"
         for c in matched_candidates
