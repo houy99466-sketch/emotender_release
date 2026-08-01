@@ -19,7 +19,7 @@ logger = logging.getLogger("emotender")
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from openai import OpenAI
 from pydantic import BaseModel
@@ -1745,6 +1745,51 @@ def reset():
         "ok": True,
         "message": "Reset complete",
     }
+
+
+@app.get("/api/text/stream")
+async def text_stream(username: str = "", user_text: str = ""):
+    """SSE streaming endpoint for text analysis"""
+    import asyncio, json as _json
+
+    def _sse(event_type, data):
+        return f"event: {event_type}\ndata: {_json.dumps(data, ensure_ascii=False)}\n\n"
+
+    async def event_generator():
+        if not user_text.strip():
+            yield _sse("error", {"error": "empty text"})
+            return
+
+        yield _sse("status", {"message": "正在分析情绪..."})
+
+        # Run analysis in thread pool to avoid blocking
+        loop = asyncio.get_event_loop()
+        try:
+            result = await loop.run_in_executor(
+                None, process_user_text, user_text.strip(), username or None
+            )
+        except Exception as exc:
+            yield _sse("error", {"error": str(exc)})
+            return
+
+        # Send emotion data first
+        ea = result.get("control_json", {}).get("emotion_assessment", {})
+        yield _sse("emotion", {"emotion_assessment": ea})
+
+        # Stream bartender line character by character
+        bartender = result.get("control_json", {}).get("bartender_line", "")
+        for ch in bartender:
+            yield _sse("token", {"token": ch})
+            await asyncio.sleep(0.03)
+
+        # Send final complete result
+        yield _sse("done", result)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.get("/", response_class=HTMLResponse)

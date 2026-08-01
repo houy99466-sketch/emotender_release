@@ -2564,12 +2564,37 @@ async function analyzeUserText(text){
   try{
     pendingUserText=clean;appendChatMessage('user',clean);
     U("● PROC");var c=document.getElementById("crt-screen");if(c)c.classList.remove("recording-active");
-    R("正在分析情绪，请稍候...");
-    var timer=setTimeout(function(){R("模型思考中，请耐心等待...")},10000);
-    var body={user_text:clean};var u=usernameValue();if(u)body.username=u;
-    var d=await C("/api/text/analyze",body);
-    clearTimeout(timer);
-    handleAnalyzeResponse(d)
+    var u=usernameValue()||"";
+    var url="/api/text/stream?user_text="+encodeURIComponent(clean)+(u?"&username="+encodeURIComponent(u):");
+    var es=new EventSource(url);
+    var bartenderText="";
+    var fullResult=null;
+    es.addEventListener("status",function(e){var d=JSON.parse(e.data);R(d.message||"分析中...")});
+    es.addEventListener("emotion",function(e){
+      var d=JSON.parse(e.data);
+      R("情绪已识别，正在生成回复...");
+      if(d.emotion_assessment&&window.updateTenderState){
+        var fake={emotion_assessment:d.emotion_assessment};
+        window.updateTenderState(fake);
+      }
+    });
+    es.addEventListener("token",function(e){
+      var d=JSON.parse(e.data);
+      bartenderText+=d.token;
+      R(bartenderText);
+    });
+    es.addEventListener("done",function(e){
+      fullResult=JSON.parse(e.data);
+      es.close();
+      handleAnalyzeResponse(fullResult);
+    });
+    es.addEventListener("error",function(e){
+      es.close();
+      if(e.data){var d=JSON.parse(e.data);R("分析失败: "+(d.error||"?"))}
+      else{R("连接中断，正在重试...")}
+      U("IDLE");
+    });
+    es.onerror=function(){es.close();U("IDLE");R("连接失败，请重试")};
   }catch(e){U("IDLE");R("分析失败: "+(e.detail||e.message||"?"))}
 }
 function handleAnalyzeResponse(d){
