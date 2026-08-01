@@ -26,6 +26,7 @@ from pydantic import BaseModel
 
 from emotender_emotion import (
     NRC_EMOTIONS,
+    build_uev,
     build_ambient_plan,
     build_fallback_emotion_assessment,
     build_target_flavor_vector,
@@ -1167,6 +1168,8 @@ def apply_emotion_compatibility(data: dict) -> dict:
     data["target_flavor_vector"] = build_target_flavor_vector(
         data["emotion_assessment"]["scores"]
     )
+    # 生成标准化 UEV
+    data["uev"] = build_uev(data["emotion_assessment"], emotion_history)
     return data
 
 

@@ -396,6 +396,19 @@
   .trend-escalating { color:#e96f51; }
   .trend-steady { color:rgba(205,215,220,0.6); }
   .trend-easing { color:#2d8f88; }
+  /* UEV detail panel */
+  #uev-detail {
+    width:100%; padding:8px 12px; margin-top:4px;
+    border:1px solid rgba(200,170,120,0.1);
+    border-radius:4px;
+    font-family:'Courier New','PingFang SC',monospace;
+    font-size:10px; color:rgba(205,215,220,0.6);
+    display:none;
+  }
+  #uev-detail.visible { display:block; }
+  .uev-row { display:flex; justify-content:space-between; margin-bottom:2px; }
+  .uev-label { color:rgba(205,215,220,0.5); }
+  .uev-value { color:rgba(233,220,200,0.8); font-weight:bold; }
 
   #save-result-button {
     display:none; min-height:40px; margin-top:28px; padding:8px 22px;
@@ -1793,6 +1806,11 @@
         <div class="vad-row"><span class="vad-label">强度</span><span class="vad-value" id="vad-i">—</span></div>
         <div class="trend-line"><span class="vad-label">趋势</span> <span id="vad-trend-val" class="trend-steady">—</span></div>
       </div>
+      <div id="uev-detail">
+        <div class="uev-row"><span class="uev-label">趋势轨迹</span><span class="uev-value" id="uev-trend-history">—</span></div>
+        <div class="uev-row"><span class="uev-label">证据数</span><span class="uev-value" id="uev-evidence-count">—</span></div>
+        <div class="uev-row"><span class="uev-label">记录时间</span><span class="uev-value" id="uev-timestamp">—</span></div>
+      </div>
     </section>
   </div>
 
@@ -2215,6 +2233,30 @@ function renderRecommendationInsight(controlJson) {
   } else if (vadBox) {
     vadBox.classList.remove('visible');
   }
+  // UEV detail panel
+  const uevBox = document.getElementById('uev-detail');
+  const uev = controlJson.uev || {};
+  if (uevBox && uev.valence !== undefined) {
+    // Trend history: last 5 turns
+    const th = uev.trend_history || [];
+    document.getElementById('uev-trend-history').textContent = th.length ? th.join(' → ') : '—';
+    // Evidence count
+    document.getElementById('uev-evidence-count').textContent = uev.evidence_count || 0;
+    // Timestamp: format nicely
+    const ts = uev.timestamp || '';
+    if (ts) {
+      try {
+        const d = new Date(ts);
+        document.getElementById('uev-timestamp').textContent =
+          d.toLocaleString('zh-CN', {hour12:false});
+      } catch(e) {
+        document.getElementById('uev-timestamp').textContent = ts;
+      }
+    }
+    uevBox.classList.add('visible');
+  } else if (uevBox) {
+    uevBox.classList.remove('visible');
+  }
   reasonSection.classList.add('visible');
   emotionSection.classList.add('visible');
 }
@@ -2226,6 +2268,8 @@ function resetRecommendationInsight() {
   if (reasonSection) reasonSection.classList.remove('visible');
   if (emotionSection) emotionSection.classList.remove('visible');
   if (saveButton) saveButton.classList.remove('visible');
+  const uevBox = document.getElementById('uev-detail');
+  if (uevBox) uevBox.classList.remove('visible');
 }
 
 function hasFormalRecommendation(controlJson) {

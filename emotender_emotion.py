@@ -347,3 +347,35 @@ TREND_DISPLAY = {
     "steady": "→ 稳定",
     "easing": "↓ 缓解",
 }
+
+def build_uev(assessment: dict, emotion_history: list | None = None) -> dict:
+    """从 emotion_assessment 构建标准化 Universal Emotion Vector"""
+    from datetime import datetime, timezone, timedelta
+
+    scores = assessment.get("scores", {})
+    vad = assessment.get("vad", {})
+    evidence = assessment.get("evidence", [])
+
+    # 构建 trend_history
+    trend_history = []
+    if emotion_history:
+        trend_history = [h["label"] if isinstance(h, dict) else str(h) for h in emotion_history[-5:]]
+
+    return {
+        "valence": round(vad.get("valence", 0.0), 4),
+        "arousal": round(vad.get("arousal", 0.0), 4),
+        "dominance": round(vad.get("dominance", 0.0), 4),
+        "intensity": round(vad.get("intensity", 0.0), 4),
+        "nrc_scores": {k: round(v, 4) for k, v in scores.items()},
+        "primary_emotion": assessment.get("primary_emotion", "trust"),
+        "confidence": round(assessment.get("confidence", 0.0), 4),
+        "trend": assessment.get("trend", "steady"),
+        "trend_display": assessment.get("trend_display", ""),
+        "trend_history": trend_history,
+        "evidence_count": len(evidence),
+        "evidence_summary": [
+            {"quote": e.get("quote", ""), "emotions": e.get("emotions", [])}
+            for e in evidence
+        ],
+        "timestamp": datetime.now(timezone(timedelta(hours=8))).isoformat(),
+    }
