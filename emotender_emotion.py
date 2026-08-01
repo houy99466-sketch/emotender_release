@@ -283,3 +283,67 @@ def build_fallback_emotion_assessment(user_text: str) -> dict:
         ],
         "clarification_needed": True,
     }
+
+
+# ==================== VAD 三维连续向量 ====================
+# 基于 Russell (1980) 环形模型 + Mehrabian & Russell (1974) PAD 模型
+# 各 NRC 情绪对应的 VAD 代表性值（-1.0 ~ 1.0）
+
+VAD_WEIGHTS: dict[str, tuple[float, float, float]] = {
+    "anger":        (-0.60,  0.70,  0.40),
+    "anticipation": ( 0.30,  0.50,  0.30),
+    "disgust":      (-0.70,  0.30,  0.50),
+    "fear":         (-0.70,  0.80, -0.60),
+    "joy":          ( 0.80,  0.60,  0.50),
+    "sadness":      (-0.70, -0.30, -0.50),
+    "surprise":     ( 0.20,  0.90,  0.10),
+    "trust":        ( 0.50,  0.20,  0.60),
+}
+
+
+def build_vad_vector(scores: dict[str, float]) -> dict:
+    """从 NRC 八类分数加权推导 VAD 三维连续向量。不依赖 LLM 输出，纯后处理。"""
+    valence = sum(scores[e] * VAD_WEIGHTS[e][0] for e in NRC_EMOTIONS)
+    arousal = sum(scores[e] * VAD_WEIGHTS[e][1] for e in NRC_EMOTIONS)
+    dominance = sum(scores[e] * VAD_WEIGHTS[e][2] for e in NRC_EMOTIONS)
+    intensity = max(scores.values())
+    return {
+        "valence": round(valence, 4),
+        "arousal": round(arousal, 4),
+        "dominance": round(dominance, 4),
+        "intensity": round(intensity, 4),
+    }
+
+
+def compute_emotion_trend(history: list[dict]) -> str:
+    """根据最近 N 轮 VAD 历史判断情绪趋势。
+
+    history: list of {"valence": float, "arousal": float}
+    返回: "escalating" / "steady" / "easing"
+    """
+    if len(history) < 2:
+        return "steady"
+
+    recent = history[-3:] if len(history) >= 3 else history
+
+    v_deltas = [recent[i]["valence"] - recent[i - 1]["valence"] for i in range(1, len(recent))]
+    a_deltas = [recent[i]["arousal"] - recent[i - 1]["arousal"] for i in range(1, len(recent))]
+
+    avg_v_delta = sum(v_deltas) / len(v_deltas)
+    avg_a_delta = sum(a_deltas) / len(a_deltas)
+
+    # 效价下降 或 唤醒度上升 → 情绪升级
+    if avg_v_delta < -0.08 or avg_a_delta > 0.08:
+        return "escalating"
+    # 效价上升 或 唤醒度下降 → 情绪缓解
+    if avg_v_delta > 0.08 or avg_a_delta < -0.08:
+        return "easing"
+
+    return "steady"
+
+
+TREND_DISPLAY = {
+    "escalating": "↑ 上升",
+    "steady": "→ 稳定",
+    "easing": "↓ 缓解",
+}

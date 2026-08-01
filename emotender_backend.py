@@ -31,6 +31,9 @@ from emotender_emotion import (
     build_target_flavor_vector,
     derive_legacy_fields,
     validate_emotion_assessment,
+    build_vad_vector,
+    compute_emotion_trend,
+    TREND_DISPLAY,
 )
 
 try:
@@ -69,7 +72,7 @@ recording_process: Optional[subprocess.Popen] = None
 last_result: Optional[dict] = None
 conversation_history: list[dict] = []
 conversation_summary = ""
-emotion_history: list[str] = []  # Track emotion trend across turns
+emotion_history: list[dict] = []  # Track VAD trend across turns
 current_username: Optional[str] = None
 MAX_EMOTION_HISTORY = 5
 
@@ -853,7 +856,9 @@ def update_conversation_state(data: dict) -> None:
         item["recommendation_reason"] = data["recommendation_reason"]
 
     conversation_history.append(item)
-    emotion_history.append(data["emotion_label"])
+    vad = data["emotion_assessment"].get("vad")
+    if vad:
+        emotion_history.append({"valence": vad["valence"], "arousal": vad["arousal"]})
     if len(emotion_history) > MAX_EMOTION_HISTORY:
         emotion_history.pop(0)
 
@@ -1215,7 +1220,7 @@ def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
             "schema_version": "1.0",
             "turn_type": turn_type,
             "user_text": user_text,
-            "emotion_assessment": emotion_assessment,
+            "emotion_assessment": {**emotion_assessment, "vad": build_vad_vector(emotion_assessment["scores"]), "trend": "steady", "trend_display": TREND_DISPLAY["steady"]},
             "emotion_label": "疲惫",
             "emotion_blend": [
                 {"emotion": "疲惫", "weight": 1.0, "source": "系统无法完成本轮情绪分析。"}
@@ -1238,7 +1243,7 @@ def fallback_result(user_text: str, turn_type: str = "recommendation") -> dict:
         "schema_version": "1.0",
         "turn_type": "recommendation",
         "user_text": user_text,
-        "emotion_assessment": emotion_assessment,
+        "emotion_assessment": {**emotion_assessment, "vad": build_vad_vector(emotion_assessment["scores"]), "trend": "steady", "trend_display": TREND_DISPLAY["steady"]},
         "emotion_label": "清醒",
         "emotion_blend": [
             {"emotion": "清醒", "weight": 1.0, "source": "系统进入推荐 fallback。"}
@@ -1292,6 +1297,13 @@ def process_user_text(user_text: str, username: Optional[str] = None) -> dict:
             result["emotion_assessment"],
             current_emotion_evidence_texts(user_text),
         )
+        # VAD 三维向量（后处理推导，不依赖 LLM）
+        vad = build_vad_vector(result["emotion_assessment"]["scores"])
+        result["emotion_assessment"]["vad"] = vad
+        # 情绪趋势
+        trend = compute_emotion_trend(emotion_history)
+        result["emotion_assessment"]["trend"] = trend
+        result["emotion_assessment"]["trend_display"] = TREND_DISPLAY.get(trend, trend)
         result = apply_emotion_compatibility(result)
         if turn_type_hint == "safety":
             result["turn_type"] = "safety"

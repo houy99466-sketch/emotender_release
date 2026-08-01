@@ -377,6 +377,23 @@
     font-family:'Courier New','PingFang SC',monospace;
     font-size:9px; fill:rgba(205,215,220,0.58);
   }
+  /* VAD + Trend display */
+  #vad-trend {
+    width:100%; padding:10px 12px; margin-top:4px;
+    border:1px solid rgba(200,170,120,0.15);
+    border-radius:4px;
+    font-family:'Courier New','PingFang SC',monospace;
+    font-size:11px; color:rgba(205,215,220,0.72);
+    display:none;
+  }
+  #vad-trend.visible { display:block; }
+  .vad-row { display:flex; justify-content:space-between; margin-bottom:3px; }
+  .vad-label { color:rgba(205,215,220,0.72); }
+  .vad-value { color:rgba(233,220,200,0.95); font-weight:bold; }
+  .trend-line { margin-top:6px; padding-top:6px; border-top:1px solid rgba(200,170,120,0.1); }
+  .trend-escalating { color:#e96f51; }
+  .trend-steady { color:rgba(205,215,220,0.6); }
+  .trend-easing { color:#2d8f88; }
 
   #save-result-button {
     display:none; min-height:40px; margin-top:28px; padding:8px 22px;
@@ -1758,6 +1775,7 @@
   <div id="report-face-block">
     <img id="report-face-image" alt="确认风味时的机器人表情">
     <div id="report-face-emotion">—</div>
+    <div id="chat-trend-badge" style="font-family:'Courier New','PingFang SC',monospace;font-size:11px;padding:2px 8px;border-radius:10px;display:none;"></div>
   </div>
 
   <div class="report-block">
@@ -1765,6 +1783,13 @@
     <section id="emotion-section">
       <div id="emotion-chart-wrap">
         <svg id="emotion-chart" viewBox="0 0 440 320" role="img" aria-label="当前情绪占比"></svg>
+      </div>
+      <div id="vad-trend">
+        <div class="vad-row"><span class="vad-label">愉悦度</span><span class="vad-value" id="vad-v">—</span></div>
+        <div class="vad-row"><span class="vad-label">唤醒度</span><span class="vad-value" id="vad-a">—</span></div>
+        <div class="vad-row"><span class="vad-label">支配度</span><span class="vad-value" id="vad-d">—</span></div>
+        <div class="vad-row"><span class="vad-label">强度</span><span class="vad-value" id="vad-i">—</span></div>
+        <div class="trend-line"><span class="vad-label">趋势</span> <span id="vad-trend-val" class="trend-steady">—</span></div>
       </div>
     </section>
   </div>
@@ -2170,6 +2195,24 @@ function renderRecommendationInsight(controlJson) {
 
   reason.textContent = controlJson.recommendation_reason || '';
   renderEmotionPie(controlJson.emotion_blend || []);
+  // VAD + Trend
+  const vadBox = document.getElementById('vad-trend');
+  const ea = controlJson.emotion_assessment || {};
+  const vad = ea.vad || {};
+  if (vadBox && (vad.valence !== undefined)) {
+    document.getElementById('vad-v').textContent = vad.valence.toFixed(2);
+    document.getElementById('vad-a').textContent = vad.arousal.toFixed(2);
+    document.getElementById('vad-d').textContent = vad.dominance.toFixed(2);
+    document.getElementById('vad-i').textContent = vad.intensity.toFixed(2);
+    const trendVal = document.getElementById('vad-trend-val');
+    const trend = ea.trend || 'steady';
+    const trendDisp = ea.trend_display || '—';
+    trendVal.textContent = trendDisp;
+    trendVal.className = 'trend-' + trend;
+    vadBox.classList.add('visible');
+  } else if (vadBox) {
+    vadBox.classList.remove('visible');
+  }
   reasonSection.classList.add('visible');
   emotionSection.classList.add('visible');
 }
@@ -2429,6 +2472,16 @@ function renderConversationHistory(state,fallbackUser,fallbackReply){
 window.updateTenderState=function(d){
   var c=document.getElementById('crt-screen');if(!c)return;
   var l=(d.emotion_label||'').trim(),t=(d.face_state||'').trim(),e="清醒";
+    /* Trend badge in chat view */
+    var _tb=document.getElementById('chat-trend-badge');
+    var _ea=d.emotion_assessment||{};
+    if(_tb&&_ea.trend){
+      var _td=_ea.trend_display||'';
+      _tb.textContent=_td;
+      _tb.style.display='inline-block';
+      _tb.style.background=_ea.trend==='escalating'?'rgba(233,111,81,0.15)':_ea.trend==='easing'?'rgba(45,143,136,0.15)':'rgba(200,170,120,0.1)';
+      _tb.style.color=_ea.trend==='escalating'?'#e96f51':_ea.trend==='easing'?'#2d8f88':'rgba(205,215,220,0.6)';
+    } else if(_tb){_tb.style.display='none';}
   if(l==="疲惫"||(t==="gentle"&&l!=="难过"))e="疲惫";
   else if(l==="难过")e="难过";
   else if(l==="焦虑"||(t==="focused"&&l!=="清醒"))e="焦虑";
