@@ -923,24 +923,29 @@ def transcribe_audio(wav_path: Path) -> str:
         "stream": False,
     }
 
-    resp = httpx.post(url, headers=headers, json=payload, timeout=30)
-
-    if resp.status_code != 200:
-        logger.error(f"MiMo ASR 请求失败: {resp.status_code} {resp.text}")
-        raise RuntimeError(f"asr_error_{resp.status_code}")
-
-    result = resp.json()
-    # MiMo ASR 返回格式: choices[0].message.content
-    text = ""
-    choices = result.get("choices", [])
-    if choices:
-        msg = choices[0].get("message", {})
-        text = msg.get("content", "").strip()
-    if not text or len(text) < 2:
-        logger.warning(f"静默或过短语音: '{text}'")
-        raise RuntimeError("silence_detected")
-    logger.info(f"MiMo ASR 识别结果: {text}")
-    return text
+    last_error = None
+    for attempt in range(3):
+        try:
+            resp = httpx.post(url, headers=headers, json=payload, timeout=30)
+            if resp.status_code != 200:
+                raise RuntimeError(f"asr_error_{resp.status_code}")
+            result = resp.json()
+            text = ""
+            choices = result.get("choices", [])
+            if choices:
+                msg = choices[0].get("message", {})
+                text = msg.get("content", "").strip()
+            if not text or len(text) < 2:
+                logger.warning(f"静默或过短语音: '{text}'")
+                raise RuntimeError("silence_detected")
+            logger.info(f"MiMo ASR 识别结果: {text}")
+            return text
+        except Exception as e:
+            last_error = e
+            if attempt < 2:
+                logger.warning(f"ASR 尝试 {attempt+1} 失败, 重试: {e}")
+                time.sleep(1)
+    raise last_error
 
 
 def extract_json(content: str) -> dict:
@@ -1101,7 +1106,7 @@ face_state, bartender_line, action_sequence, feedback_prompt, recommendation_rea
                 ],
                 temperature=0.2,
                 max_completion_tokens=4096,
-                timeout=60,
+                timeout=90,
             )
             llm_content = response.choices[0].message.content
             raw_reasoning = getattr(response.choices[0].message, 'reasoning_content', None)
@@ -1456,7 +1461,7 @@ def summarize_session_for_profile(username: str, profile: dict, state: dict) -> 
         ],
         temperature=0.1,
         max_completion_tokens=4096,
-        timeout=60,
+        timeout=90,
     )
     summary = extract_json(response.choices[0].message.content)
     summary["username"] = username
@@ -1767,32 +1772,43 @@ def tts_endpoint(req: dict):
     if not TTS_ENABLED:
         return {"ok": False, "error": "TTS not configured"}
 
-    try:
-        resp = httpx.post(
-            f"{TTS_BASE_URL}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {TTS_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": TTS_MODEL,
-                "messages": [{"role": "assistant", "content": text}],
-                "modalities": ["text", "audio"],
-                "audio": {"voice": voice, "format": "mp3"},
-            },
-            timeout=15,
-        )
-        data = resp.json()
-        choices = data.get("choices", [])
-        if not choices:
-            return {"ok": False, "error": "no choices", "detail": data}
-        audio = choices[0].get("message", {}).get("audio", {})
-        audio_b64 = audio.get("data", "")
-        if not audio_b64:
-            return {"ok": False, "error": "no audio data"}
-        return {"ok": True, "audio": audio_b64, "format": "mp3"}
-    except Exception as e:
-        return {"ok": False, "error": str(e)}
+    for attempt in range(3):
+        try:
+            resp = httpx.post(
+                f"{TTS_BASE_URL}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {TTS_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": TTS_MODEL,
+                    "messages": [{"role": "assistant", "content": text}],
+                    "modalities": ["text", "audio"],
+                    "audio": {"voice": voice, "format": "mp3"},
+                },
+                timeout=20,
+            )
+            data = resp.json()
+            choices = data.get("choices", [])
+            if not choices:
+                if attempt < 2:
+                    time.sleep(1)
+                    continue
+                return {"ok": False, "error": "no choices", "detail": data}
+            audio = choices[0].get("message", {}).get("audio", {})
+            audio_b64 = audio.get("data", "")
+            if not audio_b64:
+                if attempt < 2:
+                    time.sleep(1)
+                    continue
+                return {"ok": False, "error": "no audio data"}
+            return {"ok": True, "audio": audio_b64, "format": "mp3"}
+        except Exception as e:
+            if attempt < 2:
+                logger.warning(f"TTS 尝试 {attempt+1} 失败, 重试: {e}")
+                time.sleep(1)
+            else:
+                return {"ok": False, "error": str(e)}
 
 
 @app.get("/api/text/stream")

@@ -2498,6 +2498,7 @@ function appendChatMessage(role,text,key){
 function R(t){appendChatMessage('robot',t);var e=document.getElementById("reply-area");if(e)e.textContent=t||'';if(window._ttsEnabled)speakText(t)}
 
 var _ttsEnabled=false;
+var _ttsCache=new Map();
 function toggleTTS(){
   _ttsEnabled=!_ttsEnabled;
   window._ttsEnabled=_ttsEnabled;
@@ -2506,12 +2507,18 @@ function toggleTTS(){
 }
 async function speakText(text){
   if(!text||!text.trim())return;
+  var key=text.trim();
+  if(_ttsCache.has(key)){
+    new Audio("data:audio/mp3;base64,"+_ttsCache.get(key)).play().catch(function(){});
+    return;
+  }
   try{
-    var resp=await fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.trim()})});
+    var resp=await fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:key})});
     var d=await resp.json();
     if(d.ok&&d.audio){
-      var audio=new Audio("data:audio/mp3;base64,"+d.audio);
-      audio.play().catch(function(){});
+      _ttsCache.set(key,d.audio);
+      if(_ttsCache.size>50){var first=_ttsCache.keys().next().value;_ttsCache.delete(first);}
+      new Audio("data:audio/mp3;base64,"+d.audio).play().catch(function(){});
     }
   }catch(e){console.warn("TTS failed:",e);}
 }
