@@ -784,7 +784,7 @@
     #account-panel { top:8px; left:8px; gap:5px; }
     #help-button { top:8px; right:8px; }
     #username-input { width:92px; }
-    #report-face-image { width:160px; height:160px; }
+    #report-face-image { width:220px; height:220px; }
     #customization-modal { align-items:flex-end; padding:0; }
     .customization-sheet {
       width:100%; max-height:88vh; border-radius:22px 22px 0 0;
@@ -1551,7 +1551,7 @@
     body[data-theme="light-beverage"] #flavor-chart-wrap { width:min(320px,100%); }
     body[data-theme="light-beverage"] .composition-body { align-items:flex-start; }
     body[data-theme="light-beverage"] .report-title { font-size:36px; }
-    body[data-theme="light-beverage"] #report-face-image { width:180px; height:180px; }
+    body[data-theme="light-beverage"] #report-face-image { width:240px; height:240px; }
     body[data-theme="light-beverage"] #emotion-chart-wrap { min-height:250px; }
     body[data-theme="light-beverage"] #recommendation-reason { font-size:17px; }
     body[data-theme="light-beverage"] .ambient-device { grid-template-columns:1fr; gap:7px; }
@@ -2483,10 +2483,20 @@ function renderAmbientPlan(plan) {
 function enterFinalReport(faceSnapshot) {
   const faceImage = document.getElementById('report-face-image');
   const faceEmotion = document.getElementById('report-face-emotion');
-  if (faceImage) faceImage.src = faceSnapshot;
+  // Use emotion-specific image if available
+  const emotionLabel = currentControlJson && currentControlJson.emotion_label;
+  const emotionMap = {
+    "清醒": "/static/pixel-scene/emotions/清醒.jpg",
+    "兴奋": "/static/pixel-scene/emotions/兴奋.jpg",
+    "难过": "/static/pixel-scene/emotions/难过.jpg",
+    "疲惫": "/static/pixel-scene/emotions/疲惫.jpg",
+    "焦虑": "/static/pixel-scene/emotions/焦虑.jpg",
+    "犹豫": "/static/pixel-scene/emotions/犹豫.jpg"
+  };
+  const emotionImg = emotionMap[emotionLabel] || emotionMap[currentEmotion];
+  if (faceImage) faceImage.src = emotionImg || faceSnapshot;
   if (faceEmotion) {
-    const label = currentControlJson && currentControlJson.emotion_label;
-    faceEmotion.textContent = label || currentEmotion;
+    faceEmotion.textContent = emotionLabel || currentEmotion;
   }
   renderRecommendationInsight(currentControlJson || {});
   const flavorSection = document.getElementById('flavor-section');

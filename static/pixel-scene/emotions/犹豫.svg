@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400" width="300" height="400">
+  <defs>
+    <filter id="watercolor" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="4" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="2"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="300" height="400" fill="#FFF8F0" rx="8"/>
+  
+  <!-- Character body (simplified) -->
+  <g transform="translate(150, 200)">
+    <!-- Hair -->
+    <path d="M-45,-80 C-55,-120 -30,-140 0,-135 C30,-140 55,-120 45,-80 C50,-60 48,-30 45,-10 C40,20 30,50 20,70 L-20,70 C-30,50 -40,20 -45,-10 C-48,-30 -50,-60 -45,-80Z" 
+          fill="#8B6914" stroke="#6B4914" stroke-width="1.5" filter="url(#watercolor)"/>
+    <path d="M-40,-75 C-45,-100 -25,-115 0,-110 C25,-115 45,-100 40,-75" 
+          fill="none" stroke="#A07828" stroke-width="1" opacity="0.5"/>
+    <!-- Face -->
+    <ellipse cx="0" cy="-40" rx="38" ry="42" fill="#FFE4C4" stroke="#D4A574" stroke-width="1.5"/>
+    
+    <!-- Blush -->
+    <ellipse cx="-22" cy="-25" rx="10" ry="6" fill="#FFB6C1" opacity="0.4"/>
+    <ellipse cx="22" cy="-25" rx="10" ry="6" fill="#FFB6C1" opacity="0.4"/>
+    <!-- Eyes - looking away/thinking -->
+    <ellipse cx="-14" cy="-45" rx="6" ry="7" fill="white" stroke="#4A3728" stroke-width="1.2"/>
+    <circle cx="-11" cy="-44" r="3.5" fill="#4A3728"/>
+    <ellipse cx="14" cy="-45" rx="6" ry="7" fill="white" stroke="#4A3728" stroke-width="1.2"/>
+    <circle cx="17" cy="-44" r="3.5" fill="#4A3728"/>
+    <!-- Eyebrows - one raised/thinking -->
+    <path d="M-22,-55 C-14,-58 -6,-55" fill="none" stroke="#6B4914" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M6,-58 C14,-63 22,-58" fill="none" stroke="#6B4914" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Mouth - hmm/thinking -->
+    <path d="M-4,-22 C-2,-20 2,-22 5,-20" fill="none" stroke="#C4756E" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Nose -->
+    <path d="M0,-35 C2,-32 0,-28 -2,-30" fill="none" stroke="#D4A574" stroke-width="1" opacity="0.6"/>
+    <!-- Thought bubble -->
+    <circle cx="35" cy="-75" r="12" fill="white" stroke="#B8C4D0" stroke-width="1"/>
+    <circle cx="28" cy="-58" r="4" fill="white" stroke="#B8C4D0" stroke-width="0.8"/>
+    <circle cx="22" cy="-50" r="2.5" fill="white" stroke="#B8C4D0" stroke-width="0.6"/>
+    <text x="29" y="-72" font-size="8" fill="#6B4914">?</text>
+    <!-- Apron -->
+    <path d="M-30,20 C-35,40 -30,80 -20,100 L20,100 C30,80 35,40 30,20Z" 
+          fill="#F5E6D3" stroke="#D4B896" stroke-width="1.5"/>
+    <path d="M-20,30 L20,30" stroke="#D4B896" stroke-width="1" opacity="0.5"/>
+    <path d="M-18,50 L18,50" stroke="#D4B896" stroke-width="1" opacity="0.3"/>
+    
+    <!-- Emotion label -->
+    <text x="0" y="140" text-anchor="middle" font-family="sans-serif" font-size="16" 
+          fill="#6B4914" font-weight="bold">犹豫</text>
+    <text x="0" y="158" text-anchor="middle" font-family="sans-serif" font-size="10" 
+          fill="#8B7D6B">思考、犹豫、等待</text>
+  </g>
+</svg>

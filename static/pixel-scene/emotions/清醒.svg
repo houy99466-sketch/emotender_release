@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400" width="300" height="400">
+  <defs>
+    <filter id="watercolor" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="4" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="2"/>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="300" height="400" fill="#FFF8F0" rx="8"/>
+  
+  <!-- Character body (simplified) -->
+  <g transform="translate(150, 200)">
+    <!-- Hair -->
+    <path d="M-45,-80 C-55,-120 -30,-140 0,-135 C30,-140 55,-120 45,-80 C50,-60 48,-30 45,-10 C40,20 30,50 20,70 L-20,70 C-30,50 -40,20 -45,-10 C-48,-30 -50,-60 -45,-80Z" 
+          fill="#8B6914" stroke="#6B4914" stroke-width="1.5" filter="url(#watercolor)"/>
+    <path d="M-40,-75 C-45,-100 -25,-115 0,-110 C25,-115 45,-100 40,-75" 
+          fill="none" stroke="#A07828" stroke-width="1" opacity="0.5"/>
+    <!-- Face -->
+    <ellipse cx="0" cy="-40" rx="38" ry="42" fill="#FFE4C4" stroke="#D4A574" stroke-width="1.5"/>
+    
+    <!-- Blush -->
+    <ellipse cx="-22" cy="-25" rx="10" ry="6" fill="#FFB6C1" opacity="0.4"/>
+    <ellipse cx="22" cy="-25" rx="10" ry="6" fill="#FFB6C1" opacity="0.4"/>
+    <!-- Eyes - normal -->
+    <ellipse cx="-14" cy="-45" rx="6" ry="7" fill="white" stroke="#4A3728" stroke-width="1.2"/>
+    <circle cx="-14" cy="-44" r="3.5" fill="#4A3728"/>
+    <circle cx="-12.5" cy="-45.5" r="1.2" fill="white"/>
+    <ellipse cx="14" cy="-45" rx="6" ry="7" fill="white" stroke="#4A3728" stroke-width="1.2"/>
+    <circle cx="14" cy="-44" r="3.5" fill="#4A3728"/>
+    <circle cx="15.5" cy="-45.5" r="1.2" fill="white"/>
+    <!-- Eyebrows - relaxed -->
+    <path d="M-22,-55 C-14,-58 -6,-55" fill="none" stroke="#6B4914" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M6,-55 C14,-58 22,-55" fill="none" stroke="#6B4914" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Mouth - slight smile -->
+    <path d="M-8,-25 C-4,-20 4,-20 8,-25" fill="none" stroke="#C4756E" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Nose -->
+    <path d="M0,-35 C2,-32 0,-28 -2,-30" fill="none" stroke="#D4A574" stroke-width="1" opacity="0.6"/>
+    <!-- Light steam -->
+    <path d="M-5,-90 C-8,-100 -3,-105 -6,-115" fill="none" stroke="#B8C4D0" stroke-width="1" opacity="0.4"/>
+    <path d="M5,-90 C8,-100 3,-105 6,-115" fill="none" stroke="#B8C4D0" stroke-width="1" opacity="0.4"/>
+    <!-- Apron -->
+    <path d="M-30,20 C-35,40 -30,80 -20,100 L20,100 C30,80 35,40 30,20Z" 
+          fill="#F5E6D3" stroke="#D4B896" stroke-width="1.5"/>
+    <path d="M-20,30 L20,30" stroke="#D4B896" stroke-width="1" opacity="0.5"/>
+    <path d="M-18,50 L18,50" stroke="#D4B896" stroke-width="1" opacity="0.3"/>
+    
+    <!-- Emotion label -->
+    <text x="0" y="140" text-anchor="middle" font-family="sans-serif" font-size="16" 
+          fill="#6B4914" font-weight="bold">清醒</text>
+    <text x="0" y="158" text-anchor="middle" font-family="sans-serif" font-size="10" 
+          fill="#8B7D6B">专注、平静、清醒</text>
+  </g>
+</svg>
